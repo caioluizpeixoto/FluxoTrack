@@ -12,6 +12,8 @@ import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import LinkNext from "next/link";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function IntegrationsPage() {
   const { user } = useUser();
@@ -28,30 +30,48 @@ export default function IntegrationsPage() {
   }, [db, user]);
   const { data: accounts } = useCollection(accountsQuery);
 
-  const isConnected = !!profile?.metaConnected;
+  const isConnected = !!profile?.metaAccessToken;
 
   const handleMetaConnect = async () => {
+    if (!user || !userRef) {
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado." });
+      return;
+    }
+
     setLoading(true);
-    // Simulação do redirecionamento OAuth Meta
-    // Em produção: window.location.href = `/api/auth/meta?userId=${user?.uid}`;
+    
+    // Simulação do fluxo de autorização OAuth Meta
+    // Em um cenário real com App ID configurado, abriríamos o popup do FB
     setTimeout(async () => {
-      if (userRef) {
-        await updateDoc(userRef, {
+      try {
+        await setDoc(userRef, {
           metaConnected: true,
-          metaAccessToken: "EAAB_MOCK_TOKEN",
-          lastMetaAuth: new Date().toISOString()
+          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+          lastMetaAuth: new Date().toISOString(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        
+        toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
+        
+        // Simula busca inicial de contas após conexão
+        handleSyncAccounts();
+      } catch (err: any) {
+        const permissionError = new FirestorePermissionError({
+          path: userRef.path,
+          operation: 'update',
+          requestResourceData: { metaConnected: true }
         });
-        toast({ title: "Facebook Conectado!", description: "Suas contas de anúncios estão prontas para importação." });
+        errorEmitter.emit('permission-error', permissionError);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }, 1500);
+    }, 1000);
   };
 
   const handleSyncAccounts = async () => {
     if (!user) return;
     setSyncing(true);
     
-    // Simulação de busca na API da Meta para contas de anúncios
     const mockAccounts = [
       { accountId: "act_123456", name: "Conta Principal - Ecom", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" },
       { accountId: "act_789012", name: "Backup - Tráfego Direto", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" }
@@ -60,11 +80,12 @@ export default function IntegrationsPage() {
     try {
       const accountsColl = collection(db, "users", user.uid, "ad_accounts");
       for (const acc of mockAccounts) {
-        await setDoc(doc(accountsColl, acc.accountId), {
+        const accRef = doc(accountsColl, acc.accountId);
+        setDoc(accRef, {
           ...acc,
           monitored: true,
           updatedAt: serverTimestamp()
-        });
+        }, { merge: true });
       }
       toast({ title: "Sincronização concluída", description: `${mockAccounts.length} contas encontradas.` });
     } catch (e) {
@@ -77,8 +98,21 @@ export default function IntegrationsPage() {
   const toggleMonitoring = async (accId: string, current: boolean) => {
     if (!user) return;
     const accRef = doc(db, "users", user.uid, "ad_accounts", accId);
-    await updateDoc(accRef, { monitored: !current });
+    updateDoc(accRef, { monitored: !current })
+      .catch(async () => {
+        const err = new FirestorePermissionError({ path: accRef.path, operation: 'update' });
+        errorEmitter.emit('permission-error', err);
+      });
     toast({ title: current ? "Monitoramento pausado" : "Monitoramento ativado" });
+  };
+
+  const handleDisconnect = async () => {
+    if (!userRef) return;
+    await updateDoc(userRef, {
+      metaAccessToken: null,
+      metaConnected: false
+    });
+    toast({ title: "Desconectado", description: "Sua conta Meta foi desvinculada." });
   };
 
   return (
@@ -92,10 +126,16 @@ export default function IntegrationsPage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-2 space-y-6">
-            <Card className="glass-card border-primary/20 bg-primary/5">
+            <Card className={cn(
+              "glass-card transition-all duration-500",
+              isConnected ? "border-green-500/20 bg-green-500/5" : "border-primary/20 bg-primary/5"
+            )}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center glow-primary">
+                  <div className={cn(
+                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                    isConnected ? "bg-green-600 glow-accent" : "bg-blue-600 glow-primary"
+                  )}>
                     <Facebook className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -104,8 +144,8 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
                 <Badge className={cn(
-                  "px-3 py-1 border-none",
-                  isConnected ? "bg-green-500/20 text-green-500" : "bg-muted text-muted-foreground"
+                  "px-3 py-1 border-none font-bold",
+                  isConnected ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
                 )}>
                   {isConnected ? "CONECTADO" : "DESCONECTADO"}
                 </Badge>
@@ -118,7 +158,7 @@ export default function IntegrationsPage() {
                         <CheckCircle2 className="w-5 h-5 text-green-500" />
                         <span className="text-sm">Sincronização de dados ativa via API Graph v18.0</span>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => {}} className="text-destructive">
+                      <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-destructive hover:bg-destructive/10">
                         <Trash2 className="w-4 h-4 mr-2" /> Desconectar
                       </Button>
                     </div>
@@ -130,8 +170,12 @@ export default function IntegrationsPage() {
                     <p className="text-sm text-muted-foreground max-w-md mb-6">
                       Ao autorizar, o AdPulse poderá ler seus gastos diários para calcular o ROAS real no seu dashboard.
                     </p>
-                    <Button onClick={handleMetaConnect} disabled={loading} className="glow-primary h-12 px-8 font-bold gap-2">
-                      {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Facebook className="w-5 h-5" />}
+                    <Button 
+                      onClick={handleMetaConnect} 
+                      disabled={loading || !user} 
+                      className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl"
+                    >
+                      {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Facebook className="w-6 h-6" />}
                       Autorizar Facebook Ads
                     </Button>
                   </div>
@@ -141,9 +185,9 @@ export default function IntegrationsPage() {
                 <CardFooter className="border-t border-white/5 pt-6 bg-white/5 rounded-b-lg">
                   <div className="flex items-center justify-between w-full">
                     <div className="text-xs text-muted-foreground">
-                      Última atualização: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleString() : 'Nunca'}
+                      Última autorização: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleString('pt-BR') : 'Nunca'}
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleSyncAccounts} disabled={syncing} className="gap-2">
+                    <Button variant="outline" size="sm" onClick={handleSyncAccounts} disabled={syncing} className="gap-2 border-primary/20 text-primary">
                       <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
                       Sincronizar BMs e Contas
                     </Button>
@@ -152,7 +196,7 @@ export default function IntegrationsPage() {
               )}
             </Card>
 
-            {isConnected && accounts.length > 0 && (
+            {isConnected && accounts && accounts.length > 0 && (
               <Card className="glass-card animate-in slide-in-from-bottom-4 duration-500">
                 <CardHeader>
                   <CardTitle className="text-lg font-headline flex items-center gap-2">
@@ -186,7 +230,6 @@ export default function IntegrationsPage() {
                       </div>
                     </div>
                   ))}
-                  <Button className="w-full mt-6 glow-primary font-bold">Salvar Contas Monitoradas</Button>
                 </CardContent>
               </Card>
             )}
@@ -222,8 +265,8 @@ export default function IntegrationsPage() {
                   Lembre-se: Para o ROAS ser calculado, você também precisa ter o **Pixel AdPulse** instalado na sua página.
                 </p>
                 <LinkNext href="/pixel">
-                  <Button variant="link" className="p-0 h-auto text-accent text-xs">
-                    Ir para configuração do Pixel <ArrowRight className="w-3 h-3 ml-1" />
+                  <Button variant="link" className="p-0 h-auto text-accent text-xs group">
+                    Ir para configuração do Pixel <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </LinkNext>
               </CardContent>
