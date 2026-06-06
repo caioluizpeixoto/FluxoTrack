@@ -1,3 +1,4 @@
+
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -10,7 +11,8 @@ import {
   ArrowUpRight,
   Calendar,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  LogIn
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -28,8 +30,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
-import { useUser, useCollection, useFirestore } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
+import { useUser, useCollection, useFirestore, useAuth } from "@/firebase";
+import { collection, query, orderBy, limit, doc, setDoc } from "firebase/firestore";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { cn } from "@/lib/utils";
 
 const chartData = [
   { name: 'Seg', revenue: 4000, spend: 2400 },
@@ -52,12 +56,33 @@ const COLORS = ['#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'];
 
 export default function Dashboard() {
   const { user, loading: userLoading } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      if (result.user) {
+        // Criar perfil do usuário se não existir
+        const userRef = doc(db, "users", result.user.uid);
+        setDoc(userRef, {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName,
+          plan: "pro",
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    } catch (error) {
+      console.error("Erro ao fazer login:", error);
+    }
+  };
 
   const eventsQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -74,11 +99,21 @@ export default function Dashboard() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="p-8 text-center glass-card max-w-md">
-          <h2 className="text-2xl font-bold mb-4 font-headline">Bem-vindo ao AdPulse</h2>
-          <p className="text-muted-foreground mb-6">Conecte sua conta para começar a rastrear suas conversões e otimizar seu ROAS com IA.</p>
-          <Button className="w-full glow-primary py-6 text-lg font-headline">Acessar com Google</Button>
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="p-8 text-center glass-card max-w-md w-full border-primary/20">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 rounded-full bg-primary/10 glow-primary">
+              <TrendingUp className="w-12 h-12 text-primary" />
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold mb-4 font-headline">Bem-vindo ao AdPulse</h2>
+          <p className="text-muted-foreground mb-8 text-sm">
+            O hub definitivo para tracking de marketing e atribuição inteligente. Conecte sua conta para começar.
+          </p>
+          <Button onClick={handleLogin} className="w-full glow-primary py-6 text-lg font-headline gap-3">
+            <LogIn className="w-5 h-5" />
+            Entrar com Google
+          </Button>
         </Card>
       </div>
     );
@@ -91,7 +126,7 @@ export default function Dashboard() {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1">Visão Geral</h1>
-            <p className="text-muted-foreground">Tracking em tempo real e análise de atribuição.</p>
+            <p className="text-muted-foreground">Bem-vindo de volta, {user.displayName?.split(' ')[0]}.</p>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="outline" size="sm" className="gap-2 border-white/10">
@@ -100,7 +135,7 @@ export default function Dashboard() {
             </Button>
             <Button size="sm" className="gap-2 glow-primary">
               <RefreshCw className="w-4 h-4" />
-              Sincronizar Dados
+              Sincronizar
             </Button>
           </div>
         </header>
@@ -140,7 +175,7 @@ export default function Dashboard() {
           <Card className="lg:col-span-2 glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground font-headline">Receita vs Gasto</CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-none">Atualizado</Badge>
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-none">Live</Badge>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -208,14 +243,17 @@ export default function Dashboard() {
                     {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-lg" />)}
                   </div>
                 ) : recentEvents?.length === 0 ? (
-                  <div className="py-8 text-center">
-                    <p className="text-sm text-muted-foreground">Nenhum evento detectado. Instale o script de tracking no seu site.</p>
+                  <div className="py-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                    <p className="text-sm text-muted-foreground px-4">Nenhum evento detectado. Instale o script de tracking no seu site para ver as atividades aqui.</p>
                   </div>
                 ) : (
                   recentEvents?.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all border border-transparent hover:border-white/5">
                       <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                        <div className={cn(
+                          "w-2 h-2 rounded-full",
+                          item.eventType === 'purchase' ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-primary shadow-[0_0_8px_rgba(59,130,246,0.6)]"
+                        )} />
                         <div className="flex flex-col">
                           <span className="text-sm font-medium capitalize">{item.eventType.replace('_', ' ')}</span>
                           <span className="text-[10px] text-muted-foreground uppercase truncate max-w-[200px]">{item.url || 'Página Interna'}</span>
@@ -227,22 +265,6 @@ export default function Dashboard() {
                     </div>
                   ))
                 )}
-                {(!recentEvents || recentEvents.length === 0) && !eventsLoading && (
-                   <div className="opacity-50">
-                     {[
-                       { event: "Checkout Iniciado", time: "2 min atrás", url: "/checkout-v1" },
-                       { event: "Visualização de Página", time: "15 min atrás", url: "/home" },
-                     ].map((item, i) => (
-                       <div key={i} className="flex items-center justify-between p-3 border-b border-white/5 last:border-none">
-                         <div className="flex flex-col">
-                            <span className="text-sm">{item.event}</span>
-                            <span className="text-[10px] text-muted-foreground">{item.url}</span>
-                         </div>
-                         <span className="text-xs text-muted-foreground">{item.time}</span>
-                       </div>
-                     ))}
-                   </div>
-                )}
               </div>
             </CardContent>
           </Card>
@@ -252,23 +274,19 @@ export default function Dashboard() {
               <Sparkles className="w-6 h-6 text-accent animate-pulse" />
             </div>
             <CardHeader>
-              <CardTitle className="font-headline flex items-center gap-2">AI Path Mapping</CardTitle>
+              <CardTitle className="font-headline flex items-center gap-2">IA Path Mapping</CardTitle>
               <p className="text-sm text-muted-foreground">Resolvendo vendas órfãs com inteligência artificial</p>
             </CardHeader>
             <CardContent>
               <div className="bg-accent/10 border border-accent/20 rounded-2xl p-6 mb-6">
                 <p className="text-sm italic text-accent-foreground/90 leading-relaxed font-medium">
-                  "Detectamos um padrão de IP recorrente em 12 vendas sem origem. A IA sugere 85% de probabilidade de virem da campanha 'Escala_Nativa_01'."
+                  "O sistema de IA está pronto para analisar seus dados. Quando houver vendas sem origem clara, elas aparecerão aqui."
                 </p>
               </div>
               <div className="space-y-3">
-                <Button className="w-full justify-between bg-accent/20 hover:bg-accent/30 text-accent-foreground border border-accent/30 font-headline h-14 rounded-xl px-6 group">
-                  <span>Re-atribuir Pedido #9821</span>
+                <Button className="w-full justify-between bg-accent/20 hover:bg-accent/30 text-accent-foreground border border-accent/30 font-headline h-14 rounded-xl px-6 group disabled:opacity-50" disabled>
+                  <span>Analisar Vendas Órfãs</span>
                   <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                </Button>
-                <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground font-headline h-14 rounded-xl px-6">
-                  <span>Ver Relatório Completo</span>
-                  <ArrowUpRight className="w-5 h-5 opacity-50" />
                 </Button>
               </div>
             </CardContent>
