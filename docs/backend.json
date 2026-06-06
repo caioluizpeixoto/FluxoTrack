@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -11,7 +10,10 @@
         "displayName": { "type": "string" },
         "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
         "metaAccessToken": { "type": "string" },
-        "metaConnected": { "type": "boolean" }
+        "metaConnected": { "type": "boolean" },
+        "storeUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email"]
     },
@@ -26,7 +28,8 @@
         "status": { "type": "string" },
         "businessId": { "type": "string" },
         "businessName": { "type": "string" },
-        "monitored": { "type": "boolean", "default": true }
+        "monitored": { "type": "boolean", "default": true },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["accountId", "name"]
     },
@@ -41,6 +44,7 @@
         "spend": { "type": "number" },
         "impressions": { "type": "number" },
         "clicks": { "type": "number" },
+        "conversions": { "type": "number" },
         "lastSync": { "type": "string", "format": "date-time" }
       }
     },
@@ -49,9 +53,6 @@
       "description": "Evento capturado pelo Pixel AdPulse.",
       "type": "object",
       "properties": {
-        "eventId": { "type": "string" },
-        "visitorId": { "type": "string" },
-        "sessionId": { "type": "string" },
         "eventType": { "type": "string" },
         "url": { "type": "string" },
         "utmSource": { "type": "string" },
@@ -60,8 +61,8 @@
         "fbclid": { "type": "string" },
         "fbp": { "type": "string" },
         "fbc": { "type": "string" },
-        "userAgent": { "type": "string" },
         "ipAddress": { "type": "string" },
+        "userAgent": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       }
     },
@@ -70,13 +71,21 @@
       "description": "Venda ou lead registrado no sistema.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "externalId": { "type": "string" },
         "value": { "type": "number" },
         "status": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
-        "utmSource": { "type": "string" },
         "attributedCampaignId": { "type": "string" }
+      }
+    },
+    "Webhook": {
+      "title": "Webhook Configuration",
+      "description": "Configuração de webhook para plataformas de checkout.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "platform": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -103,6 +112,10 @@
     "/users/{userId}/conversions": {
       "schema": "Conversion",
       "description": "Conversões e vendas registradas."
+    },
+    "/users/{userId}/webhooks": {
+      "schema": "Webhook",
+      "description": "Configurações de webhooks recebidos."
     }
   }
 }

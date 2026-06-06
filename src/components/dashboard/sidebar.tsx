@@ -1,4 +1,3 @@
-
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -20,7 +19,7 @@ import {
   UserPlus
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore } from "@/firebase";
 import { 
   signOut, 
   GoogleAuthProvider, 
@@ -28,6 +27,7 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword 
 } from "firebase/auth";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { 
@@ -153,18 +153,37 @@ export function DashboardSidebar() {
 
 function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
   const auth = useAuth();
+  const db = useFirestore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  const initializeUserProfile = async (uid: string, userEmail: string, name: string) => {
+    const userRef = doc(db, "users", uid);
+    const snap = await getDoc(userRef);
+    
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        uid,
+        email: userEmail,
+        displayName: name,
+        plan: "free",
+        metaConnected: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await initializeUserProfile(result.user.uid, email, email.split('@')[0]);
         toast({ title: "Conta criada!", description: "Seu cadastro foi realizado com sucesso." });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -172,11 +191,14 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
       }
       setIsDialogOpen(false);
     } catch (error: any) {
-      console.error(error);
+      console.error("Auth Error:", error);
       let message = "Ocorreu um erro na autenticação.";
       if (error.code === 'auth/email-already-in-use') message = "Este e-mail já está em uso.";
+      if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
+      if (error.code === 'auth/operation-not-allowed') message = "O cadastro por e-mail não está ativado no Firebase Console.";
+      
       toast({ variant: "destructive", title: "Erro", description: message });
     } finally {
       setLoading(false);
@@ -189,10 +211,10 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
         <ShieldCheck className="w-5 h-5 text-accent" />
         <div className="flex flex-col overflow-hidden">
           <span className="text-xs font-bold text-accent font-headline uppercase truncate">
-            {user ? (user.displayName || user.email?.split('@')[0] || "Usuário") : "Modo Teste"}
+            {user ? (user.displayName || user.email?.split('@')[0] || "Usuário") : "Visitante"}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            {user ? "Plano Pro Ativo" : "Acesso Limitado"}
+            {user ? "Plano Ativo" : "Acesso Limitado"}
           </span>
         </div>
       </div>
@@ -214,7 +236,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
               className="w-full justify-start gap-3 text-primary hover:bg-primary/10 h-10 px-3"
             >
               <LogIn className="w-5 h-5" />
-              Entrar
+              Entrar ou Cadastrar
             </Button>
           </DialogTrigger>
           <DialogContent className="bg-[#121212] border-white/10 text-white sm:max-w-[400px]">
@@ -224,8 +246,8 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
               </DialogTitle>
               <DialogDescription>
                 {isSignUp 
-                  ? "Cadastre seu e-mail para salvar suas configurações." 
-                  : "Acesse sua conta para gerenciar suas atribuições."}
+                  ? "Crie sua conta para salvar suas atribuições e pixels." 
+                  : "Acesse sua conta para gerenciar seu dashboard."}
               </DialogDescription>
             </DialogHeader>
 
@@ -261,7 +283,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
                 </div>
               </div>
               <Button type="submit" className="w-full glow-primary font-bold" disabled={loading}>
-                {loading ? "Processando..." : (isSignUp ? "Cadastrar" : "Entrar")}
+                {loading ? "Processando..." : (isSignUp ? "Cadastrar Agora" : "Entrar")}
               </Button>
             </form>
 
