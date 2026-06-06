@@ -3,82 +3,81 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Dados do usuário administrador e configurações de API.",
+      "description": "Dados do usuário administrador e configurações globais.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "storeUrl": { "type": "string" },
         "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
-        "metaAccessToken": { "type": "string", "description": "Token de acesso à API da Meta." },
-        "metaPixelId": { "type": "string", "description": "ID do Pixel configurado." }
+        "metaAccessToken": { "type": "string" },
+        "metaConnected": { "type": "boolean" }
       },
       "required": ["uid", "email"]
     },
-    "TrackingEvent": {
-      "title": "Tracking Event",
-      "description": "Log de atividade de um visitante no site monitorado.",
+    "AdAccount": {
+      "title": "Ad Account",
+      "description": "Conta de anúncio selecionada para monitoramento.",
       "type": "object",
       "properties": {
-        "eventId": { "type": "string" },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "eventType": { "type": "string", "enum": ["page_view", "click", "checkout_start", "pix_generated", "purchase"] },
-        "url": { "type": "string" },
-        "referrer": { "type": "string" },
-        "utmSource": { "type": "string" },
-        "utmMedium": { "type": "string" },
-        "utmCampaign": { "type": "string" },
-        "fbc": { "type": "string" },
-        "fbp": { "type": "string" },
-        "ipAddress": { "type": "string" },
-        "userAgent": { "type": "string" }
+        "accountId": { "type": "string" },
+        "name": { "type": "string" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "businessId": { "type": "string" },
+        "businessName": { "type": "string" },
+        "monitored": { "type": "boolean", "default": true }
       },
-      "required": ["eventId", "timestamp", "eventType"]
-    },
-    "Conversion": {
-      "title": "Conversion",
-      "description": "Uma venda ou lead finalizado que requer atribuição.",
-      "type": "object",
-      "properties": {
-        "conversionId": { "type": "string" },
-        "externalId": { "type": "string", "description": "ID do pedido na plataforma de e-commerce." },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "value": { "type": "number" },
-        "currency": { "type": "string", "default": "BRL" },
-        "status": { "type": "string", "enum": ["pending", "approved", "cancelled"] },
-        "attributedCampaignId": { "type": "string" },
-        "attributionConfidence": { "type": "number" }
-      },
-      "required": ["conversionId", "timestamp", "value", "status"]
+      "required": ["accountId", "name"]
     },
     "Campaign": {
-      "title": "Marketing Campaign",
-      "description": "Dados de performance de campanhas de anúncios sincronizadas.",
+      "title": "Campaign",
+      "description": "Dados de performance da campanha.",
       "type": "object",
       "properties": {
         "campaignId": { "type": "string" },
-        "platform": { "type": "string", "enum": ["meta", "google", "tiktok"] },
         "name": { "type": "string" },
         "status": { "type": "string" },
         "spend": { "type": "number" },
-        "clicks": { "type": "number" },
         "impressions": { "type": "number" },
-        "conversions": { "type": "number" }
-      },
-      "required": ["campaignId", "platform", "name"]
+        "clicks": { "type": "number" },
+        "lastSync": { "type": "string", "format": "date-time" }
+      }
     },
-    "WebhookConfig": {
-      "title": "Webhook Configuration",
-      "description": "Configuração de integração de webhook para uma plataforma específica.",
+    "TrackingEvent": {
+      "title": "Tracking Event",
+      "description": "Evento capturado pelo Pixel AdPulse.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "visitorId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "eventType": { "type": "string" },
+        "url": { "type": "string" },
+        "utmSource": { "type": "string" },
+        "utmMedium": { "type": "string" },
+        "utmCampaign": { "type": "string" },
+        "fbclid": { "type": "string" },
+        "fbp": { "type": "string" },
+        "fbc": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Conversion": {
+      "title": "Conversion",
+      "description": "Venda ou lead registrado no sistema.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "name": { "type": "string" },
-        "platform": { "type": "string", "enum": ["kiwify", "hotmart", "cartpanda", "perfectpay", "custom"] },
-        "createdAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["name", "platform"]
+        "externalId": { "type": "string" },
+        "value": { "type": "number" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "utmSource": { "type": "string" },
+        "attributedCampaignId": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -87,23 +86,23 @@
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "Perfil do usuário administrador."
+      "description": "Configurações do usuário."
     },
-    "/users/{userId}/events": {
-      "schema": "TrackingEvent",
-      "description": "Coleção de eventos de rastreamento capturados para este usuário."
-    },
-    "/users/{userId}/conversions": {
-      "schema": "Conversion",
-      "description": "Coleção de vendas e conversões registradas."
+    "/users/{userId}/ad_accounts": {
+      "schema": "AdAccount",
+      "description": "Contas de anúncios monitoradas."
     },
     "/users/{userId}/campaigns": {
       "schema": "Campaign",
-      "description": "Campanhas sincronizadas das plataformas de anúncios."
+      "description": "Campanhas sincronizadas da Meta."
     },
-    "/users/{userId}/webhooks": {
-      "schema": "WebhookConfig",
-      "description": "Configurações de webhooks cadastradas pelo usuário."
+    "/users/{userId}/events": {
+      "schema": "TrackingEvent",
+      "description": "Eventos de rastreamento do Pixel."
+    },
+    "/users/{userId}/conversions": {
+      "schema": "Conversion",
+      "description": "Conversões e vendas registradas."
     }
   }
 }

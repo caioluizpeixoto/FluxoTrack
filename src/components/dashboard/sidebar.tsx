@@ -14,7 +14,9 @@ import {
   LogOut,
   LogIn,
   Menu,
-  ShieldCheck
+  ShieldCheck,
+  Code2,
+  Plug
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser } from "@/firebase";
@@ -26,10 +28,10 @@ import LinkNext from "next/link";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { label: "Integrações", icon: Plug, href: "/integrations" },
+  { label: "Pixel AdPulse", icon: Code2, href: "/pixel" },
   { label: "Logs de Eventos", icon: MousePointer2, href: "/events" },
-  { label: "Meta Ads Sync", icon: Target, href: "/meta-ads" },
   { label: "IA Path Mapping", icon: Sparkles, href: "/ai-insights" },
-  { label: "Funis", icon: BarChart3, href: "/funnels" },
   { label: "Webhooks", icon: Webhook, href: "/webhooks" },
   { label: "Configurações", icon: Settings, href: "/settings" },
 ];
@@ -75,7 +77,6 @@ export function DashboardSidebar() {
 
   return (
     <>
-      {/* Mobile Trigger */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -85,7 +86,7 @@ export function DashboardSidebar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 bg-background border-r border-border/50">
             <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-            <SheetDescription className="sr-only">Acesse as principais ferramentas de tracking e atribuição do AdPulse.</SheetDescription>
+            <SheetDescription className="sr-only">Acesse as ferramentas do AdPulse.</SheetDescription>
             <div className="flex h-full flex-col">
               <div className="p-6">
                 <LinkNext href="/" className="flex items-center gap-2 text-primary">
@@ -104,7 +105,6 @@ export function DashboardSidebar() {
         </Sheet>
       </div>
 
-      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex h-full flex-col bg-background border-r border-border/50 w-64 fixed left-0 top-0 z-30">
         <div className="p-6">
           <LinkNext href="/" className="flex items-center gap-2 text-primary">
@@ -147,7 +147,7 @@ function AuthSection({ user, handleSignIn, handleSignOut }: any) {
           className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <LogOut className="w-5 h-5" />
-          Sair da Conta
+          Sair
         </Button>
       ) : (
         <Button 
@@ -156,7 +156,7 @@ function AuthSection({ user, handleSignIn, handleSignOut }: any) {
           className="w-full justify-start gap-3 text-primary hover:bg-primary/10"
         >
           <LogIn className="w-5 h-5" />
-          Fazer Login
+          Entrar
         </Button>
       )}
     </div>
