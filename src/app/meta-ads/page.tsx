@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Facebook, RefreshCw, Target, ShieldCheck, Lock, Trash2, Zap } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useState, useMemo } from "react";
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useAuth } from "@/firebase";
 import { collection, doc, setDoc, serverTimestamp, deleteDoc, query, getDocs, updateDoc } from "firebase/firestore";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -19,6 +20,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function MetaAdsPage() {
   const { user } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -34,29 +36,39 @@ export default function MetaAdsPage() {
 
   const isConnected = !!profile?.metaAccessToken;
 
-  const handleFacebookConnect = () => {
-    if (!user || !userRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa fazer login primeiro!" });
-      return;
-    }
+  const handleFacebookConnect = async () => {
     setConnecting(true);
+    let currentUser = user;
 
-    const data = {
-      metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
-      metaConnected: true,
-      updatedAt: serverTimestamp()
-    };
+    try {
+      if (!currentUser) {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        currentUser = result.user;
+      }
 
-    setDoc(userRef, data, { merge: true })
-      .catch(async () => {
-        const err = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: data });
-        errorEmitter.emit('permission-error', err);
-      });
+      if (currentUser) {
+        const ref = doc(db, "users", currentUser.uid);
+        const data = {
+          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+          metaConnected: true,
+          updatedAt: serverTimestamp()
+        };
 
-    setTimeout(() => {
+        setDoc(ref, data, { merge: true })
+          .catch(async () => {
+            const err = new FirestorePermissionError({ path: ref.path, operation: 'update', requestResourceData: data });
+            errorEmitter.emit('permission-error', err);
+          });
+
+        toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Erro na conexão", description: "Falha ao autorizar Facebook." });
+    } finally {
       setConnecting(false);
-      toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
-    }, 1500);
+    }
   };
 
   const handleSyncData = () => {

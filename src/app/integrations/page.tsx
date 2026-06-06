@@ -6,8 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc, useAuth } from "@/firebase";
 import { collection, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function IntegrationsPage() {
   const { user } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -32,8 +34,8 @@ export default function IntegrationsPage() {
 
   const isConnected = !!profile?.metaAccessToken;
 
-  const handleSyncAccounts = () => {
-    if (!user || !db) return;
+  const handleSyncAccounts = (userId: string) => {
+    if (!db) return;
     setSyncing(true);
     
     const mockAccounts = [
@@ -41,7 +43,7 @@ export default function IntegrationsPage() {
       { accountId: "act_789012", name: "Backup - Tráfego Direto", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" }
     ];
 
-    const accountsColl = collection(db, "users", user.uid, "ad_accounts");
+    const accountsColl = collection(db, "users", userId, "ad_accounts");
     
     mockAccounts.forEach((acc) => {
       const accRef = doc(accountsColl, acc.accountId);
@@ -60,36 +62,46 @@ export default function IntegrationsPage() {
     }, 1000);
   };
 
-  const handleMetaConnect = () => {
-    if (!user || !userRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa fazer login primeiro!" });
-      return;
-    }
-
+  const handleMetaConnect = async () => {
     setLoading(true);
-    
-    const data = {
-      metaConnected: true,
-      metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
-      lastMetaAuth: new Date().toISOString(),
-      updatedAt: serverTimestamp()
-    };
+    let currentUser = user;
 
-    setDoc(userRef, data, { merge: true })
-      .catch(async () => {
-        const permissionError = new FirestorePermissionError({
-          path: userRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+    try {
+      // Se não estiver logado, faz o login primeiro
+      if (!currentUser) {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        currentUser = result.user;
+      }
 
-    setTimeout(() => {
+      if (currentUser) {
+        const ref = doc(db, "users", currentUser.uid);
+        const data = {
+          metaConnected: true,
+          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+          lastMetaAuth: new Date().toISOString(),
+          updatedAt: serverTimestamp()
+        };
+
+        setDoc(ref, data, { merge: true })
+          .catch(async () => {
+            const permissionError = new FirestorePermissionError({
+              path: ref.path,
+              operation: 'update',
+              requestResourceData: data,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+          });
+
+        toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
+        handleSyncAccounts(currentUser.uid);
+      }
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Erro na conexão", description: "Não foi possível autorizar a conta." });
+    } finally {
       setLoading(false);
-      toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
-      handleSyncAccounts();
-    }, 1500);
+    }
   };
 
   const toggleMonitoring = (accId: string, current: boolean) => {
@@ -177,7 +189,7 @@ export default function IntegrationsPage() {
                     <Button 
                       onClick={handleMetaConnect} 
                       disabled={loading} 
-                      className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl"
+                      className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02]"
                     >
                       {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Facebook className="w-6 h-6" />}
                       Autorizar Facebook Ads
@@ -191,7 +203,7 @@ export default function IntegrationsPage() {
                     <div className="text-xs text-muted-foreground">
                       Última autorização: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleString('pt-BR') : 'Nunca'}
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleSyncAccounts} disabled={syncing} className="gap-2 border-primary/20 text-primary">
+                    <Button variant="outline" size="sm" onClick={() => user && handleSyncAccounts(user.uid)} disabled={syncing} className="gap-2 border-primary/20 text-primary">
                       <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
                       Sincronizar BMs e Contas
                     </Button>
@@ -227,7 +239,7 @@ export default function IntegrationsPage() {
                           onClick={() => toggleMonitoring(acc.accountId, acc.monitored)}
                           variant={acc.monitored ? "default" : "outline"}
                           size="sm"
-                          className={cn("h-8 rounded-lg", acc.monitored && "bg-green-600 hover:bg-green-700")}
+                          className={cn("h-8 rounded-lg transition-all", acc.monitored && "bg-green-600 hover:bg-green-700")}
                         >
                           {acc.monitored ? "Ativo" : "Monitorar"}
                         </Button>
