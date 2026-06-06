@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "meta-ads-logo",
+      "description": "Meta Ads Logo",
+      "imageUrl": "https://picsum.photos/seed/meta/40/40",
+      "imageHint": "meta ads logo"
+    },
+    {
+      "id": "google-ads-logo",
+      "description": "Google Ads Logo",
+      "imageUrl": "https://picsum.photos/seed/google/40/40",
+      "imageHint": "google ads logo"
+    }
+  ]
 }
