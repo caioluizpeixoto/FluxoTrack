@@ -11,6 +11,7 @@ import { collection, doc, setDoc, deleteDoc, updateDoc, serverTimestamp } from "
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import LinkNext from "next/link";
 
 export default function IntegrationsPage() {
   const { user } = useUser();
