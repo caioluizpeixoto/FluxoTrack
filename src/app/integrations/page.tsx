@@ -5,9 +5,9 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, RefreshCw, CheckCircle2, AlertCircle, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
+import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
-import { collection, doc, setDoc, deleteDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -32,42 +32,7 @@ export default function IntegrationsPage() {
 
   const isConnected = !!profile?.metaAccessToken;
 
-  const handleMetaConnect = async () => {
-    if (!user || !userRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para conectar." });
-      return;
-    }
-
-    setLoading(true);
-    
-    // Simulação do fluxo de autorização OAuth Meta
-    setTimeout(async () => {
-      try {
-        await setDoc(userRef, {
-          metaConnected: true,
-          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
-          lastMetaAuth: new Date().toISOString(),
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-        
-        toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
-        
-        // Simula busca inicial de contas após conexão
-        handleSyncAccounts();
-      } catch (err: any) {
-        const permissionError = new FirestorePermissionError({
-          path: userRef.path,
-          operation: 'update',
-          requestResourceData: { metaConnected: true }
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      } finally {
-        setLoading(false);
-      }
-    }, 1000);
-  };
-
-  const handleSyncAccounts = async () => {
+  const handleSyncAccounts = () => {
     if (!user || !db) return;
     setSyncing(true);
     
@@ -76,41 +41,81 @@ export default function IntegrationsPage() {
       { accountId: "act_789012", name: "Backup - Tráfego Direto", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" }
     ];
 
-    try {
-      const accountsColl = collection(db, "users", user.uid, "ad_accounts");
-      for (const acc of mockAccounts) {
-        const accRef = doc(accountsColl, acc.accountId);
-        setDoc(accRef, {
-          ...acc,
-          monitored: true,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-      }
-      toast({ title: "Sincronização concluída", description: `${mockAccounts.length} contas encontradas.` });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Erro ao sincronizar", description: "Falha na comunicação com a Meta." });
-    } finally {
+    const accountsColl = collection(db, "users", user.uid, "ad_accounts");
+    
+    mockAccounts.forEach((acc) => {
+      const accRef = doc(accountsColl, acc.accountId);
+      const data = { ...acc, monitored: true, updatedAt: serverTimestamp() };
+      
+      setDoc(accRef, data, { merge: true })
+        .catch(async () => {
+          const err = new FirestorePermissionError({ path: accRef.path, operation: 'write', requestResourceData: data });
+          errorEmitter.emit('permission-error', err);
+        });
+    });
+
+    setTimeout(() => {
       setSyncing(false);
-    }
+      toast({ title: "Sincronização concluída", description: `${mockAccounts.length} contas encontradas.` });
+    }, 1000);
   };
 
-  const toggleMonitoring = async (accId: string, current: boolean) => {
+  const handleMetaConnect = () => {
+    if (!user || !userRef) {
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa fazer login primeiro!" });
+      return;
+    }
+
+    setLoading(true);
+    
+    const data = {
+      metaConnected: true,
+      metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+      lastMetaAuth: new Date().toISOString(),
+      updatedAt: serverTimestamp()
+    };
+
+    setDoc(userRef, data, { merge: true })
+      .catch(async () => {
+        const permissionError = new FirestorePermissionError({
+          path: userRef.path,
+          operation: 'update',
+          requestResourceData: data,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
+
+    setTimeout(() => {
+      setLoading(false);
+      toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
+      handleSyncAccounts();
+    }, 1500);
+  };
+
+  const toggleMonitoring = (accId: string, current: boolean) => {
     if (!user || !db) return;
     const accRef = doc(db, "users", user.uid, "ad_accounts", accId);
+    
     updateDoc(accRef, { monitored: !current })
       .catch(async () => {
         const err = new FirestorePermissionError({ path: accRef.path, operation: 'update' });
         errorEmitter.emit('permission-error', err);
       });
+    
     toast({ title: current ? "Monitoramento pausado" : "Monitoramento ativado" });
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     if (!userRef) return;
-    await updateDoc(userRef, {
+    
+    updateDoc(userRef, {
       metaAccessToken: null,
       metaConnected: false
+    }).catch(async () => {
+      const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
+      errorEmitter.emit('permission-error', err);
     });
+
     toast({ title: "Desconectado", description: "Sua conta Meta foi desvinculada." });
   };
 
@@ -171,7 +176,7 @@ export default function IntegrationsPage() {
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
-                      disabled={loading || !user} 
+                      disabled={loading} 
                       className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl"
                     >
                       {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Facebook className="w-6 h-6" />}

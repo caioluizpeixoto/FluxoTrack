@@ -7,22 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Facebook, 
-  RefreshCw, 
-  Sparkles, 
-  Target, 
-  ShieldCheck, 
-  Lock,
-  Trash2,
-  Zap
-} from "lucide-react";
+import { Facebook, RefreshCw, Target, ShieldCheck, Lock, Trash2, Zap } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc, setDoc, serverTimestamp, deleteDoc, query, getDocs, updateDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function MetaAdsPage() {
   const { user } = useUser();
@@ -30,11 +23,9 @@ export default function MetaAdsPage() {
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
-  // Busca dados de configuração do usuário
   const userRef = useMemo(() => user ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: profile } = useDoc(userRef);
 
-  // Busca campanhas sincronizadas
   const campaignsQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "campaigns");
@@ -45,30 +36,30 @@ export default function MetaAdsPage() {
 
   const handleFacebookConnect = () => {
     if (!user || !userRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado." });
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa fazer login primeiro!" });
       return;
     }
     setConnecting(true);
 
-    // Simulação de conexão automática (OAuth Mock)
-    setTimeout(async () => {
-      try {
-        await setDoc(userRef, {
-          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
-          metaConnected: true,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-        
-        toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
-      } catch (err) {
-        toast({ variant: "destructive", title: "Erro ao salvar", description: "Não conseguimos persistir o token." });
-      } finally {
-        setConnecting(false);
-      }
+    const data = {
+      metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+      metaConnected: true,
+      updatedAt: serverTimestamp()
+    };
+
+    setDoc(userRef, data, { merge: true })
+      .catch(async () => {
+        const err = new FirestorePermissionError({ path: userRef.path, operation: 'update', requestResourceData: data });
+        errorEmitter.emit('permission-error', err);
+      });
+
+    setTimeout(() => {
+      setConnecting(false);
+      toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
     }, 1500);
   };
 
-  const handleSyncData = async () => {
+  const handleSyncData = () => {
     if (!user || !db) return;
     setSyncing(true);
 
@@ -77,48 +68,53 @@ export default function MetaAdsPage() {
       { campaignId: "meta_2", name: "Remarketing_Carrinho_Aberto", platform: "meta", status: "ACTIVE", spend: 320.15, clicks: 450, impressions: 8500, conversions: 9 },
     ];
 
-    try {
-      const campaignsRef = collection(db, "users", user.uid, "campaigns");
-      for (const camp of mockMetaCampaigns) {
-        const campDocRef = doc(campaignsRef, camp.campaignId);
-        setDoc(campDocRef, {
-          ...camp,
-          lastSync: new Date().toISOString(),
-          serverTimestamp: serverTimestamp()
-        }, { merge: true });
-      }
-      toast({ title: "Sincronização concluída", description: "Dados de gastos atualizados." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erro na sincronização", description: "Falha ao importar dados." });
-    } finally {
+    const campaignsRef = collection(db, "users", user.uid, "campaigns");
+    
+    mockMetaCampaigns.forEach((camp) => {
+      const campDocRef = doc(campaignsRef, camp.campaignId);
+      const data = { ...camp, lastSync: new Date().toISOString(), serverTimestamp: serverTimestamp() };
+      
+      setDoc(campDocRef, data, { merge: true })
+        .catch(async () => {
+          const err = new FirestorePermissionError({ path: campDocRef.path, operation: 'write', requestResourceData: data });
+          errorEmitter.emit('permission-error', err);
+        });
+    });
+
+    setTimeout(() => {
       setSyncing(false);
-    }
+      toast({ title: "Sincronização concluída", description: "Dados de gastos atualizados." });
+    }, 1500);
   };
 
   const handleDeleteCampaigns = async () => {
     if (!user || !db) return;
-    try {
-      const q = query(collection(db, "users", user.uid, "campaigns"));
-      const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map((d) => deleteDoc(doc(db, "users", user.uid, "campaigns", d.id)));
-      await Promise.all(deletePromises);
-      toast({ title: "Dados limpos", description: "Campanhas removidas." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erro", description: "Falha ao limpar dados." });
-    }
+    const q = query(collection(db, "users", user.uid, "campaigns"));
+    const snapshot = await getDocs(q);
+    
+    snapshot.docs.forEach((d) => {
+      deleteDoc(doc(db, "users", user.uid, "campaigns", d.id))
+        .catch(async () => {
+          const err = new FirestorePermissionError({ path: d.ref.path, operation: 'delete' });
+          errorEmitter.emit('permission-error', err);
+        });
+    });
+    
+    toast({ title: "Dados limpos", description: "Campanhas removidas." });
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     if (!userRef) return;
-    try {
-      await updateDoc(userRef, { 
-        metaAccessToken: null, 
-        metaConnected: false 
-      });
-      toast({ title: "Desconectado", description: "Conta desvinculada." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erro", description: "Não foi possível desconectar." });
-    }
+    
+    updateDoc(userRef, { 
+      metaAccessToken: null, 
+      metaConnected: false 
+    }).catch(async () => {
+      const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
+      errorEmitter.emit('permission-error', err);
+    });
+
+    toast({ title: "Desconectado", description: "Conta desvinculada." });
   };
 
   return (
@@ -157,7 +153,7 @@ export default function MetaAdsPage() {
               <div className="space-y-4">
                 <Button 
                   onClick={handleFacebookConnect} 
-                  disabled={connecting || !user}
+                  disabled={connecting}
                   className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg gap-3 shadow-lg shadow-blue-900/20 rounded-2xl transition-all hover:scale-[1.02]"
                 >
                   {connecting ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6 fill-current" />}
@@ -179,8 +175,11 @@ export default function MetaAdsPage() {
                       onBlur={(e) => {
                         if (e.target.value && user && userRef) {
                           setDoc(userRef, { metaAccessToken: e.target.value, metaConnected: true }, { merge: true })
-                            .then(() => toast({ title: "Token salvo!", description: "Conexão manual estabelecida." }))
-                            .catch(() => toast({ variant: "destructive", title: "Erro", description: "Falha ao salvar token." }));
+                            .catch(async () => {
+                              const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
+                              errorEmitter.emit('permission-error', err);
+                            });
+                          toast({ title: "Token salvo!", description: "Conexão manual estabelecida." });
                         }
                       }}
                     />
