@@ -7,7 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { MousePointer2, Clock, Globe, ArrowUpRight, Button } from "lucide-react";
 import { useUser, useCollection, useFirestore } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, limit } from "firebase/firestore";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button as ShadButton } from "@/components/ui/button";
@@ -16,11 +16,13 @@ export default function EventsPage() {
   const { user } = useUser();
   const db = useFirestore();
 
+  // Busca os últimos 100 eventos reais do Firestore
   const eventsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
       collection(db, "users", user.uid, "events"),
-      orderBy("timestamp", "desc")
+      orderBy("serverTimestamp", "desc"),
+      limit(100)
     );
   }, [db, user]);
 
@@ -51,7 +53,7 @@ export default function EventsPage() {
               </div>
             ) : !events || events.length === 0 ? (
               <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-2xl">
-                <p className="text-muted-foreground">Nenhum evento capturado. Verifique a instalação do script.</p>
+                <p className="text-muted-foreground">Nenhum evento capturado ainda. Instale o script no seu site para começar.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -71,8 +73,8 @@ export default function EventsPage() {
                         <TableCell>
                           <Badge className={cn(
                             "capitalize border-none font-bold",
-                            event.eventType === 'purchase' ? "bg-green-500/10 text-green-500" :
-                            event.eventType === 'checkout_start' ? "bg-yellow-500/10 text-yellow-500" :
+                            event.eventType === 'purchase' || event.eventType === 'PURCHASED' ? "bg-green-500/10 text-green-500" :
+                            event.eventType === 'checkout_start' || event.eventType === 'START_CHECKOUT' ? "bg-yellow-500/10 text-yellow-500" :
                             "bg-primary/10 text-primary"
                           )}>
                             {event.eventType.replace('_', ' ')}
@@ -81,7 +83,7 @@ export default function EventsPage() {
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {new Date(event.timestamp).toLocaleString()}
+                            {event.timestamp ? new Date(event.timestamp).toLocaleString('pt-BR') : 'Agora'}
                           </div>
                         </TableCell>
                         <TableCell>
