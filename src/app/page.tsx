@@ -4,12 +4,10 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { 
   TrendingUp, 
-  Users, 
   DollarSign, 
   Percent, 
   ShoppingCart, 
   ArrowUpRight,
-  Filter,
   Calendar,
   Sparkles,
   RefreshCw
@@ -61,7 +59,6 @@ export default function Dashboard() {
     setMounted(true);
   }, []);
 
-  // Busca eventos recentes do usuário
   const eventsQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -78,10 +75,10 @@ export default function Dashboard() {
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <Card className="p-8 text-center glass-card">
-          <h2 className="text-2xl font-bold mb-4">Bem-vindo ao AdPulse</h2>
-          <p className="text-muted-foreground mb-6">Por favor, faça login para acessar seu dashboard.</p>
-          <Button className="glow-primary">Acessar Conta</Button>
+        <Card className="p-8 text-center glass-card max-w-md">
+          <h2 className="text-2xl font-bold mb-4 font-headline">Bem-vindo ao AdPulse</h2>
+          <p className="text-muted-foreground mb-6">Conecte sua conta para começar a rastrear suas conversões e otimizar seu ROAS com IA.</p>
+          <Button className="w-full glow-primary py-6 text-lg font-headline">Acessar com Google</Button>
         </Card>
       </div>
     );
@@ -94,16 +91,16 @@ export default function Dashboard() {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1">Visão Geral</h1>
-            <p className="text-muted-foreground">Tracking em tempo real e análise de ROAS.</p>
+            <p className="text-muted-foreground">Tracking em tempo real e análise de atribuição.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2 border-white/10">
               <Calendar className="w-4 h-4" />
               Últimos 7 Dias
             </Button>
             <Button size="sm" className="gap-2 glow-primary">
               <RefreshCw className="w-4 h-4" />
-              Sincronizar
+              Sincronizar Dados
             </Button>
           </div>
         </header>
@@ -143,7 +140,7 @@ export default function Dashboard() {
           <Card className="lg:col-span-2 glass-card">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium uppercase tracking-wider text-muted-foreground font-headline">Receita vs Gasto</CardTitle>
-              <Badge variant="secondary" className="bg-primary/10 text-primary">Sincronizado</Badge>
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-none">Atualizado</Badge>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -162,9 +159,9 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
                     <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', color: '#fff' }} />
-                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorRevenue)" />
-                    <Area type="monotone" dataKey="spend" stroke="hsl(var(--accent))" fillOpacity={1} fill="url(#colorSpend)" />
+                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '12px' }} />
+                    <Area type="monotone" dataKey="revenue" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorRevenue)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="spend" stroke="hsl(var(--accent))" fillOpacity={1} fill="url(#colorSpend)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -182,7 +179,7 @@ export default function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
                     <XAxis type="number" hide />
                     <YAxis dataKey="name" type="category" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} width={100} />
-                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', color: '#fff' }} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0F172A', borderColor: '#334155', borderRadius: '12px' }} />
                     <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                       {conversionData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -200,42 +197,48 @@ export default function Dashboard() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="font-headline">Eventos Recentes</CardTitle>
-                <p className="text-xs text-muted-foreground">Últimas atividades capturadas</p>
+                <p className="text-xs text-muted-foreground">Últimas atividades capturadas via Pixel</p>
               </div>
               <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80">Ver Todos</Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {eventsLoading ? (
-                  <p className="text-sm text-muted-foreground">Carregando eventos...</p>
+                  <div className="flex flex-col gap-4">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-lg" />)}
+                  </div>
                 ) : recentEvents?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum evento detectado ainda.</p>
+                  <div className="py-8 text-center">
+                    <p className="text-sm text-muted-foreground">Nenhum evento detectado. Instale o script de tracking no seu site.</p>
+                  </div>
                 ) : (
                   recentEvents?.map((item: any) => (
-                    <div key={item.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all border border-transparent hover:border-white/5">
                       <div className="flex items-center gap-3">
                         <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
                         <div className="flex flex-col">
-                          <span className="text-sm font-medium">{item.eventType}</span>
-                          <span className="text-[10px] text-muted-foreground uppercase">{item.url || 'Página Interna'}</span>
+                          <span className="text-sm font-medium capitalize">{item.eventType.replace('_', ' ')}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase truncate max-w-[200px]">{item.url || 'Página Interna'}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] text-muted-foreground">{new Date(item.timestamp).toLocaleTimeString()}</div>
+                        <div className="text-[10px] text-muted-foreground">{item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '--:--'}</div>
                       </div>
                     </div>
                   ))
                 )}
-                {/* Fallback mockup para visualização se não houver dados reais */}
                 {(!recentEvents || recentEvents.length === 0) && !eventsLoading && (
                    <div className="opacity-50">
                      {[
-                       { event: "Compra Aprovada", time: "2 min atrás", value: "R$ 49,00" },
-                       { event: "PIX Gerado", time: "15 min atrás", value: "R$ 120,00" },
+                       { event: "Checkout Iniciado", time: "2 min atrás", url: "/checkout-v1" },
+                       { event: "Visualização de Página", time: "15 min atrás", url: "/home" },
                      ].map((item, i) => (
-                       <div key={i} className="flex items-center justify-between p-3">
-                         <span className="text-sm">{item.event}</span>
-                         <span className="text-xs">{item.time}</span>
+                       <div key={i} className="flex items-center justify-between p-3 border-b border-white/5 last:border-none">
+                         <div className="flex flex-col">
+                            <span className="text-sm">{item.event}</span>
+                            <span className="text-[10px] text-muted-foreground">{item.url}</span>
+                         </div>
+                         <span className="text-xs text-muted-foreground">{item.time}</span>
                        </div>
                      ))}
                    </div>
@@ -250,22 +253,22 @@ export default function Dashboard() {
             </div>
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2">AI Path Mapping</CardTitle>
-              <p className="text-sm text-muted-foreground">Mapeando vendas "órfãs" para campanhas</p>
+              <p className="text-sm text-muted-foreground">Resolvendo vendas órfãs com inteligência artificial</p>
             </CardHeader>
             <CardContent>
-              <div className="bg-accent/5 border border-accent/10 rounded-xl p-4 mb-4">
-                <p className="text-sm italic text-accent-foreground/80 leading-relaxed">
-                  "Identificamos 12 conversões sem origem nas últimas 24h. A IA sugere atribuição de 85% para a campanha 'Retargeting Black Friday' baseada em padrão de IP."
+              <div className="bg-accent/10 border border-accent/20 rounded-2xl p-6 mb-6">
+                <p className="text-sm italic text-accent-foreground/90 leading-relaxed font-medium">
+                  "Detectamos um padrão de IP recorrente em 12 vendas sem origem. A IA sugere 85% de probabilidade de virem da campanha 'Escala_Nativa_01'."
                 </p>
               </div>
               <div className="space-y-3">
-                <Button className="w-full justify-between bg-accent/20 hover:bg-accent/30 text-accent-foreground border border-accent/30 font-headline h-12">
-                  <span>Re-atribuir #ORD-9821</span>
-                  <ArrowUpRight className="w-4 h-4" />
+                <Button className="w-full justify-between bg-accent/20 hover:bg-accent/30 text-accent-foreground border border-accent/30 font-headline h-14 rounded-xl px-6 group">
+                  <span>Re-atribuir Pedido #9821</span>
+                  <ArrowUpRight className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </Button>
-                <Button className="w-full justify-between bg-accent/20 hover:bg-accent/30 text-accent-foreground border border-accent/30 font-headline h-12">
-                  <span>Análise de Caminho Completa</span>
-                  <ArrowUpRight className="w-4 h-4" />
+                <Button variant="ghost" className="w-full justify-between text-muted-foreground hover:text-foreground font-headline h-14 rounded-xl px-6">
+                  <span>Ver Relatório Completo</span>
+                  <ArrowUpRight className="w-5 h-5 opacity-50" />
                 </Button>
               </div>
             </CardContent>
