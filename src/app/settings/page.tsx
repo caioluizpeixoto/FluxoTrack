@@ -8,14 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Copy, Check, Shield, Code, Save, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function SettingsPage() {
   const { user } = useUser();
   const db = useFirestore();
-  const userRef = user ? doc(db, "users", user.uid) : null;
+  
+  const userRef = useMemo(() => {
+    return user ? doc(db, "users", user.uid) : null;
+  }, [db, user]);
+
   const { data: profile } = useDoc(userRef);
 
   const [storeUrl, setStoreUrl] = useState("");
@@ -30,7 +34,14 @@ export default function SettingsPage() {
   }, [profile]);
 
   const handleSaveProfile = async () => {
-    if (!userRef) return;
+    if (!userRef) {
+      toast({
+        variant: "destructive",
+        title: "Ação não permitida",
+        description: "Você precisa estar logado para salvar alterações.",
+      });
+      return;
+    }
     try {
       await updateDoc(userRef, {
         storeUrl,
@@ -138,10 +149,10 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Seu Tracking ID</Label>
                   <div className="p-3 rounded-lg bg-muted text-xs font-mono break-all border border-white/5">
-                    {user?.uid}
+                    {user?.uid || "Faça login para ver seu ID"}
                   </div>
                 </div>
-                <Button onClick={handleSaveProfile} className="w-full gap-2 glow-primary">
+                <Button onClick={handleSaveProfile} className="w-full gap-2 glow-primary" disabled={!user}>
                   <Save className="w-4 h-4" />
                   Salvar Alterações
                 </Button>

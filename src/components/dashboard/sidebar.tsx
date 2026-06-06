@@ -12,12 +12,13 @@ import {
   Webhook, 
   Zap,
   Sparkles,
-  LogOut
+  LogOut,
+  LogIn
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/firebase";
-import { signOut } from "firebase/auth";
+import { useAuth, useUser } from "@/firebase";
+import { signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -33,9 +34,15 @@ const navItems = [
 export function DashboardSidebar() {
   const pathname = usePathname();
   const auth = useAuth();
+  const { user } = useUser();
 
   const handleSignOut = () => {
     signOut(auth);
+  };
+
+  const handleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
   };
 
   return (
@@ -72,19 +79,34 @@ export function DashboardSidebar() {
         <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
           <ShieldCheck className="w-5 h-5 text-accent" />
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-accent font-headline uppercase">Plano Pro</span>
-            <span className="text-[10px] text-muted-foreground">Ativo para este projeto</span>
+            <span className="text-xs font-bold text-accent font-headline uppercase">
+              {user ? "Plano Pro" : "Modo Teste"}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {user ? "Ativo para este projeto" : "Autenticação opcional"}
+            </span>
           </div>
         </div>
         
-        <Button 
-          variant="ghost" 
-          onClick={handleSignOut}
-          className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-        >
-          <LogOut className="w-5 h-5" />
-          Sair da Conta
-        </Button>
+        {user ? (
+          <Button 
+            variant="ghost" 
+            onClick={handleSignOut}
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          >
+            <LogOut className="w-5 h-5" />
+            Sair da Conta
+          </Button>
+        ) : (
+          <Button 
+            variant="ghost" 
+            onClick={handleSignIn}
+            className="w-full justify-start gap-3 text-primary hover:bg-primary/10"
+          >
+            <LogIn className="w-5 h-5" />
+            Fazer Login
+          </Button>
+        )}
       </div>
     </div>
   );

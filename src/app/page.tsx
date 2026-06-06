@@ -55,7 +55,7 @@ const conversionData = [
 const COLORS = ['#3B82F6', '#6366F1', '#8B5CF6', '#EC4899'];
 
 export default function Dashboard() {
-  const { user, loading: userLoading } = useUser();
+  const { user } = useUser();
   const auth = useAuth();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
@@ -69,7 +69,6 @@ export default function Dashboard() {
     try {
       const result = await signInWithPopup(auth, provider);
       if (result.user) {
-        // Criar perfil do usuário se não existir
         const userRef = doc(db, "users", result.user.uid);
         setDoc(userRef, {
           uid: result.user.uid,
@@ -95,29 +94,7 @@ export default function Dashboard() {
 
   const { data: recentEvents, loading: eventsLoading } = useCollection(eventsQuery);
 
-  if (!mounted || userLoading) return null;
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="p-8 text-center glass-card max-w-md w-full border-primary/20">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 rounded-full bg-primary/10 glow-primary">
-              <TrendingUp className="w-12 h-12 text-primary" />
-            </div>
-          </div>
-          <h2 className="text-3xl font-bold mb-4 font-headline">Bem-vindo ao AdPulse</h2>
-          <p className="text-muted-foreground mb-8 text-sm">
-            O hub definitivo para tracking de marketing e atribuição inteligente. Conecte sua conta para começar.
-          </p>
-          <Button onClick={handleLogin} className="w-full glow-primary py-6 text-lg font-headline gap-3">
-            <LogIn className="w-5 h-5" />
-            Entrar com Google
-          </Button>
-        </Card>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -126,9 +103,17 @@ export default function Dashboard() {
         <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1">Visão Geral</h1>
-            <p className="text-muted-foreground">Bem-vindo de volta, {user.displayName?.split(' ')[0]}.</p>
+            <p className="text-muted-foreground">
+              {user ? `Bem-vindo de volta, ${user.displayName?.split(' ')[0]}.` : "Bem-vindo ao AdPulse Dashboard."}
+            </p>
           </div>
           <div className="flex items-center gap-3">
+            {!user && (
+              <Button onClick={handleLogin} variant="outline" size="sm" className="gap-2 border-primary/30 text-primary">
+                <LogIn className="w-4 h-4" />
+                Entrar
+              </Button>
+            )}
             <Button variant="outline" size="sm" className="gap-2 border-white/10">
               <Calendar className="w-4 h-4" />
               Últimos 7 Dias
@@ -242,12 +227,14 @@ export default function Dashboard() {
                   <div className="flex flex-col gap-4">
                     {[1, 2, 3].map(i => <div key={i} className="h-12 w-full bg-white/5 animate-pulse rounded-lg" />)}
                   </div>
-                ) : recentEvents?.length === 0 ? (
+                ) : !recentEvents || recentEvents.length === 0 ? (
                   <div className="py-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
-                    <p className="text-sm text-muted-foreground px-4">Nenhum evento detectado. Instale o script de tracking no seu site para ver as atividades aqui.</p>
+                    <p className="text-sm text-muted-foreground px-4">
+                      {user ? "Nenhum evento detectado ainda." : "Faça login para ver seus eventos reais aqui."}
+                    </p>
                   </div>
                 ) : (
-                  recentEvents?.map((item: any) => (
+                  recentEvents.map((item: any) => (
                     <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all border border-transparent hover:border-white/5">
                       <div className="flex items-center gap-3">
                         <div className={cn(
