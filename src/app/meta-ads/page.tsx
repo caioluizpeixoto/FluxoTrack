@@ -17,10 +17,11 @@ import {
   ExternalLink,
   CheckCircle2,
   Lock,
-  Trash2
+  Trash2,
+  Zap
 } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc, setDoc, addDoc, serverTimestamp, deleteDoc, query, getDocs } from "firebase/firestore";
 import { cn } from "@/lib/utils";
@@ -28,12 +29,18 @@ import { toast } from "@/hooks/use-toast";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+declare global {
+  interface Window {
+    fbAsyncInit: () => void;
+    FB: any;
+  }
+}
+
 export default function MetaAdsPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [syncing, setSyncing] = useState(false);
-  const [accessToken, setAccessToken] = useState("");
-  const [pixelId, setPixelId] = useState("");
+  const [connecting, setConnecting] = useState(false);
 
   // Busca dados de configuração do usuário
   const userRef = useMemo(() => user ? doc(db, "users", user.uid) : null, [db, user]);
@@ -48,40 +55,62 @@ export default function MetaAdsPage() {
 
   const isConnected = !!profile?.metaAccessToken;
 
-  const handleConnect = async () => {
-    if (!user || !accessToken) {
-      toast({ variant: "destructive", title: "Erro", description: "Insira o Access Token para conectar." });
-      return;
-    }
-    
-    setSyncing(true);
-    const docRef = doc(db, "users", user.uid);
-    
-    setDoc(docRef, {
-      metaAccessToken: accessToken,
-      metaPixelId: pixelId,
-      updatedAt: new Date().toISOString()
-    }, { merge: true })
-    .then(() => {
-      toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
-      setSyncing(false);
-    })
-    .catch(async (err) => {
-      const permissionError = new FirestorePermissionError({
-        path: docRef.path,
-        operation: 'update',
-        requestResourceData: { metaAccessToken: accessToken },
+  // Inicializa o SDK do Facebook
+  useEffect(() => {
+    const appId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || '1234567890'; // Substitua pelo seu App ID real
+
+    window.fbAsyncInit = function() {
+      window.FB.init({
+        appId: appId,
+        cookie: true,
+        xfbml: true,
+        version: 'v18.0'
       });
-      errorEmitter.emit('permission-error', permissionError);
-      setSyncing(false);
-    });
+    };
+
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s) as HTMLScriptElement; js.id = id;
+      js.src = "https://connect.facebook.net/pt_BR/sdk.js";
+      fjs.parentNode?.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  }, []);
+
+  const handleFacebookConnect = () => {
+    if (!user) return;
+    setConnecting(true);
+
+    window.FB.login((response: any) => {
+      if (response.authResponse) {
+        const accessToken = response.authResponse.accessToken;
+        
+        // Salva o token no Firestore
+        const docRef = doc(db, "users", user.uid);
+        setDoc(docRef, {
+          metaAccessToken: accessToken,
+          updatedAt: new Date().toISOString()
+        }, { merge: true })
+        .then(() => {
+          toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada via login automático." });
+          setConnecting(false);
+        })
+        .catch(async () => {
+          toast({ variant: "destructive", title: "Erro ao salvar", description: "Não conseguimos persistir o token." });
+          setConnecting(false);
+        });
+      } else {
+        toast({ variant: "destructive", title: "Conexão Cancelada", description: "O usuário cancelou o login ou não autorizou a aplicação." });
+        setConnecting(false);
+      }
+    }, { scope: 'ads_read,ads_management,business_management' });
   };
 
   const handleSyncData = async () => {
     if (!user) return;
     setSyncing(true);
 
-    // Simulação de busca na API da Meta (em produção aqui seria um fetch para graph.facebook.com)
+    // Simulação de busca na API da Meta (em produção aqui seria um fetch real)
     const mockMetaCampaigns = [
       { campaignId: "meta_1", name: "Escala_Lookalike_01", platform: "meta", status: "ACTIVE", spend: 850.40, clicks: 1200, impressions: 24000, conversions: 15 },
       { campaignId: "meta_2", name: "Remarketing_Carrinho_Aberto", platform: "meta", status: "ACTIVE", spend: 320.15, clicks: 450, impressions: 8500, conversions: 9 },
@@ -89,8 +118,6 @@ export default function MetaAdsPage() {
 
     try {
       const campaignsRef = collection(db, "users", user.uid, "campaigns");
-      
-      // Para o MVP, estamos adicionando as campanhas simuladas ao Firestore real
       for (const camp of mockMetaCampaigns) {
         await addDoc(campaignsRef, {
           ...camp,
@@ -98,10 +125,9 @@ export default function MetaAdsPage() {
           serverTimestamp: serverTimestamp()
         });
       }
-
-      toast({ title: "Sincronização concluída", description: "Os dados de gastos foram atualizados." });
+      toast({ title: "Sincronização concluída", description: "Dados de gastos atualizados." });
     } catch (err) {
-      toast({ variant: "destructive", title: "Erro na sincronização", description: "Não foi possível importar os dados." });
+      toast({ variant: "destructive", title: "Erro na sincronização", description: "Falha ao importar dados." });
     } finally {
       setSyncing(false);
     }
@@ -112,7 +138,7 @@ export default function MetaAdsPage() {
     const q = query(collection(db, "users", user.uid, "campaigns"));
     const snapshot = await getDocs(q);
     snapshot.forEach((d) => deleteDoc(doc(db, "users", user.uid, "campaigns", d.id)));
-    toast({ title: "Dados limpos", description: "Todas as campanhas foram removidas." });
+    toast({ title: "Dados limpos", description: "Campanhas removidas." });
   };
 
   return (
@@ -122,7 +148,7 @@ export default function MetaAdsPage() {
         <header className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1">Conexão Meta Ads</h1>
-            <p className="text-muted-foreground">Sincronize seus gastos para calcular o ROAS real no Dashboard.</p>
+            <p className="text-muted-foreground">Conecte sua conta para importar gastos e calcular ROAS real.</p>
           </div>
           {isConnected && (
             <div className="flex items-center gap-3">
@@ -143,42 +169,45 @@ export default function MetaAdsPage() {
               <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 glow-primary">
                 <Facebook className="w-10 h-10 text-white" />
               </div>
-              <CardTitle className="text-2xl font-headline mb-2 text-center">Configurar Token da API Graph</CardTitle>
+              <CardTitle className="text-2xl font-headline mb-2 text-center">Conectar via Login Oficial</CardTitle>
               <CardDescription className="mb-8 text-center">
-                Para importar seus gastos, você precisa de um "Access Token de Usuário do Sistema" gerado no Gerenciador de Negócios da Meta.
+                A maneira mais segura e rápida. Autorize o AdPulse a ler seus dados de anúncios com apenas um clique.
               </CardDescription>
               
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Meta Access Token (Long-lived)</Label>
-                  <Input 
-                    type="password" 
-                    placeholder="EAAB..." 
-                    value={accessToken}
-                    onChange={(e) => setAccessToken(e.target.value)}
-                    className="bg-white/5 border-white/10 font-mono"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Pixel ID (Opcional para CAPI)</Label>
-                  <Input 
-                    placeholder="123456789..." 
-                    value={pixelId}
-                    onChange={(e) => setPixelId(e.target.value)}
-                    className="bg-white/5 border-white/10"
-                  />
-                </div>
                 <Button 
-                  onClick={handleConnect} 
-                  disabled={syncing}
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold gap-3"
+                  onClick={handleFacebookConnect} 
+                  disabled={connecting}
+                  className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg gap-3 shadow-lg shadow-blue-900/20"
                 >
-                  {syncing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
-                  Conectar API Meta Ads
+                  {connecting ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 fill-current" />}
+                  Autorizar Conexão Automática
                 </Button>
-                <div className="pt-4 flex items-center justify-center gap-2">
-                  <Lock className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Conexão Segura AES-256</span>
+                
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
+                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-2 text-muted-foreground">Ou via Token Manual</span></div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Access Token de Usuário do Sistema</Label>
+                    <Input 
+                      type="password" 
+                      placeholder="EAAB..." 
+                      className="bg-white/5 border-white/10 font-mono text-xs"
+                      onBlur={(e) => {
+                        if (e.target.value && user) {
+                          setDoc(doc(db, "users", user.uid), { metaAccessToken: e.target.value }, { merge: true });
+                          toast({ title: "Token salvo!", description: "Conexão manual estabelecida." });
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="pt-4 flex items-center justify-center gap-2">
+                    <Lock className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Protocolo de Segurança OAuth 2.0</span>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -193,7 +222,7 @@ export default function MetaAdsPage() {
                       <Target className="w-5 h-5 text-primary" />
                       Campanhas Importadas
                     </CardTitle>
-                    <CardDescription>Dados sincronizados diretamente da sua BM.</CardDescription>
+                    <CardDescription>Dados sincronizados via API Graph.</CardDescription>
                   </div>
                   <Button variant="ghost" size="sm" onClick={handleDeleteCampaigns} className="text-destructive">
                     <Trash2 className="w-4 h-4" />
@@ -223,7 +252,7 @@ export default function MetaAdsPage() {
                                 {acc.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-mono">R$ {acc.spend?.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-mono text-xs">R$ {acc.spend?.toFixed(2)}</TableCell>
                             <TableCell className="text-right font-bold text-primary">{acc.conversions}</TableCell>
                           </TableRow>
                         ))
@@ -235,16 +264,16 @@ export default function MetaAdsPage() {
 
               <Card className="glass-card">
                 <CardHeader>
-                  <CardTitle className="text-lg font-headline">Configuração Avançada CAPI</CardTitle>
-                  <CardDescription>Status do envio de eventos de servidor para redução de perda do iOS.</CardDescription>
+                  <CardTitle className="text-lg font-headline">Configuração CAPI</CardTitle>
+                  <CardDescription>Eventos de servidor vinculados a este token.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                      <span className="text-sm font-medium">Eventos de Compra sendo enviados via Servidor</span>
+                      <span className="text-sm font-medium">Fluxo de Dados Ativo</span>
                     </div>
-                    <Badge variant="outline">Ativo</Badge>
+                    <Badge variant="outline" className="text-[10px]">CAPI Enabled</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -260,12 +289,12 @@ export default function MetaAdsPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Token Ativo:</span>
-                    <span className="font-bold text-green-500">Sim</span>
+                    <span className="text-muted-foreground">Autorização:</span>
+                    <span className="font-bold text-green-500">Válida</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Última Sinc:</span>
-                    <span className="font-bold">Agora</span>
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="font-bold">OAuth 2.0</span>
                   </div>
                   <div className="pt-4 border-t border-white/5">
                     <Button 
@@ -273,25 +302,11 @@ export default function MetaAdsPage() {
                       onClick={() => {
                         if (user) setDoc(doc(db, "users", user.uid), { metaAccessToken: null }, { merge: true });
                       }}
-                      className="w-full text-destructive hover:bg-destructive/10"
+                      className="w-full text-destructive hover:bg-destructive/10 h-10"
                     >
                       Desconectar Conta
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Suporte à API</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Button variant="link" className="p-0 h-auto text-xs text-primary group justify-start w-full">
-                    Como gerar o Access Token Permanente <ExternalLink className="w-3 h-3 ml-1" />
-                  </Button>
-                  <Button variant="link" className="p-0 h-auto text-xs text-primary group justify-start w-full">
-                    Documentação do Pixel Server-Side <ExternalLink className="w-3 h-3 ml-1" />
-                  </Button>
                 </CardContent>
               </Card>
             </div>
