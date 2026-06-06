@@ -7,7 +7,6 @@ import {
   MousePointer2, 
   Target, 
   BarChart3, 
-  ShieldCheck, 
   Settings, 
   Webhook, 
   Zap,
@@ -15,14 +14,13 @@ import {
   LogOut,
   LogIn,
   Menu,
-  X
+  ShieldCheck
 } from "lucide-react";
-import Link from "next/navigation";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser } from "@/firebase";
 import { signOut, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { useState } from "react";
 import LinkNext from "next/link";
 
@@ -86,6 +84,8 @@ export function DashboardSidebar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0 bg-background border-r border-border/50">
+            <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
+            <SheetDescription className="sr-only">Acesse as principais ferramentas de tracking e atribuição do AdPulse.</SheetDescription>
             <div className="flex h-full flex-col">
               <div className="p-6">
                 <LinkNext href="/" className="flex items-center gap-2 text-primary">

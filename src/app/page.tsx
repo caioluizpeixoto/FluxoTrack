@@ -1,3 +1,4 @@
+
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -16,10 +17,8 @@ import {
   RefreshCw,
   Pencil,
   Info,
-  ChevronDown,
   LayoutGrid,
-  Menu,
-  Calendar as CalendarIcon
+  Menu
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -32,13 +31,13 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { 
   Dialog, 
   DialogContent, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger 
+  DialogTrigger,
+  DialogDescription
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { 
@@ -49,7 +48,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
 
 const chartData = [
   { name: '00:00', revenue: 1200, spend: 800 },
@@ -114,6 +112,7 @@ export default function Dashboard() {
               <DialogContent className="bg-[#121212] border-white/10 text-white">
                 <DialogHeader>
                   <DialogTitle className="font-headline">Personalizar Métricas</DialogTitle>
+                  <DialogDescription>Selecione quais indicadores você deseja acompanhar no seu painel principal.</DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                   {allMetrics.map((metric) => (
@@ -174,7 +173,7 @@ export default function Dashboard() {
               </Select>
             </div>
 
-            {/* Outros Filtros (Placeholders interativos) */}
+            {/* Outros Filtros */}
             {[
               { label: 'Conta de anúncio', value: 'Todas', options: ['Todas', 'BM 01', 'BM 02'] },
               { label: 'Plataformas', value: 'Qualquer', options: ['Qualquer', 'Facebook Ads', 'Google Ads'] },
@@ -215,7 +214,7 @@ export default function Dashboard() {
           ))}
         </section>
 
-        {/* Funil e Gráficos */}
+        {/* Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <Card className="lg:col-span-2 bg-[#121212] border-none rounded-2xl overflow-hidden shadow-xl">
              <CardHeader className="border-b border-white/5 pb-4">
@@ -243,6 +242,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
             </CardContent>
+          </AreaChart>
           </Card>
 
           <Card className="bg-[#121212] border-none rounded-2xl shadow-xl">
