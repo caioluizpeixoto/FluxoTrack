@@ -3,14 +3,16 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Dados do usuário administrador do dashboard AdPulse.",
+      "description": "Dados do usuário administrador e configurações de API.",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
         "storeUrl": { "type": "string" },
-        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] }
+        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] },
+        "metaAccessToken": { "type": "string", "description": "Token de acesso à API da Meta." },
+        "metaPixelId": { "type": "string", "description": "ID do Pixel configurado." }
       },
       "required": ["uid", "email"]
     },
@@ -21,7 +23,7 @@
       "properties": {
         "eventId": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
-        "eventType": { "type": "string", "enum": ["page_view", "click", "checkout_start", "pix_generated"] },
+        "eventType": { "type": "string", "enum": ["page_view", "click", "checkout_start", "pix_generated", "purchase"] },
         "url": { "type": "string" },
         "referrer": { "type": "string" },
         "utmSource": { "type": "string" },
