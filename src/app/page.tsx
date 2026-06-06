@@ -18,7 +18,8 @@ import {
   Info,
   ChevronDown,
   LayoutGrid,
-  Menu
+  Menu,
+  Calendar as CalendarIcon
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -40,6 +41,13 @@ import {
   DialogTrigger 
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +79,7 @@ const allMetrics = [
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [visibleMetrics, setVisibleMetrics] = useState<string[]>(allMetrics.map(m => m.id));
+  const [dateRange, setDateRange] = useState("hoje");
 
   useEffect(() => {
     setMounted(true);
@@ -89,12 +98,11 @@ export default function Dashboard() {
       <DashboardSidebar />
       
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pb-24 lg:pb-8 transition-all">
-        {/* Top Header - Estilo UTMify */}
+        {/* Top Header */}
         <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <span className="text-green-400">💚</span>
-            <span className="font-headline font-bold text-sm lg:text-base">Projeto A ✝️ G...</span>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <span className="font-headline font-bold text-sm lg:text-base uppercase tracking-tight">AdPulse Dashboard</span>
           </div>
           <div className="flex items-center gap-4">
             <Dialog>
@@ -131,41 +139,69 @@ export default function Dashboard() {
         </header>
 
         {/* Card Resumo com Filtros */}
-        <Card className="bg-[#121212] border-none rounded-2xl p-6 mb-8">
+        <Card className="bg-[#121212] border-none rounded-2xl p-6 mb-8 shadow-2xl">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-2xl font-bold font-headline mb-1">Resumo</h2>
-              <p className="text-muted-foreground text-xs">Atualizado agora mesmo</p>
+              <h2 className="text-2xl font-bold font-headline mb-1">Resumo de Performance</h2>
+              <p className="text-muted-foreground text-xs">Dados sincronizados em tempo real com as plataformas.</p>
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 rounded-lg h-12">
-              Atualizar
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 rounded-lg h-12 transition-all">
+              Sincronizar Dados
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {/* Filtro de Período */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-muted-foreground uppercase font-bold">Período de visualização</span>
+                <Info className="w-3 h-3 text-muted-foreground/50" />
+              </div>
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="bg-transparent border-white/20 rounded-xl px-4 h-14 hover:border-white/40 transition-colors text-sm font-medium outline-none">
+                  <SelectValue placeholder="Selecione o período" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                  <SelectItem value="hoje">Hoje</SelectItem>
+                  <SelectItem value="ontem">Ontem</SelectItem>
+                  <SelectItem value="sete_dias">Últimos 7 dias</SelectItem>
+                  <SelectItem value="trinta_dias">Últimos 30 dias</SelectItem>
+                  <SelectItem value="este_mes">Este mês</SelectItem>
+                  <SelectItem value="mes_passado">Mês passado</SelectItem>
+                  <SelectItem value="maximo">Máximo</SelectItem>
+                  <SelectItem value="personalizado">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Outros Filtros (Placeholders interativos) */}
             {[
-              { label: 'Período de visualização', value: 'Hoje' },
-              { label: 'Conta de anúncio', value: 'Todas' },
-              { label: 'Plataformas', value: 'Qualquer' },
-              { label: 'Produtos', value: 'Qualquer' },
-              { label: 'Fonte de tráfego', value: 'Qualquer' },
+              { label: 'Conta de anúncio', value: 'Todas', options: ['Todas', 'BM 01', 'BM 02'] },
+              { label: 'Plataformas', value: 'Qualquer', options: ['Qualquer', 'Facebook Ads', 'Google Ads'] },
+              { label: 'Produtos', value: 'Qualquer', options: ['Qualquer', 'Produto X', 'Produto Y'] },
+              { label: 'Fonte de tráfego', value: 'Qualquer', options: ['Qualquer', 'Direto', 'Referência'] },
             ].map((filter, i) => (
-              <div key={i} className={cn("space-y-2", i === 4 && "lg:col-span-1")}>
+              <div key={i} className="space-y-2">
                 <div className="flex items-center gap-1">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold">{filter.label}</span>
-                  {i === 0 && <Info className="w-3 h-3 text-muted-foreground/50" />}
                 </div>
-                <div className="flex items-center justify-between bg-transparent border border-white/20 rounded-xl px-4 h-14 cursor-pointer hover:border-white/40 transition-colors">
-                  <span className="text-sm font-medium">{filter.value}</span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </div>
+                <Select defaultValue={filter.value}>
+                  <SelectTrigger className="bg-transparent border-white/20 rounded-xl px-4 h-14 hover:border-white/40 transition-colors text-sm font-medium outline-none">
+                    <SelectValue placeholder={filter.label} />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                    {filter.options.map((opt) => (
+                      <SelectItem key={opt} value={opt.toLowerCase().replace(' ', '_')}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ))}
           </div>
         </Card>
 
         {/* Métricas Dinâmicas */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
           {allMetrics.filter(m => visibleMetrics.includes(m.id)).map((metric) => (
             <StatCard 
               key={metric.id}
@@ -174,14 +210,14 @@ export default function Dashboard() {
               change={0}
               icon={metric.icon}
               trend="neutral"
-              className="bg-[#121212] border-none rounded-2xl h-32"
+              className="bg-[#121212] border-none rounded-2xl h-32 hover:bg-[#1a1a1a] transition-all cursor-default"
             />
           ))}
         </section>
 
         {/* Funil e Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          <Card className="lg:col-span-2 bg-[#121212] border-none rounded-2xl overflow-hidden">
+          <Card className="lg:col-span-2 bg-[#121212] border-none rounded-2xl overflow-hidden shadow-xl">
              <CardHeader className="border-b border-white/5 pb-4">
               <CardTitle className="text-sm font-bold uppercase text-muted-foreground font-headline flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-blue-500" />
@@ -209,9 +245,9 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-[#121212] border-none rounded-2xl">
+          <Card className="bg-[#121212] border-none rounded-2xl shadow-xl">
             <CardHeader className="border-b border-white/5 pb-4">
-              <CardTitle className="text-sm font-bold uppercase text-muted-foreground font-headline">Funil de Atribuição</CardTitle>
+              <CardTitle className="text-sm font-bold uppercase text-muted-foreground font-headline">Funil de Atribuição Real</CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               {[
@@ -237,9 +273,8 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation - Simplificada conforme solicitado (Foco Facebook Ads) */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#121212] border-t border-white/5 flex items-center justify-around z-50 px-4">
-        {/* Barra limpa conforme solicitado, apenas ícones de sistema básicos se necessário ou nada */}
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#121212] border-t border-white/5 flex items-center justify-around z-50 px-4 backdrop-blur-lg">
         <Button variant="ghost" size="icon" className="text-blue-500">
           <LayoutGrid className="w-6 h-6" />
         </Button>
