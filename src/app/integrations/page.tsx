@@ -5,7 +5,7 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
+import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target, LogIn } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc, useAuth } from "@/firebase";
 import { collection, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -67,38 +67,50 @@ export default function IntegrationsPage() {
     let currentUser = user;
 
     try {
-      // Se não estiver logado, faz o login primeiro
+      // 1. Se não estiver logado no app, solicita login primeiro
       if (!currentUser) {
+        toast({ title: "Autenticação necessária", description: "Por favor, faça login com o Google para continuar." });
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         currentUser = result.user;
       }
 
+      // 2. Com o usuário logado, salva as credenciais da Meta
       if (currentUser) {
         const ref = doc(db, "users", currentUser.uid);
         const data = {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
           metaConnected: true,
           metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
           lastMetaAuth: new Date().toISOString(),
           updatedAt: serverTimestamp()
         };
 
+        // setDoc com merge garante que o documento seja criado se não existir
         setDoc(ref, data, { merge: true })
-          .catch(async () => {
+          .then(() => {
+            toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
+            handleSyncAccounts(currentUser!.uid);
+          })
+          .catch(async (err) => {
+            console.error("Firestore Error:", err);
             const permissionError = new FirestorePermissionError({
               path: ref.path,
-              operation: 'update',
+              operation: 'write',
               requestResourceData: data,
             });
             errorEmitter.emit('permission-error', permissionError);
           });
-
-        toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
-        handleSyncAccounts(currentUser.uid);
       }
-    } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Erro na conexão", description: "Não foi possível autorizar a conta." });
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      let msg = "Não foi possível autorizar a conta.";
+      if (error.code === 'auth/popup-blocked') msg = "O pop-up de login foi bloqueado pelo navegador.";
+      if (error.code === 'auth/cancelled-popup-request') msg = "A autorização foi cancelada.";
+      
+      toast({ variant: "destructive", title: "Erro na conexão", description: msg });
     } finally {
       setLoading(false);
     }
@@ -182,17 +194,26 @@ export default function IntegrationsPage() {
                 ) : (
                   <div className="flex flex-col items-center py-8 text-center">
                     <Zap className="w-8 h-8 text-primary mb-4 animate-pulse" />
-                    <h3 className="text-lg font-bold mb-2">Conecte sua conta Meta</h3>
+                    <h3 className="text-lg font-bold mb-2">{user ? "Conecte sua conta Meta" : "Entre para começar"}</h3>
                     <p className="text-sm text-muted-foreground max-w-md mb-6">
-                      Ao autorizar, o AdPulse poderá ler seus gastos diários para calcular o ROAS real no seu dashboard.
+                      {user 
+                        ? "Ao autorizar, o AdPulse poderá ler seus gastos diários para calcular o ROAS real no seu dashboard."
+                        : "Você precisa estar logado com sua conta Google antes de vincular o Facebook Ads."
+                      }
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
                       disabled={loading} 
                       className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02]"
                     >
-                      {loading ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Facebook className="w-6 h-6" />}
-                      Autorizar Facebook Ads
+                      {loading ? (
+                        <RefreshCw className="w-6 h-6 animate-spin" />
+                      ) : user ? (
+                        <Facebook className="w-6 h-6" />
+                      ) : (
+                        <LogIn className="w-6 h-6" />
+                      )}
+                      {user ? "Autorizar Facebook Ads" : "Fazer Login com Google"}
                     </Button>
                   </div>
                 )}

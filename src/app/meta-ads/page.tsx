@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Facebook, RefreshCw, Target, ShieldCheck, Lock, Trash2, Zap } from "lucide-react";
+import { Facebook, RefreshCw, Target, ShieldCheck, Lock, Trash2, Zap, LogIn } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { useUser, useFirestore, useCollection, useDoc, useAuth } from "@/firebase";
@@ -41,7 +41,9 @@ export default function MetaAdsPage() {
     let currentUser = user;
 
     try {
+      // 1. Garante que o usuário está logado no Google
       if (!currentUser) {
+        toast({ title: "Autenticação", description: "Faça login com Google para vincular a Meta." });
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         currentUser = result.user;
@@ -50,22 +52,30 @@ export default function MetaAdsPage() {
       if (currentUser) {
         const ref = doc(db, "users", currentUser.uid);
         const data = {
+          uid: currentUser.uid,
+          email: currentUser.email,
+          displayName: currentUser.displayName,
           metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
           metaConnected: true,
           updatedAt: serverTimestamp()
         };
 
+        // setDoc com merge para criar ou atualizar
         setDoc(ref, data, { merge: true })
-          .catch(async () => {
-            const err = new FirestorePermissionError({ path: ref.path, operation: 'update', requestResourceData: data });
-            errorEmitter.emit('permission-error', err);
+          .then(() => {
+            toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
+          })
+          .catch(async (err) => {
+            console.error("Firestore Error:", err);
+            const permissionError = new FirestorePermissionError({ path: ref.path, operation: 'write', requestResourceData: data });
+            errorEmitter.emit('permission-error', permissionError);
           });
-
-        toast({ title: "Conectado!", description: "Sua conta Meta Ads foi vinculada com sucesso." });
       }
-    } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Erro na conexão", description: "Falha ao autorizar Facebook." });
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      let msg = "Falha ao autorizar Facebook.";
+      if (error.code === 'auth/popup-blocked') msg = "Pop-up bloqueado pelo navegador.";
+      toast({ variant: "destructive", title: "Erro na conexão", description: msg });
     } finally {
       setConnecting(false);
     }
@@ -157,9 +167,14 @@ export default function MetaAdsPage() {
               <div className="w-20 h-20 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 glow-primary">
                 <Facebook className="w-10 h-10 text-white" />
               </div>
-              <CardTitle className="text-2xl font-headline mb-2 text-center">Conectar via Login Oficial</CardTitle>
+              <CardTitle className="text-2xl font-headline mb-2 text-center">
+                {user ? "Conectar via Login Oficial" : "Entre para começar"}
+              </CardTitle>
               <CardDescription className="mb-8 text-center">
-                Autorize o AdPulse a ler seus dados de anúncios com um fluxo de conexão automático e seguro.
+                {user 
+                  ? "Autorize o AdPulse a ler seus dados de anúncios com um fluxo de conexão automático e seguro."
+                  : "Por favor, clique no botão abaixo para fazer login e depois vincular sua conta Meta."
+                }
               </CardDescription>
               
               <div className="space-y-4">
@@ -168,39 +183,49 @@ export default function MetaAdsPage() {
                   disabled={connecting}
                   className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg gap-3 shadow-lg shadow-blue-900/20 rounded-2xl transition-all hover:scale-[1.02]"
                 >
-                  {connecting ? <RefreshCw className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6 fill-current" />}
-                  Autorizar Conexão Automática
+                  {connecting ? (
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                  ) : user ? (
+                    <Zap className="w-6 h-6 fill-current" />
+                  ) : (
+                    <LogIn className="w-6 h-6" />
+                  )}
+                  {user ? "Autorizar Conexão Automática" : "Fazer Login com Google"}
                 </Button>
                 
-                <div className="relative my-8">
-                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
-                  <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-4 text-muted-foreground">Ou via Token Manual</span></div>
-                </div>
+                {user && (
+                  <>
+                    <div className="relative my-8">
+                      <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
+                      <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-4 text-muted-foreground">Ou via Token Manual</span></div>
+                    </div>
 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Access Token de Usuário do Sistema</Label>
-                    <Input 
-                      type="password" 
-                      placeholder="EAAB..." 
-                      className="bg-white/5 border-white/10 font-mono text-xs h-12"
-                      onBlur={(e) => {
-                        if (e.target.value && user && userRef) {
-                          setDoc(userRef, { metaAccessToken: e.target.value, metaConnected: true }, { merge: true })
-                            .catch(async () => {
-                              const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
-                              errorEmitter.emit('permission-error', err);
-                            });
-                          toast({ title: "Token salvo!", description: "Conexão manual estabelecida." });
-                        }
-                      }}
-                    />
-                  </div>
-                  <div className="pt-4 flex items-center justify-center gap-2">
-                    <Lock className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Protocolo de Segurança OAuth 2.0</span>
-                  </div>
-                </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Access Token de Usuário do Sistema</Label>
+                        <Input 
+                          type="password" 
+                          placeholder="EAAB..." 
+                          className="bg-white/5 border-white/10 font-mono text-xs h-12"
+                          onBlur={(e) => {
+                            if (e.target.value && user && userRef) {
+                              setDoc(userRef, { metaAccessToken: e.target.value, metaConnected: true }, { merge: true })
+                                .catch(async () => {
+                                  const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
+                                  errorEmitter.emit('permission-error', err);
+                                });
+                              toast({ title: "Token salvo!", description: "Conexão manual estabelecida." });
+                            }
+                          }}
+                        />
+                      </div>
+                      <div className="pt-4 flex items-center justify-center gap-2">
+                        <Lock className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Protocolo de Segurança OAuth 2.0</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
           </div>
