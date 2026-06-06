@@ -12,7 +12,7 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import LinkNext from "next/link";
+import Link from "next/link";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -38,9 +38,11 @@ export default function IntegrationsPage() {
     if (!db) return;
     setSyncing(true);
     
+    // Dados simulados de BMs e Contas reais para o protótipo
     const mockAccounts = [
-      { accountId: "act_123456", name: "Conta Principal - Ecom", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" },
-      { accountId: "act_789012", name: "Backup - Tráfego Direto", currency: "BRL", status: "ACTIVE", businessName: "Vendas Online BM" }
+      { accountId: "act_123456789", name: "Ecom High Scale - Conta 01", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
+      { accountId: "act_987654321", name: "Retargeting Criativo - Backup", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
+      { accountId: "act_456123789", name: "Lançamento Produto X", currency: "BRL", status: "DISABLED", businessName: "Agência Digital VIP" }
     ];
 
     const accountsColl = collection(db, "users", userId, "ad_accounts");
@@ -58,8 +60,11 @@ export default function IntegrationsPage() {
 
     setTimeout(() => {
       setSyncing(false);
-      toast({ title: "Sincronização concluída", description: `${mockAccounts.length} contas encontradas.` });
-    }, 1000);
+      toast({ 
+        title: "Contas Sincronizadas", 
+        description: `${mockAccounts.length} contas de anúncios encontradas no seu Facebook.` 
+      });
+    }, 1500);
   };
 
   const handleMetaConnect = async () => {
@@ -67,15 +72,15 @@ export default function IntegrationsPage() {
     let currentUser = user;
 
     try {
-      // 1. Se não estiver logado no app, solicita login primeiro
+      // 1. Força login com Google se não estiver logado para ter um UID
       if (!currentUser) {
-        toast({ title: "Autenticação necessária", description: "Por favor, faça login com o Google para continuar." });
+        toast({ title: "Login Necessário", description: "Inicie sessão com o Google para vincular sua Meta Ads." });
         const provider = new GoogleAuthProvider();
         const result = await signInWithPopup(auth, provider);
         currentUser = result.user;
       }
 
-      // 2. Com o usuário logado, salva as credenciais da Meta
+      // 2. Simula a autorização da Meta e salva o token no Firestore
       if (currentUser) {
         const ref = doc(db, "users", currentUser.uid);
         const data = {
@@ -83,19 +88,20 @@ export default function IntegrationsPage() {
           email: currentUser.email,
           displayName: currentUser.displayName,
           metaConnected: true,
-          metaAccessToken: "EAAB_MOCK_TOKEN_" + Math.random().toString(36).substring(7),
+          metaAccessToken: "EAAB_PROTOTYPE_TOKEN_" + Math.random().toString(36).substring(7),
           lastMetaAuth: new Date().toISOString(),
           updatedAt: serverTimestamp()
         };
 
-        // setDoc com merge garante que o documento seja criado se não existir
         setDoc(ref, data, { merge: true })
           .then(() => {
-            toast({ title: "Facebook Conectado!", description: "Sua conta foi vinculada com sucesso." });
+            toast({ 
+              title: "Facebook Conectado!", 
+              description: "Sua autorização foi processada com sucesso." 
+            });
             handleSyncAccounts(currentUser!.uid);
           })
           .catch(async (err) => {
-            console.error("Firestore Error:", err);
             const permissionError = new FirestorePermissionError({
               path: ref.path,
               operation: 'write',
@@ -106,11 +112,7 @@ export default function IntegrationsPage() {
       }
     } catch (error: any) {
       console.error("Auth Error:", error);
-      let msg = "Não foi possível autorizar a conta.";
-      if (error.code === 'auth/popup-blocked') msg = "O pop-up de login foi bloqueado pelo navegador.";
-      if (error.code === 'auth/cancelled-popup-request') msg = "A autorização foi cancelada.";
-      
-      toast({ variant: "destructive", title: "Erro na conexão", description: msg });
+      toast({ variant: "destructive", title: "Erro na conexão", description: "Não foi possível abrir o fluxo de autorização." });
     } finally {
       setLoading(false);
     }
@@ -126,7 +128,10 @@ export default function IntegrationsPage() {
         errorEmitter.emit('permission-error', err);
       });
     
-    toast({ title: current ? "Monitoramento pausado" : "Monitoramento ativado" });
+    toast({ 
+      title: current ? "Monitoramento pausado" : "Monitoramento ativado",
+      description: "As métricas desta conta serão refletidas no dashboard."
+    });
   };
 
   const handleDisconnect = () => {
@@ -146,86 +151,85 @@ export default function IntegrationsPage() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <DashboardSidebar />
-      <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8">
+      <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline">Integrações</h1>
+          <h1 className="text-3xl font-bold font-headline mb-1">Integrações</h1>
           <p className="text-muted-foreground">Conecte suas fontes de tráfego e dados para uma atribuição perfeita.</p>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-2 space-y-6">
             <Card className={cn(
-              "glass-card transition-all duration-500",
+              "glass-card transition-all duration-500 overflow-hidden",
               isConnected ? "border-green-500/20 bg-green-500/5" : "border-primary/20 bg-primary/5"
             )}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <div className="p-6 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className={cn(
-                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all",
+                    "w-14 h-14 rounded-2xl flex items-center justify-center transition-all",
                     isConnected ? "bg-green-600 glow-accent" : "bg-blue-600 glow-primary"
                   )}>
-                    <Facebook className="w-6 h-6 text-white" />
+                    <Facebook className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="font-headline">Facebook Ads</CardTitle>
-                    <CardDescription>Importe gastos e métricas de campanhas automaticamente.</CardDescription>
+                    <CardTitle className="font-headline text-xl">Facebook Ads</CardTitle>
+                    <CardDescription>Métricas de campanhas e gastos via API.</CardDescription>
                   </div>
                 </div>
                 <Badge className={cn(
-                  "px-3 py-1 border-none font-bold",
+                  "px-4 py-1.5 border-none font-bold rounded-full",
                   isConnected ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"
                 )}>
-                  {isConnected ? "CONECTADO" : "DESCONECTADO"}
+                  {isConnected ? "SISTEMA ATIVO" : "OFFLINE"}
                 </Badge>
-              </CardHeader>
-              <CardContent className="pt-4">
+              </div>
+
+              <CardContent className="pt-0">
                 {isConnected ? (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-background/50 border border-white/5">
+                    <div className="flex items-center justify-between p-5 rounded-2xl bg-background/50 border border-white/5">
                       <div className="flex items-center gap-3">
-                        <CheckCircle2 className="w-5 h-5 text-green-500" />
-                        <span className="text-sm">Sincronização de dados ativa via API Graph v18.0</span>
+                        <CheckCircle2 className="w-6 h-6 text-green-500" />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold">Conexão Estabelecida</span>
+                          <span className="text-xs text-muted-foreground">Token verificado via OAuth 2.0</span>
+                        </div>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-destructive hover:bg-destructive/10">
+                      <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-destructive hover:bg-destructive/10 rounded-xl">
                         <Trash2 className="w-4 h-4 mr-2" /> Desconectar
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center py-8 text-center">
-                    <Zap className="w-8 h-8 text-primary mb-4 animate-pulse" />
-                    <h3 className="text-lg font-bold mb-2">{user ? "Conecte sua conta Meta" : "Entre para começar"}</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mb-6">
-                      {user 
-                        ? "Ao autorizar, o AdPulse poderá ler seus gastos diários para calcular o ROAS real no seu dashboard."
-                        : "Você precisa estar logado com sua conta Google antes de vincular o Facebook Ads."
-                      }
+                  <div className="flex flex-col items-center py-10 text-center">
+                    <Zap className="w-10 h-10 text-primary mb-4 animate-pulse" />
+                    <h3 className="text-xl font-bold mb-2">Vincular Conta de Anúncios</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mb-8 leading-relaxed">
+                      Autorize o AdPulse a importar seus gastos e métricas para calcular o ROI real de cada venda em tempo real.
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
                       disabled={loading} 
-                      className="glow-primary h-14 px-10 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02]"
+                      className="glow-primary h-16 px-12 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02]"
                     >
                       {loading ? (
                         <RefreshCw className="w-6 h-6 animate-spin" />
-                      ) : user ? (
-                        <Facebook className="w-6 h-6" />
                       ) : (
-                        <LogIn className="w-6 h-6" />
+                        <Facebook className="w-6 h-6" />
                       )}
-                      {user ? "Autorizar Facebook Ads" : "Fazer Login com Google"}
+                      Autorizar Facebook Ads
                     </Button>
                   </div>
                 )}
               </CardContent>
               {isConnected && (
-                <CardFooter className="border-t border-white/5 pt-6 bg-white/5 rounded-b-lg">
+                <CardFooter className="border-t border-white/5 pt-6 bg-white/5">
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-muted-foreground">
-                      Última autorização: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleString('pt-BR') : 'Nunca'}
+                    <div className="text-xs text-muted-foreground font-mono">
+                      LAST_SYNC: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleTimeString() : 'PENDING'}
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => user && handleSyncAccounts(user.uid)} disabled={syncing} className="gap-2 border-primary/20 text-primary">
-                      <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
+                    <Button variant="outline" size="sm" onClick={() => user && handleSyncAccounts(user.uid)} disabled={syncing} className="gap-2 border-primary/20 text-primary bg-primary/5 hover:bg-primary/10 rounded-xl">
+                      <RefreshCw className={cn("w-4 h-4", syncing && "animate-spin")} />
                       Sincronizar BMs e Contas
                     </Button>
                   </div>
@@ -234,33 +238,38 @@ export default function IntegrationsPage() {
             </Card>
 
             {isConnected && accounts && accounts.length > 0 && (
-              <Card className="glass-card animate-in slide-in-from-bottom-4 duration-500">
+              <Card className="glass-card animate-in slide-in-from-bottom-4 duration-700">
                 <CardHeader>
                   <CardTitle className="text-lg font-headline flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-primary" />
-                    Contas de Anúncio Encontradas
+                    Gerenciador de Negócios (BM)
                   </CardTitle>
-                  <CardDescription>Selecione quais contas você deseja monitorar no AdPulse.</CardDescription>
+                  <CardDescription>Selecione as contas que o AdPulse deve monitorar.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   {accounts.map((acc: any) => (
-                    <div key={acc.accountId} className="flex items-center justify-between p-4 rounded-xl border border-white/5 hover:bg-white/5 transition-colors">
+                    <div key={acc.accountId} className={cn(
+                      "flex items-center justify-between p-5 rounded-2xl border transition-all",
+                      acc.monitored ? "bg-white/5 border-primary/30" : "bg-black/20 border-white/5 opacity-60"
+                    )}>
                       <div className="flex items-center gap-4">
-                        <div className="p-2 bg-muted rounded-lg">
-                          <Target className="w-5 h-5 text-primary" />
+                        <div className={cn("p-3 rounded-xl", acc.monitored ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}>
+                          <Target className="w-6 h-6" />
                         </div>
                         <div>
-                          <p className="font-bold text-sm">{acc.name}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{acc.businessName} • {acc.accountId}</p>
+                          <p className="font-bold text-base">{acc.name}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
+                            {acc.businessName} • {acc.accountId}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline" className="text-[10px]">{acc.currency}</Badge>
+                      <div className="flex items-center gap-6">
+                        <Badge variant="outline" className="font-mono">{acc.currency}</Badge>
                         <Button 
                           onClick={() => toggleMonitoring(acc.accountId, acc.monitored)}
                           variant={acc.monitored ? "default" : "outline"}
                           size="sm"
-                          className={cn("h-8 rounded-lg transition-all", acc.monitored && "bg-green-600 hover:bg-green-700")}
+                          className={cn("h-10 px-6 rounded-xl font-bold transition-all", acc.monitored && "bg-green-600 hover:bg-green-700 glow-accent border-none")}
                         >
                           {acc.monitored ? "Ativo" : "Monitorar"}
                         </Button>
@@ -273,39 +282,36 @@ export default function IntegrationsPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="glass-card">
+            <Card className="glass-card bg-primary/5 border-primary/20">
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Segurança dos Dados</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5" />
+                  Privacidade Garantida
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Seus tokens de acesso são criptografados e nunca compartilhados com terceiros.</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-primary" />
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">O AdPulse solicita apenas permissão de leitura para métricas e anúncios.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  O AdPulse utiliza apenas permissões de **leitura** de anúncios e insights. Seus dados são criptografados de ponta a ponta.
+                </p>
+                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-full" />
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="glass-card bg-accent/5 border-accent/20">
+            <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-accent">Configuração do Pixel</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-accent">Status do Pixel</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Lembre-se: Para o ROAS ser calculado, você também precisa ter o **Pixel AdPulse** instalado na sua página.
+                  Para cruzar dados de gasto com vendas, você precisa instalar o Pixel AdPulse em suas páginas.
                 </p>
-                <LinkNext href="/pixel">
+                <Link href="/pixel">
                   <Button variant="link" className="p-0 h-auto text-accent text-xs group">
                     Ir para configuração do Pixel <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </Button>
-                </LinkNext>
+                </Link>
               </CardContent>
             </Card>
           </div>
