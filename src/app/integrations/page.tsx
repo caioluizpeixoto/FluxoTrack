@@ -5,10 +5,9 @@ import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target, LogIn } from "lucide-react";
-import { useUser, useFirestore, useCollection, useDoc, useAuth } from "@/firebase";
+import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
+import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -18,7 +17,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function IntegrationsPage() {
   const { user } = useUser();
-  const auth = useAuth();
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -38,7 +36,6 @@ export default function IntegrationsPage() {
     if (!db) return;
     setSyncing(true);
     
-    // Dados simulados de BMs e Contas reais para o protótipo
     const mockAccounts = [
       { accountId: "act_123456789", name: "Ecom High Scale - Conta 01", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
       { accountId: "act_987654321", name: "Retargeting Criativo - Backup", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
@@ -62,57 +59,49 @@ export default function IntegrationsPage() {
       setSyncing(false);
       toast({ 
         title: "Contas Sincronizadas", 
-        description: `${mockAccounts.length} contas de anúncios encontradas no seu Facebook.` 
+        description: `${mockAccounts.length} contas encontradas.` 
       });
     }, 1500);
   };
 
   const handleMetaConnect = async () => {
+    if (!user) {
+      toast({ 
+        variant: "destructive",
+        title: "Login Necessário", 
+        description: "Por favor, clique em 'Entrar' na barra lateral primeiro." 
+      });
+      return;
+    }
+
     setLoading(true);
-    let currentUser = user;
-
     try {
-      // 1. Força login com Google se não estiver logado para ter um UID
-      if (!currentUser) {
-        toast({ title: "Login Necessário", description: "Inicie sessão com o Google para vincular sua Meta Ads." });
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        currentUser = result.user;
-      }
+      const ref = doc(db, "users", user.uid);
+      const data = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        metaConnected: true,
+        metaAccessToken: "EAAB_PROTOTYPE_TOKEN_" + Math.random().toString(36).substring(7),
+        lastMetaAuth: new Date().toISOString(),
+        updatedAt: serverTimestamp()
+      };
 
-      // 2. Simula a autorização da Meta e salva o token no Firestore
-      if (currentUser) {
-        const ref = doc(db, "users", currentUser.uid);
-        const data = {
-          uid: currentUser.uid,
-          email: currentUser.email,
-          displayName: currentUser.displayName,
-          metaConnected: true,
-          metaAccessToken: "EAAB_PROTOTYPE_TOKEN_" + Math.random().toString(36).substring(7),
-          lastMetaAuth: new Date().toISOString(),
-          updatedAt: serverTimestamp()
-        };
-
-        setDoc(ref, data, { merge: true })
-          .then(() => {
-            toast({ 
-              title: "Facebook Conectado!", 
-              description: "Sua autorização foi processada com sucesso." 
-            });
-            handleSyncAccounts(currentUser!.uid);
-          })
-          .catch(async (err) => {
-            const permissionError = new FirestorePermissionError({
-              path: ref.path,
-              operation: 'write',
-              requestResourceData: data,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-          });
-      }
+      await setDoc(ref, data, { merge: true });
+      
+      toast({ 
+        title: "Facebook Conectado!", 
+        description: "Sua conta foi vinculada com sucesso." 
+      });
+      
+      handleSyncAccounts(user.uid);
     } catch (error: any) {
-      console.error("Auth Error:", error);
-      toast({ variant: "destructive", title: "Erro na conexão", description: "Não foi possível abrir o fluxo de autorização." });
+      console.error("Meta Connect Error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Erro na conexão", 
+        description: "Não foi possível salvar os dados. Tente novamente." 
+      });
     } finally {
       setLoading(false);
     }
@@ -205,7 +194,7 @@ export default function IntegrationsPage() {
                     <Zap className="w-10 h-10 text-primary mb-4 animate-pulse" />
                     <h3 className="text-xl font-bold mb-2">Vincular Conta de Anúncios</h3>
                     <p className="text-sm text-muted-foreground max-w-sm mb-8 leading-relaxed">
-                      Autorize o AdPulse a importar seus gastos e métricas para calcular o ROI real de cada venda em tempo real.
+                      {user ? "Clique abaixo para autorizar o AdPulse a importar seus gastos e métricas." : "Faça login no app primeiro para poder salvar sua conta Meta Ads."}
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
@@ -217,7 +206,7 @@ export default function IntegrationsPage() {
                       ) : (
                         <Facebook className="w-6 h-6" />
                       )}
-                      Autorizar Facebook Ads
+                      {user ? "Autorizar Facebook Ads" : "Fazer Login Primeiro"}
                     </Button>
                   </div>
                 )}
@@ -226,11 +215,11 @@ export default function IntegrationsPage() {
                 <CardFooter className="border-t border-white/5 pt-6 bg-white/5">
                   <div className="flex items-center justify-between w-full">
                     <div className="text-xs text-muted-foreground font-mono">
-                      LAST_SYNC: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleTimeString() : 'PENDING'}
+                      SYNC: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleTimeString() : 'PENDING'}
                     </div>
                     <Button variant="outline" size="sm" onClick={() => user && handleSyncAccounts(user.uid)} disabled={syncing} className="gap-2 border-primary/20 text-primary bg-primary/5 hover:bg-primary/10 rounded-xl">
                       <RefreshCw className={cn("w-4 h-4", syncing && "animate-spin")} />
-                      Sincronizar BMs e Contas
+                      Sincronizar BMs
                     </Button>
                   </div>
                 </CardFooter>
@@ -242,9 +231,8 @@ export default function IntegrationsPage() {
                 <CardHeader>
                   <CardTitle className="text-lg font-headline flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-primary" />
-                    Gerenciador de Negócios (BM)
+                    Contas de Anúncios Encontradas
                   </CardTitle>
-                  <CardDescription>Selecione as contas que o AdPulse deve monitorar.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {accounts.map((acc: any) => (
@@ -258,22 +246,19 @@ export default function IntegrationsPage() {
                         </div>
                         <div>
                           <p className="font-bold text-base">{acc.name}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">
-                            {acc.businessName} • {acc.accountId}
+                          <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-widest">
+                            {acc.businessName}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <Badge variant="outline" className="font-mono">{acc.currency}</Badge>
-                        <Button 
-                          onClick={() => toggleMonitoring(acc.accountId, acc.monitored)}
-                          variant={acc.monitored ? "default" : "outline"}
-                          size="sm"
-                          className={cn("h-10 px-6 rounded-xl font-bold transition-all", acc.monitored && "bg-green-600 hover:bg-green-700 glow-accent border-none")}
-                        >
-                          {acc.monitored ? "Ativo" : "Monitorar"}
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={() => toggleMonitoring(acc.accountId, acc.monitored)}
+                        variant={acc.monitored ? "default" : "outline"}
+                        size="sm"
+                        className={cn("rounded-xl font-bold", acc.monitored && "bg-green-600 hover:bg-green-700 glow-accent border-none")}
+                      >
+                        {acc.monitored ? "Ativo" : "Monitorar"}
+                      </Button>
                     </div>
                   ))}
                 </CardContent>
@@ -286,30 +271,27 @@ export default function IntegrationsPage() {
               <CardHeader>
                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  Privacidade Garantida
+                  Privacidade
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  O AdPulse utiliza apenas permissões de **leitura** de anúncios e insights. Seus dados são criptografados de ponta a ponta.
+                  O AdPulse utiliza apenas permissões de leitura. Seus dados de faturamento nunca são compartilhados com a Meta.
                 </p>
-                <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-full" />
-                </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-accent">Status do Pixel</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase text-accent">Status do Pixel</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Para cruzar dados de gasto com vendas, você precisa instalar o Pixel AdPulse em suas páginas.
+                  Lembre-se: Para o ROAS ser calculado, você também precisa ter o **Pixel AdPulse** instalado na sua página.
                 </p>
                 <Link href="/pixel">
                   <Button variant="link" className="p-0 h-auto text-accent text-xs group">
-                    Ir para configuração do Pixel <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
+                    Configurar Pixel <ArrowRight className="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               </CardContent>
