@@ -87,10 +87,10 @@ export default function SettingsPage() {
       }).catch(err => console.error('AdPulse Error:', err));
     }
 
-    // Auto-track page view
+    // Rastreio automático de visualização
     track('page_view');
 
-    // Export global tracker
+    // Exportar rastreador global
     window.adPulse = { track: track };
   })();
 </script>
@@ -109,14 +109,14 @@ export default function SettingsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-headline mb-1">Configurações</h1>
           <p className="text-muted-foreground">Gerencie sua conta e instale o pixel de rastreamento.</p>
         </header>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+          <div className="space-y-6 lg:space-y-8">
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
@@ -166,7 +166,7 @@ export default function SettingsPage() {
                   Script de Instalação
                 </CardTitle>
                 <CardDescription>
-                  Copie e cole este script na tag <code>&lt;head&gt;</code> do seu site para começar a rastrear.
+                  Copie e cole este script na tag <code>&lt;head&gt;</code> do seu site.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -177,7 +177,7 @@ export default function SettingsPage() {
                   <Button 
                     size="icon" 
                     variant="secondary" 
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-2 right-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"
                     onClick={copyToClipboard}
                   >
                     {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
@@ -185,13 +185,13 @@ export default function SettingsPage() {
                 </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-2">
                   <Check className="w-3 h-3 text-green-500" /> 
-                  Rastreia automaticamente Page Views e UTMs.
+                  Rastreia Visualizações e UTMs automaticamente.
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6 lg:space-y-8">
             <Card className="glass-card bg-primary/5">
               <CardHeader>
                 <CardTitle className="font-headline text-sm uppercase tracking-widest text-primary">Plano Atual</CardTitle>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h3 className="text-2xl font-bold font-headline capitalize">{profile?.plan || 'Free'}</h3>
-                    <p className="text-xs text-muted-foreground">Válido até 25 de Dez, 2024</p>
+                    <p className="text-xs text-muted-foreground">Próxima renovação: Jan, 2025</p>
                   </div>
                   <Badge className="bg-primary text-white">Ativo</Badge>
                 </div>
