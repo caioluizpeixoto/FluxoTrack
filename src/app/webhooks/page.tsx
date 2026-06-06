@@ -1,3 +1,4 @@
+
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -5,17 +6,30 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Webhook, 
-  ExternalLink, 
   Copy, 
   Check, 
   CircleDollarSign,
-  Clock
+  Clock,
+  ExternalLink,
+  ChevronRight,
+  HelpCircle,
+  Zap,
+  Info
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
+
+const platforms = [
+  { id: 'kiwify', name: 'Kiwify', icon: '🥝' },
+  { id: 'hotmart', name: 'Hotmart', icon: '🔥' },
+  { id: 'cartpanda', name: 'CartPanda', icon: '🐼' },
+  { id: 'perfectpay', name: 'PerfectPay', icon: '💎' },
+  { id: 'custom', name: 'API Custom', icon: '⚙️' },
+];
 
 export default function WebhooksPage() {
   const { user } = useUser();
@@ -29,103 +43,144 @@ export default function WebhooksPage() {
     setTimeout(() => setCopied(false), 2000);
     toast({
       title: "URL Copiada!",
-      description: "Cole este endereço nas configurações de webhook da sua plataforma de checkout.",
+      description: "Cole este endereço nas configurações de webhook da sua plataforma.",
     });
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background text-white">
       <DashboardSidebar />
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline mb-1">Webhooks & Integrações</h1>
-          <p className="text-muted-foreground">Conecte sua plataforma de vendas para receber conversões em tempo real.</p>
+          <h1 className="text-3xl font-bold font-headline mb-1">Webhooks de Conversão</h1>
+          <p className="text-muted-foreground">Conecte seu checkout para cruzar vendas com gastos de anúncios.</p>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="xl:col-span-2 space-y-8">
-            <Card className="glass-card border-primary/20">
+          <div className="xl:col-span-2 space-y-6">
+            <Card className="glass-card border-primary/20 bg-primary/5">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="font-headline flex items-center gap-2 text-primary">
-                    <Webhook className="w-6 h-6" />
-                    Sua URL de Webhook
-                  </CardTitle>
-                  <Badge className="bg-primary/20 text-primary border-none">HTTPS</Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/20 rounded-lg">
+                      <Webhook className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="font-headline text-lg">Sua URL Universal</CardTitle>
+                      <CardDescription>Use este link em qualquer plataforma suportada.</CardDescription>
+                    </div>
+                  </div>
+                  <Badge className="bg-primary/20 text-primary border-none">HTTPS ATIVO</Badge>
                 </div>
-                <CardDescription>
-                  Use esta URL nas plataformas suportadas para enviar dados de vendas automaticamente.
-                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <div className="flex gap-2">
-                  <div className="flex-1 p-3 rounded-lg bg-black/40 border border-white/5 font-mono text-xs truncate">
+                  <div className="flex-1 p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-xs truncate flex items-center">
                     {webhookUrl}
                   </div>
-                  <Button variant="secondary" onClick={copyUrl} className="shrink-0">
+                  <Button variant="secondary" onClick={copyUrl} className="shrink-0 h-auto">
                     {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                   </Button>
-                </div>
-                <div className="flex flex-wrap gap-4 pt-4 border-t border-white/5">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-green-500" /> Suporta Kiwify
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-green-500" /> Suporta Hotmart
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-green-500" /> Suporta CartPanda
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Check className="w-3 h-3 text-green-500" /> API Customizada
-                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                  <CircleDollarSign className="w-5 h-5 text-primary" />
-                  Conversões Recebidas
+                <CardTitle className="font-headline text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  Guia de Integração
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                <Tabs defaultValue="kiwify" className="w-full">
+                  <TabsList className="bg-white/5 border border-white/10 w-full justify-start p-1 h-14 mb-6">
+                    {platforms.map(p => (
+                      <TabsTrigger 
+                        key={p.id} 
+                        value={p.id}
+                        className="data-[state=active]:bg-primary data-[state=active]:text-white h-full px-4"
+                      >
+                        <span className="mr-2">{p.icon}</span>
+                        {p.name}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  
+                  {platforms.map(p => (
+                    <TabsContent key={p.id} value={p.id} className="animate-in fade-in zoom-in-95 duration-300">
+                      <div className="space-y-6">
+                        <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+                          <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
+                            Passo a passo para {p.name}
+                          </h4>
+                          <ol className="space-y-3 text-xs text-muted-foreground list-decimal pl-4">
+                            <li>Acesse seu painel na {p.name}.</li>
+                            <li>Vá em Configurações &gt; Webhooks ou API.</li>
+                            <li>Clique em "Criar Novo Webhook" ou "Adicionar Endpoint".</li>
+                            <li>Cole sua URL Universal no campo de URL.</li>
+                            <li>Selecione os eventos: <b>Venda Aprovada</b>, <b>Venda Gerada (Boleto/PIX)</b>.</li>
+                            <li>Salve e faça um teste de envio.</li>
+                          </ol>
+                        </div>
+                        <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-lg text-[10px] text-blue-400">
+                          <Info className="w-4 h-4" />
+                          O AdPulse identifica o comprador pelo e-mail ou IP e cruza com os eventos do Pixel automaticamente.
+                        </div>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="font-headline text-lg flex items-center gap-2">
+                  <CircleDollarSign className="w-5 h-5 text-primary" />
+                  Últimas Vendas Recebidas
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead>ID Pedido</TableHead>
+                    <TableRow className="border-white/5">
+                      <TableHead>ID / Origem</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Horário</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead>Atribuição</TableHead>
+                      <TableHead className="text-right">Horário</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {[
-                      { id: "ORD-7721", val: "R$ 97,00", status: "Aprovado", time: "5 min atrás" },
-                      { id: "ORD-7719", val: "R$ 499,90", status: "Pendente", time: "12 min atrás" },
-                      { id: "ORD-7655", val: "R$ 147,00", status: "Aprovado", time: "1 hora atrás" },
+                      { id: "ORD-9912", plat: "Kiwify", val: "R$ 97,00", status: "Aprovado", attr: "Facebook Ads", time: "2 min" },
+                      { id: "ORD-9910", plat: "Hotmart", val: "R$ 499,00", status: "Pendente", attr: "Google Ads", time: "15 min" },
+                      { id: "ORD-9888", plat: "Kiwify", val: "R$ 147,00", status: "Aprovado", attr: "Orgânico", time: "1h" },
                     ].map((row, i) => (
-                      <TableRow key={i} className="border-white/5 hover:bg-white/5">
-                        <TableCell className="font-bold">{row.id}</TableCell>
-                        <TableCell>{row.val}</TableCell>
+                      <TableRow key={i} className="border-white/5">
                         <TableCell>
-                          <Badge className={row.status === "Aprovado" ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"}>
+                          <div className="flex flex-col">
+                            <span className="font-bold">{row.id}</span>
+                            <span className="text-[10px] text-muted-foreground">{row.plat}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{row.val}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(
+                            "border-none text-[10px]",
+                            row.status === "Aprovado" ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
+                          )}>
                             {row.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {row.time}
+                        <TableCell>
+                          <div className="flex items-center gap-1 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            {row.attr}
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <ExternalLink className="w-4 h-4 opacity-50" />
-                          </Button>
-                        </TableCell>
+                        <TableCell className="text-right text-xs text-muted-foreground">{row.time} atrás</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -134,46 +189,33 @@ export default function WebhooksPage() {
             </Card>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             <Card className="glass-card bg-accent/5 border-accent/20">
               <CardHeader>
-                <CardTitle className="font-headline text-sm uppercase tracking-widest text-accent">Configuração Rápida</CardTitle>
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-accent flex items-center gap-2">
+                  <HelpCircle className="w-5 h-5" />
+                  Por que integrar?
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <span className="w-5 h-5 flex items-center justify-center bg-accent text-white rounded-full text-[10px]">1</span>
-                    Acesse sua Plataforma
-                  </h4>
-                  <p className="text-xs text-muted-foreground pl-7">Vá em Configurações &gt; Webhooks ou API nas ferramentas de checkout.</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Sem webhooks, o AdPulse não consegue saber se um clique se tornou uma venda real. Ao integrar, você ativa:
+                </p>
+                <div className="space-y-3">
+                  {[
+                    "Cálculo exato de Lucro e ROI.",
+                    "Identificação de campanhas que vendem.",
+                    "Dados para a IA de Atribuição.",
+                    "Sincronização com Pixel da Meta (CAPI)."
+                  ].map((text, i) => (
+                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                      <div className="w-1 h-1 rounded-full bg-accent" />
+                      {text}
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <span className="w-5 h-5 flex items-center justify-center bg-accent text-white rounded-full text-[10px]">2</span>
-                    Cole a URL
-                  </h4>
-                  <p className="text-xs text-muted-foreground pl-7">Crie um novo Webhook e cole o link ao lado. Selecione &quot;Venda Aprovada&quot; e &quot;Venda Gerada&quot;.</p>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-sm font-bold flex items-center gap-2">
-                    <span className="w-5 h-5 flex items-center justify-center bg-accent text-white rounded-full text-[10px]">3</span>
-                    Sincronização Ativa
-                  </h4>
-                  <p className="text-xs text-muted-foreground pl-7">O AdPulse começará a atribuir as vendas automaticamente às suas UTMs.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="font-headline text-sm uppercase tracking-widest text-muted-foreground">Dúvidas Frequentes</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="link" className="p-0 h-auto text-xs text-primary group">
-                  Como funciona a atribuição? <ExternalLink className="w-3 h-3 ml-1" />
-                </Button>
-                <Button variant="link" className="p-0 h-auto text-xs text-primary group">
-                  Segurança dos dados financeiros <ExternalLink className="w-3 h-3 ml-1" />
+                <Button variant="link" className="p-0 text-accent text-xs mt-4">
+                  Documentação completa <ChevronRight className="w-3 h-3" />
                 </Button>
               </CardContent>
             </Card>
