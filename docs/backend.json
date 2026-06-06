@@ -1,0 +1,91 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Dados do usuário administrador do dashboard AdPulse.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "storeUrl": { "type": "string" },
+        "plan": { "type": "string", "enum": ["free", "pro", "enterprise"] }
+      },
+      "required": ["uid", "email"]
+    },
+    "TrackingEvent": {
+      "title": "Tracking Event",
+      "description": "Log de atividade de um visitante no site monitorado.",
+      "type": "object",
+      "properties": {
+        "eventId": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "eventType": { "type": "string", "enum": ["page_view", "click", "checkout_start", "pix_generated"] },
+        "url": { "type": "string" },
+        "referrer": { "type": "string" },
+        "utmSource": { "type": "string" },
+        "utmMedium": { "type": "string" },
+        "utmCampaign": { "type": "string" },
+        "fbc": { "type": "string" },
+        "fbp": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "userAgent": { "type": "string" }
+      },
+      "required": ["eventId", "timestamp", "eventType"]
+    },
+    "Conversion": {
+      "title": "Conversion",
+      "description": "Uma venda ou lead finalizado que requer atribuição.",
+      "type": "object",
+      "properties": {
+        "conversionId": { "type": "string" },
+        "externalId": { "type": "string", "description": "ID do pedido na plataforma de e-commerce." },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "value": { "type": "number" },
+        "currency": { "type": "string", "default": "BRL" },
+        "status": { "type": "string", "enum": ["pending", "approved", "cancelled"] },
+        "attributedCampaignId": { "type": "string" },
+        "attributionConfidence": { "type": "number" }
+      },
+      "required": ["conversionId", "timestamp", "value", "status"]
+    },
+    "Campaign": {
+      "title": "Marketing Campaign",
+      "description": "Dados de performance de campanhas de anúncios sincronizadas.",
+      "type": "object",
+      "properties": {
+        "campaignId": { "type": "string" },
+        "platform": { "type": "string", "enum": ["meta", "google", "tiktok"] },
+        "name": { "type": "string" },
+        "status": { "type": "string" },
+        "spend": { "type": "number" },
+        "clicks": { "type": "number" },
+        "impressions": { "type": "number" },
+        "conversions": { "type": "number" }
+      },
+      "required": ["campaignId", "platform", "name"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "password"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Perfil do usuário administrador."
+    },
+    "/users/{userId}/events": {
+      "schema": "TrackingEvent",
+      "description": "Coleção de eventos de rastreamento capturados para este usuário."
+    },
+    "/users/{userId}/conversions": {
+      "schema": "Conversion",
+      "description": "Coleção de vendas e conversões registradas."
+    },
+    "/users/{userId}/campaigns": {
+      "schema": "Campaign",
+      "description": "Campanhas sincronizadas das plataformas de anúncios."
+    }
+  }
+}
