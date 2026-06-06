@@ -34,14 +34,13 @@ export default function IntegrationsPage() {
 
   const handleMetaConnect = async () => {
     if (!user || !userRef) {
-      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado." });
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado para conectar." });
       return;
     }
 
     setLoading(true);
     
     // Simulação do fluxo de autorização OAuth Meta
-    // Em um cenário real com App ID configurado, abriríamos o popup do FB
     setTimeout(async () => {
       try {
         await setDoc(userRef, {
@@ -69,7 +68,7 @@ export default function IntegrationsPage() {
   };
 
   const handleSyncAccounts = async () => {
-    if (!user) return;
+    if (!user || !db) return;
     setSyncing(true);
     
     const mockAccounts = [
@@ -96,7 +95,7 @@ export default function IntegrationsPage() {
   };
 
   const toggleMonitoring = async (accId: string, current: boolean) => {
-    if (!user) return;
+    if (!user || !db) return;
     const accRef = doc(db, "users", user.uid, "ad_accounts", accId);
     updateDoc(accRef, { monitored: !current })
       .catch(async () => {

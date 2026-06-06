@@ -20,11 +20,9 @@ import {
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useState, useMemo } from "react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
-import { collection, doc, setDoc, serverTimestamp, deleteDoc, query, getDocs } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, deleteDoc, query, getDocs, updateDoc } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function MetaAdsPage() {
   const { user } = useUser();
@@ -46,7 +44,10 @@ export default function MetaAdsPage() {
   const isConnected = !!profile?.metaAccessToken;
 
   const handleFacebookConnect = () => {
-    if (!user || !userRef) return;
+    if (!user || !userRef) {
+      toast({ variant: "destructive", title: "Erro", description: "Você precisa estar logado." });
+      return;
+    }
     setConnecting(true);
 
     // Simulação de conexão automática (OAuth Mock)
@@ -68,7 +69,7 @@ export default function MetaAdsPage() {
   };
 
   const handleSyncData = async () => {
-    if (!user) return;
+    if (!user || !db) return;
     setSyncing(true);
 
     const mockMetaCampaigns = [
@@ -95,11 +96,29 @@ export default function MetaAdsPage() {
   };
 
   const handleDeleteCampaigns = async () => {
-    if (!user) return;
-    const q = query(collection(db, "users", user.uid, "campaigns"));
-    const snapshot = await getDocs(q);
-    snapshot.forEach((d) => deleteDoc(doc(db, "users", user.uid, "campaigns", d.id)));
-    toast({ title: "Dados limpos", description: "Campanhas removidas." });
+    if (!user || !db) return;
+    try {
+      const q = query(collection(db, "users", user.uid, "campaigns"));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map((d) => deleteDoc(doc(db, "users", user.uid, "campaigns", d.id)));
+      await Promise.all(deletePromises);
+      toast({ title: "Dados limpos", description: "Campanhas removidas." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro", description: "Falha ao limpar dados." });
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!userRef) return;
+    try {
+      await updateDoc(userRef, { 
+        metaAccessToken: null, 
+        metaConnected: false 
+      });
+      toast({ title: "Desconectado", description: "Conta desvinculada." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível desconectar." });
+    }
   };
 
   return (
@@ -245,9 +264,7 @@ export default function MetaAdsPage() {
                   <div className="pt-4 border-t border-white/5">
                     <Button 
                       variant="ghost" 
-                      onClick={() => {
-                        if (user && userRef) updateDoc(userRef, { metaAccessToken: null, metaConnected: false });
-                      }}
+                      onClick={handleDisconnect}
                       className="w-full text-destructive hover:bg-destructive/10 h-10"
                     >
                       Desconectar Conta
