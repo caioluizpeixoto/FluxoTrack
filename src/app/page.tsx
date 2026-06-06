@@ -1,4 +1,3 @@
-
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -18,13 +17,8 @@ import {
   Pencil,
   Info,
   ChevronDown,
-  Facebook,
-  MonitorPlay,
-  Music,
-  Youtube,
-  Menu,
   LayoutGrid,
-  Check
+  Menu
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -38,8 +32,6 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { 
   Dialog, 
   DialogContent, 
@@ -187,7 +179,7 @@ export default function Dashboard() {
           ))}
         </section>
 
-        {/* Funil e Gráficos continuam abaixo... */}
+        {/* Funil e Gráficos */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <Card className="lg:col-span-2 bg-[#121212] border-none rounded-2xl overflow-hidden">
              <CardHeader className="border-b border-white/5 pb-4">
@@ -245,22 +237,11 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Simplificada conforme solicitado (Foco Facebook Ads) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#121212] border-t border-white/5 flex items-center justify-around z-50 px-4">
+        {/* Barra limpa conforme solicitado, apenas ícones de sistema básicos se necessário ou nada */}
         <Button variant="ghost" size="icon" className="text-blue-500">
           <LayoutGrid className="w-6 h-6" />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <Facebook className="w-6 h-6" />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <MonitorPlay className="w-6 h-6" />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <Music className="w-6 h-6" />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
-          <Youtube className="w-6 h-6" />
         </Button>
         <Button variant="ghost" size="icon" className="text-muted-foreground">
           <Menu className="w-6 h-6" />
