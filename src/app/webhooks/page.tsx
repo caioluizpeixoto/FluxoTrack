@@ -1,4 +1,3 @@
-
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -11,7 +10,6 @@ import {
   ExternalLink, 
   Copy, 
   Check, 
-  CreditCard,
   CircleDollarSign,
   Clock
 } from "lucide-react";
@@ -147,14 +145,14 @@ export default function WebhooksPage() {
                     <span className="w-5 h-5 flex items-center justify-center bg-accent text-white rounded-full text-[10px]">1</span>
                     Acesse sua Plataforma
                   </h4>
-                  <p className="text-xs text-muted-foreground pl-7">Vá em Configurações > Webhooks ou API nas ferramentas de checkout.</p>
+                  <p className="text-xs text-muted-foreground pl-7">Vá em Configurações &gt; Webhooks ou API nas ferramentas de checkout.</p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="text-sm font-bold flex items-center gap-2">
                     <span className="w-5 h-5 flex items-center justify-center bg-accent text-white rounded-full text-[10px]">2</span>
                     Cole a URL
                   </h4>
-                  <p className="text-xs text-muted-foreground pl-7">Crie um novo Webhook e cole o link ao lado. Selecione "Venda Aprovada" e "Venda Gerada".</p>
+                  <p className="text-xs text-muted-foreground pl-7">Crie um novo Webhook e cole o link ao lado. Selecione &quot;Venda Aprovada&quot; e &quot;Venda Gerada&quot;.</p>
                 </div>
                 <div className="space-y-2">
                   <h4 className="text-sm font-bold flex items-center gap-2">
