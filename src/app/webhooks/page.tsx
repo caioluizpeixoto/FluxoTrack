@@ -22,6 +22,7 @@ import {
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { useUser } from "@/firebase";
+import { cn } from "@/lib/utils";
 
 const platforms = [
   { id: 'kiwify', name: 'Kiwify', icon: '🥝' },
@@ -116,7 +117,7 @@ export default function WebhooksPage() {
                           </h4>
                           <ol className="space-y-3 text-xs text-muted-foreground list-decimal pl-4">
                             <li>Acesse seu painel na {p.name}.</li>
-                            <li>Vá em Configurações &gt; Webhooks ou API.</li>
+                            <li>Vá em Configurações &gt; Webhooks ou API nas ferramentas de checkout.</li>
                             <li>Clique em "Criar Novo Webhook" ou "Adicionar Endpoint".</li>
                             <li>Cole sua URL Universal no campo de URL.</li>
                             <li>Selecione os eventos: <b>Venda Aprovada</b>, <b>Venda Gerada (Boleto/PIX)</b>.</li>
