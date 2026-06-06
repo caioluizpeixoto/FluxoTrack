@@ -65,6 +65,18 @@
         "conversions": { "type": "number" }
       },
       "required": ["campaignId", "platform", "name"]
+    },
+    "WebhookConfig": {
+      "title": "Webhook Configuration",
+      "description": "Configuração de integração de webhook para uma plataforma específica.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "platform": { "type": "string", "enum": ["kiwify", "hotmart", "cartpanda", "perfectpay", "custom"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "platform"]
     }
   },
   "auth": {
@@ -86,6 +98,10 @@
     "/users/{userId}/campaigns": {
       "schema": "Campaign",
       "description": "Campanhas sincronizadas das plataformas de anúncios."
+    },
+    "/users/{userId}/webhooks": {
+      "schema": "WebhookConfig",
+      "description": "Configurações de webhooks cadastradas pelo usuário."
     }
   }
 }

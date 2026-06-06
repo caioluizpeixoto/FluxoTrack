@@ -6,22 +6,39 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Webhook, 
   Copy, 
   Check, 
   CircleDollarSign,
-  Clock,
+  Plus,
+  Trash2,
+  Info,
   ExternalLink,
-  ChevronRight,
-  HelpCircle,
-  Zap,
-  Info
+  ChevronRight
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { cn } from "@/lib/utils";
 
 const platforms = [
@@ -34,104 +51,187 @@ const platforms = [
 
 export default function WebhooksPage() {
   const { user } = useUser();
-  const [copied, setCopied] = useState(false);
+  const db = useFirestore();
+  
+  const [newWebhookName, setNewWebhookName] = useState("");
+  const [selectedPlatform, setSelectedPlatform] = useState("kiwify");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const webhookUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks?userId=${user?.uid || 'SEU_ID'}`;
+  const webhooksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "webhooks");
+  }, [db, user]);
 
-  const copyUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({
-      title: "URL Copiada!",
-      description: "Cole este endereço nas configurações de webhook da sua plataforma.",
-    });
+  const { data: webhooks, loading } = useCollection(webhooksQuery);
+
+  const handleAddWebhook = async () => {
+    if (!user) return;
+    if (!newWebhookName) {
+      toast({ variant: "destructive", title: "Erro", description: "Dê um nome para sua integração." });
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "users", user.uid, "webhooks"), {
+        name: newWebhookName,
+        platform: selectedPlatform,
+        createdAt: new Date().toISOString(),
+        serverTimestamp: serverTimestamp()
+      });
+      
+      setNewWebhookName("");
+      setIsDialogOpen(false);
+      toast({ title: "Sucesso!", description: "Integração cadastrada com sucesso." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível salvar o webhook." });
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "webhooks", id));
+      toast({ title: "Removido", description: "Integração excluída com sucesso." });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erro", description: "Erro ao excluir." });
+    }
+  };
+
+  const copyUrl = (id: string) => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/${id}?userId=${user?.uid}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+    toast({ title: "Copiado!", description: "Link do webhook pronto para uso." });
   };
 
   return (
     <div className="flex min-h-screen bg-background text-white">
       <DashboardSidebar />
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline mb-1">Webhooks de Conversão</h1>
-          <p className="text-muted-foreground">Conecte seu checkout para cruzar vendas com gastos de anúncios.</p>
+        <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold font-headline mb-1">Integrações de Checkout</h1>
+            <p className="text-muted-foreground">Cadastre e gerencie seus links de webhook para receber vendas.</p>
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 bg-primary hover:bg-primary/90 glow-primary">
+                <Plus className="w-4 h-4" />
+                Novo Webhook
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#121212] border-white/10 text-white">
+              <DialogHeader>
+                <DialogTitle className="font-headline">Cadastrar Integração</DialogTitle>
+                <DialogDescription>Escolha a plataforma e dê um nome para identificar este link.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nome da Integração</Label>
+                  <Input 
+                    placeholder="Ex: Minha Loja Kiwify" 
+                    value={newWebhookName}
+                    onChange={(e) => setNewWebhookName(e.target.value)}
+                    className="bg-white/5 border-white/10"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Plataforma de Checkout</Label>
+                  <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                    <SelectTrigger className="bg-white/5 border-white/10">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                      {platforms.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleAddWebhook} className="bg-primary hover:bg-primary/90">Salvar e Gerar Link</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-2 space-y-6">
-            <Card className="glass-card border-primary/20 bg-primary/5">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/20 rounded-lg">
-                      <Webhook className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="font-headline text-lg">Sua URL Universal</CardTitle>
-                      <CardDescription>Use este link em qualquer plataforma suportada.</CardDescription>
-                    </div>
-                  </div>
-                  <Badge className="bg-primary/20 text-primary border-none">HTTPS ATIVO</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-2">
-                  <div className="flex-1 p-3 rounded-xl bg-black/40 border border-white/5 font-mono text-xs truncate flex items-center">
-                    {webhookUrl}
-                  </div>
-                  <Button variant="secondary" onClick={copyUrl} className="shrink-0 h-auto">
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             <Card className="glass-card">
               <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Guia de Integração
+                  <Webhook className="w-5 h-5 text-primary" />
+                  Seus Webhooks Ativos
                 </CardTitle>
+                <CardDescription>Links gerados para suas plataformas de pagamento.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="kiwify" className="w-full">
-                  <TabsList className="bg-white/5 border border-white/10 w-full justify-start p-1 h-14 mb-6">
-                    {platforms.map(p => (
-                      <TabsTrigger 
-                        key={p.id} 
-                        value={p.id}
-                        className="data-[state=active]:bg-primary data-[state=active]:text-white h-full px-4"
-                      >
-                        <span className="mr-2">{p.icon}</span>
-                        {p.name}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  
-                  {platforms.map(p => (
-                    <TabsContent key={p.id} value={p.id} className="animate-in fade-in zoom-in-95 duration-300">
-                      <div className="space-y-6">
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                          <h4 className="text-sm font-bold mb-4 flex items-center gap-2">
-                            Passo a passo para {p.name}
-                          </h4>
-                          <ol className="space-y-3 text-xs text-muted-foreground list-decimal pl-4">
-                            <li>Acesse seu painel na {p.name}.</li>
-                            <li>Vá em Configurações &gt; Webhooks ou API nas ferramentas de checkout.</li>
-                            <li>Clique em "Criar Novo Webhook" ou "Adicionar Endpoint".</li>
-                            <li>Cole sua URL Universal no campo de URL.</li>
-                            <li>Selecione os eventos: <b>Venda Aprovada</b>, <b>Venda Gerada (Boleto/PIX)</b>.</li>
-                            <li>Salve e faça um teste de envio.</li>
-                          </ol>
-                        </div>
-                        <div className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-lg text-[10px] text-blue-400">
-                          <Info className="w-4 h-4" />
-                          O AdPulse identifica o comprador pelo e-mail ou IP e cruza com os eventos do Pixel automaticamente.
-                        </div>
+              <CardContent className="p-0">
+                {!loading && webhooks && webhooks.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/5">
+                        <TableHead>Integração</TableHead>
+                        <TableHead>Link do Webhook</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {webhooks.map((wh: any) => (
+                        <TableRow key={wh.id} className="border-white/5 hover:bg-white/5">
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-bold">{wh.name}</span>
+                              <span className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                                {platforms.find(p => p.id === wh.platform)?.icon} {wh.platform}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2 max-w-[300px]">
+                              <div className="flex-1 p-2 rounded bg-black/40 border border-white/5 font-mono text-[10px] truncate">
+                                {`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/${wh.id}?userId=${user?.uid}`}
+                              </div>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-primary"
+                                onClick={() => copyUrl(wh.id)}
+                              >
+                                {copiedId === wh.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteWebhook(wh.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="py-20 text-center border-t border-white/5">
+                    {loading ? (
+                      <div className="animate-pulse text-muted-foreground">Carregando integrações...</div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-muted-foreground">Nenhum webhook cadastrado ainda.</p>
+                        <Button variant="outline" className="border-white/10" onClick={() => setIsDialogOpen(true)}>Cadastrar minha primeira plataforma</Button>
                       </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -141,49 +241,24 @@ export default function WebhooksPage() {
                   <CircleDollarSign className="w-5 h-5 text-primary" />
                   Últimas Vendas Recebidas
                 </CardTitle>
+                <CardDescription>Histórico de eventos capturados via API.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/5">
-                      <TableHead>ID / Origem</TableHead>
+                      <TableHead>Plataforma</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Atribuição</TableHead>
                       <TableHead className="text-right">Horário</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[
-                      { id: "ORD-9912", plat: "Kiwify", val: "R$ 97,00", status: "Aprovado", attr: "Facebook Ads", time: "2 min" },
-                      { id: "ORD-9910", plat: "Hotmart", val: "R$ 499,00", status: "Pendente", attr: "Google Ads", time: "15 min" },
-                      { id: "ORD-9888", plat: "Kiwify", val: "R$ 147,00", status: "Aprovado", attr: "Orgânico", time: "1h" },
-                    ].map((row, i) => (
-                      <TableRow key={i} className="border-white/5">
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-bold">{row.id}</span>
-                            <span className="text-[10px] text-muted-foreground">{row.plat}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">{row.val}</TableCell>
-                        <TableCell>
-                          <Badge className={cn(
-                            "border-none text-[10px]",
-                            row.status === "Aprovado" ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500"
-                          )}>
-                            {row.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1 text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                            {row.attr}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-xs text-muted-foreground">{row.time} atrás</TableCell>
-                      </TableRow>
-                    ))}
+                    <TableRow className="border-white/5">
+                      <TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">
+                        Aguardando as primeiras vendas...
+                      </TableCell>
+                    </TableRow>
                   </TableBody>
                 </Table>
               </CardContent>
@@ -191,33 +266,40 @@ export default function WebhooksPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="glass-card bg-accent/5 border-accent/20">
+            <Card className="glass-card bg-primary/5 border-primary/20">
               <CardHeader>
-                <CardTitle className="text-sm font-bold uppercase tracking-widest text-accent flex items-center gap-2">
-                  <HelpCircle className="w-5 h-5" />
-                  Por que integrar?
+                <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  Instruções Rápidas
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Sem webhooks, o AdPulse não consegue saber se um clique se tornou uma venda real. Ao integrar, você ativa:
-                </p>
-                <div className="space-y-3">
-                  {[
-                    "Cálculo exato de Lucro e ROI.",
-                    "Identificação de campanhas que vendem.",
-                    "Dados para a IA de Atribuição.",
-                    "Sincronização com Pixel da Meta (CAPI)."
-                  ].map((text, i) => (
-                    <div key={i} className="flex items-center gap-2 text-[10px]">
-                      <div className="w-1 h-1 rounded-full bg-accent" />
-                      {text}
-                    </div>
-                  ))}
+              <CardContent className="space-y-4 text-xs text-muted-foreground leading-relaxed">
+                <p>Para cada checkout que você usa (ex: Kiwify para o curso A e Hotmart para o curso B), crie um novo webhook aqui.</p>
+                <ol className="list-decimal pl-4 space-y-2">
+                  <li>Clique em <b>Novo Webhook</b>.</li>
+                  <li>Dê um nome e selecione a plataforma.</li>
+                  <li>Copie o link gerado na lista ao lado.</li>
+                  <li>Cole este link na área de <b>Webhooks</b> da sua plataforma de vendas.</li>
+                </ol>
+                <div className="pt-4 flex flex-col gap-2">
+                  <Button variant="link" className="p-0 h-auto text-primary justify-start text-[10px]">
+                    Tutorial Kiwify <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
+                  <Button variant="link" className="p-0 h-auto text-primary justify-start text-[10px]">
+                    Tutorial Hotmart <ExternalLink className="w-3 h-3 ml-1" />
+                  </Button>
                 </div>
-                <Button variant="link" className="p-0 text-accent text-xs mt-4">
-                  Documentação completa <ChevronRight className="w-3 h-3" />
-                </Button>
+              </CardContent>
+            </Card>
+            
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="text-sm font-bold uppercase text-muted-foreground">Por que separar?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Ao cadastrar webhooks individuais, você consegue identificar exatamente de qual conta e produto cada venda está vindo, facilitando o cálculo de ROI por oferta.
+                </p>
               </CardContent>
             </Card>
           </div>
