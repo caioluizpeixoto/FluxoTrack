@@ -1,3 +1,4 @@
+
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { aiAttributionSuggestions, type AttributionSuggestionsOutput } from "@/ai/flows/ai-attribution-suggestions";
+import { cn } from "@/lib/utils";
 
 export default function AiInsightsPage() {
   const [loading, setLoading] = useState(false);
@@ -58,11 +60,11 @@ export default function AiInsightsPage() {
   return (
     <div className="flex min-h-screen bg-background">
       <DashboardSidebar />
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1">AI Path Mapping</h1>
-            <p className="text-muted-foreground">Resolving attribution for orphan sales using behavioral patterns.</p>
+            <p className="text-muted-foreground">Resolvendo attribution for orphan sales using behavioral patterns.</p>
           </div>
           <Button onClick={handleRunAnalysis} disabled={loading} className="gap-2 bg-accent hover:bg-accent/90 glow-accent">
             <Sparkles className={cn("w-4 h-4", loading && "animate-spin")} />
@@ -181,5 +183,3 @@ export default function AiInsightsPage() {
     </div>
   );
 }
-
-import { cn } from "@/lib/utils";

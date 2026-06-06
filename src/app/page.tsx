@@ -242,7 +242,6 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
             </CardContent>
-          </AreaChart>
           </Card>
 
           <Card className="bg-[#121212] border-none rounded-2xl shadow-xl">
