@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -95,7 +96,7 @@
   "firestore": {
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "Configurações do usuário."
+      "description": "Configurações do usuário. Acesso permitido apenas ao proprietário."
     },
     "/users/{userId}/ad_accounts": {
       "schema": "AdAccount",
