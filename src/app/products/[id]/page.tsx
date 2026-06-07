@@ -401,10 +401,6 @@ export default function ProductDetail() {
             </LinkNext>
             <div>
               <h1 className="text-2xl font-bold font-headline text-primary">{product.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline" className="text-xs bg-[#1a1c23] border-white/10 text-green-500">Venda: {formatCurrency(product.price)}</Badge>
-                <Badge variant="outline" className="text-xs bg-[#1a1c23] border-white/10 text-red-400">Custo: {formatCurrency(product.product_cost)}</Badge>
-              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -459,7 +455,7 @@ export default function ProductDetail() {
                 </Card>
                 <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
                   <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
-                  <p className="text-3xl font-bold font-headline text-primary">{formatCurrency(kpis.profit)}</p>
+                  <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
                 </Card>
               </div>
 
@@ -724,6 +720,55 @@ export default function ProductDetail() {
                         </div>
                       </div>
                     ))}
+                 </div>
+               </div>
+            </TabsContent>
+
+            {/* ABA: PIXEL */}
+            <TabsContent value="pixel" className="flex-1 overflow-y-auto p-6 m-0">
+               <div className="max-w-2xl space-y-6">
+                 <div>
+                   <h2 className="text-xl font-bold font-headline">Pixel de Rastreamento</h2>
+                   <p className="text-sm text-muted-foreground mb-4">Vincule o Pixel do Facebook para marcar compras quando o Webhook não for o suficiente.</p>
+                 </div>
+                 <div className="space-y-4">
+                   <div className="flex flex-col gap-2">
+                     <label className="text-xs font-bold text-slate-400">ID do Pixel Meta</label>
+                     <div className="flex gap-2">
+                        <Input value={pixel?.pixel_id || ''} onChange={(e) => setPixel({...pixel, pixel_id: e.target.value})} className="bg-[#0f1115] border-white/10 font-mono" placeholder="Ex: 100023456789" />
+                        <Button onClick={async () => {
+                           if (!pixel?.pixel_id) return;
+                           const { data: existing } = await supabase.from('product_pixels').select('id').eq('product_id', id).maybeSingle();
+                           if (existing) await supabase.from('product_pixels').update({ pixel_id: pixel.pixel_id }).eq('id', existing.id);
+                           else await supabase.from('product_pixels').insert({ user_id: user!.uid, product_id: id, pixel_id: pixel.pixel_id, provider: 'facebook' });
+                           toast({ title: 'Pixel salvo com sucesso!' });
+                        }}>Salvar Pixel</Button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+            </TabsContent>
+
+            {/* ABA: UTMs */}
+            <TabsContent value="utms" className="flex-1 overflow-y-auto p-6 m-0">
+               <div className="max-w-4xl space-y-6">
+                 <div>
+                   <h2 className="text-xl font-bold font-headline">Parâmetros UTM Recomendados</h2>
+                   <p className="text-sm text-muted-foreground mb-4">Para que a leitura de vendas pelo Webhook fique perfeita, utilize exatamente esta estrutura de UTM nos seus anúncios do Meta.</p>
+                 </div>
+                 
+                 <div className="bg-[#1a1c23] border border-white/10 rounded-lg p-6 space-y-4">
+                    <h3 className="font-bold text-lg text-primary">Copie e cole a URL abaixo:</h3>
+                    <div className="p-4 bg-[#0f1115] rounded border border-white/5 font-mono text-sm break-all text-slate-300">
+                      ?utm_source=facebook&utm_medium=&#123;&#123;adset.name&#125;&#125;&utm_campaign=&#123;&#123;campaign.name&#125;&#125;&utm_content=&#123;&#123;ad.name&#125;&#125;
+                    </div>
+                    <Button variant="secondary" onClick={() => {
+                      navigator.clipboard.writeText("?utm_source=facebook&utm_medium={{adset.name}}&utm_campaign={{campaign.name}}&utm_content={{ad.name}}");
+                      toast({title: 'UTMs Copiadas!'});
+                    }}><Copy className="w-4 h-4 mr-2"/> Copiar UTMs</Button>
+                    <p className="text-xs text-muted-foreground mt-4">
+                      Estes parâmetros dinâmicos (`&#123;&#123;campaign.name&#125;&#125;` etc) serão substituídos pelo Facebook quando o usuário clicar. O Webhook irá identificar a campanha através deles.
+                    </p>
                  </div>
                </div>
             </TabsContent>
