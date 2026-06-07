@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { getInsights, getAccountDetails } from '@/lib/metaApi';
+import { getInsights, getAccountDetails, getCampaigns, getAdSets, getAds } from '@/lib/metaApi';
 
 export async function POST(req: NextRequest) {
   try {
@@ -64,12 +64,30 @@ export async function POST(req: NextRequest) {
       // O Meta API não permite level=all. Se a UI precisa de campanhas, conjuntos e anúncios simultâneos, a UI chamará 3x ou faremos 3 chamadas aqui.
       
       if (level === 'all') {
-        const [c, a, ad] = await Promise.all([
+        const [c, a, ad, cStruct, aStruct, adStruct] = await Promise.all([
            getInsights(accountId, token, 'campaign', dateParams),
            getInsights(accountId, token, 'adset', dateParams),
-           getInsights(accountId, token, 'ad', dateParams)
+           getInsights(accountId, token, 'ad', dateParams),
+           getCampaigns(accountId, token),
+           getAdSets(accountId, token),
+           getAds(accountId, token)
         ]);
-        insights = { campaigns: c, adsets: a, ads: ad };
+
+        // Merge structure into insights
+        const merge = (insArr: any[], structArr: any[], idKeyIns: string, idKeyStruct: string) => {
+           // We want to return structural data EVEN IF there are no insights (spend = 0)
+           const merged = [...structArr].map(struct => {
+              const ins = insArr.find(i => i[idKeyIns] === struct[idKeyStruct]);
+              return { ...struct, ...ins, [idKeyIns]: struct[idKeyStruct], [`${idKeyIns.replace('_id', '')}_name`]: struct.name };
+           });
+           return merged;
+        };
+
+        insights = { 
+           campaigns: merge(c, cStruct, 'campaign_id', 'id'), 
+           adsets: merge(a, aStruct, 'adset_id', 'id'), 
+           ads: merge(ad, adStruct, 'ad_id', 'id') 
+        };
       } else {
         insights = await getInsights(accountId, token, realLevel as any, dateParams);
       }

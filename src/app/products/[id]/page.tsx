@@ -53,8 +53,8 @@ export default function ProductDetail() {
 
   // Drilldown Meta Ads
   const [metaTab, setMetaTab] = useState("campanhas");
-  const [drilledCampaignId, setDrilledCampaignId] = useState<string | null>(null);
-  const [drilledAdsetId, setDrilledAdsetId] = useState<string | null>(null);
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
+  const [selectedAdsetIds, setSelectedAdsetIds] = useState<string[]>([]);
 
   // Modals & Forms
   const [budgetModal, setBudgetModal] = useState<any>(null);
@@ -270,7 +270,7 @@ export default function ProductDetail() {
       const pRev = item.action_values.find((a: any) => a.action_type === 'purchase');
       if (pRev) revenue = Number(pRev.value || 0);
     }
-    return { spend, purchases, revenue, roas: spend > 0 ? revenue / spend : 0, cpa: purchases > 0 ? spend / purchases : 0, status: item.status, name: item.name };
+    return { spend, purchases, revenue, roas: spend > 0 ? revenue / spend : 0, cpa: purchases > 0 ? spend / purchases : 0, status: item.status, name: item.name, daily_budget: Number(item.daily_budget || 0) / 100, lifetime_budget: Number(item.lifetime_budget || 0) / 100 };
   };
 
   // Status and Budget Modals
@@ -475,19 +475,30 @@ export default function ProductDetail() {
 
             {/* ABA: META ADS */}
             <TabsContent value="meta" className="flex-1 flex flex-col m-0 p-0 overflow-hidden">
-              <div className="bg-[#1a1c23] p-2 border-b border-white/5 flex gap-2">
-                <Button variant={metaTab === 'campanhas' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => { setDrilledCampaignId(null); setDrilledAdsetId(null); setMetaTab('campanhas'); }}>Campanhas</Button>
-                <Button variant={metaTab === 'conjuntos' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => { setDrilledAdsetId(null); setMetaTab('conjuntos'); }}>Conjuntos</Button>
-                <Button variant={metaTab === 'anuncios' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setMetaTab('anuncios')}>Anúncios</Button>
+              <div className="bg-[#1a1c23] p-2 border-b border-white/5 flex gap-2 items-center justify-between">
+                <div className="flex gap-2">
+                  <Button variant={metaTab === 'campanhas' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setMetaTab('campanhas')}>
+                     Campanhas {selectedCampaignIds.length > 0 && <Badge className="ml-2 h-5 bg-primary/20 text-primary">{selectedCampaignIds.length}</Badge>}
+                  </Button>
+                  <Button variant={metaTab === 'conjuntos' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setMetaTab('conjuntos')}>
+                     Conjuntos {selectedAdsetIds.length > 0 && <Badge className="ml-2 h-5 bg-primary/20 text-primary">{selectedAdsetIds.length}</Badge>}
+                  </Button>
+                  <Button variant={metaTab === 'anuncios' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setMetaTab('anuncios')}>Anúncios</Button>
+                </div>
+                {(selectedCampaignIds.length > 0 || selectedAdsetIds.length > 0) && (
+                   <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-white" onClick={() => { setSelectedCampaignIds([]); setSelectedAdsetIds([]); }}>Limpar Filtros</Button>
+                )}
               </div>
 
               <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap">
                   <thead className="bg-[#14151a] text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-md">
                     <tr>
+                      <th className="px-4 py-3 w-10"></th>
                       <th className="px-4 py-3 w-10">Status</th>
                       <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3 text-center">Orçamento</th>
+                      <th className="px-4 py-3 text-center">Orçamento Atual</th>
+                      <th className="px-4 py-3 text-center">Alterar</th>
                       <th className="px-4 py-3 text-right">Gasto</th>
                       <th className="px-4 py-3 text-right">CPA</th>
                       <th className="px-4 py-3 text-right">ROAS</th>
@@ -496,24 +507,54 @@ export default function ProductDetail() {
                   <tbody className="divide-y divide-white/5">
                     {metaTab === 'campanhas' && liveMetrics.campaigns.map(c => {
                       const m = getMetric('campaigns', 'campaign_id', c.campaign_id);
+                      const isSelected = selectedCampaignIds.includes(c.campaign_id);
                       return (
-                        <tr key={c.campaign_id} className="hover:bg-white/5">
+                        <tr key={c.campaign_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
+                          <td className="px-4 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                             if (checked) setSelectedCampaignIds(prev => [...prev, c.campaign_id]);
+                             else setSelectedCampaignIds(prev => prev.filter(id => id !== c.campaign_id));
+                          }}/></td>
                           <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
-                          <td className="px-4 py-2 font-medium text-blue-400 cursor-pointer" onClick={() => { setDrilledCampaignId(c.campaign_id); setMetaTab('conjuntos'); }}>{c.campaign_name}</td>
-                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10 hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}>Alterar</Button></td>
+                          <td className="px-4 py-2 font-medium">{c.campaign_name}</td>
+                          <td className="px-4 py-2 text-center font-mono text-slate-300">{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</td>
+                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10 hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}>Editar</Button></td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                         </tr>
                       );
                     })}
-                    {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => !drilledCampaignId || a.campaign_id === drilledCampaignId).map(a => {
+                    {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)).map(a => {
                       const m = getMetric('adsets', 'adset_id', a.adset_id);
+                      const isSelected = selectedAdsetIds.includes(a.adset_id);
                       return (
-                        <tr key={a.adset_id} className="hover:bg-white/5">
+                        <tr key={a.adset_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
+                          <td className="px-4 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                             if (checked) setSelectedAdsetIds(prev => [...prev, a.adset_id]);
+                             else setSelectedAdsetIds(prev => prev.filter(id => id !== a.adset_id));
+                          }}/></td>
                           <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
-                          <td className="px-4 py-2 font-medium text-blue-400 cursor-pointer" onClick={() => { setDrilledAdsetId(a.adset_id); setMetaTab('anuncios'); }}>{a.adset_name}</td>
-                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}>Alterar</Button></td>
+                          <td className="px-4 py-2 font-medium">{a.adset_name}</td>
+                          <td className="px-4 py-2 text-center font-mono text-slate-300">{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</td>
+                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}>Editar</Button></td>
+                          <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
+                          <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
+                          <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                        </tr>
+                      );
+                    })}
+                    {metaTab === 'anuncios' && liveMetrics.ads.filter(a => 
+                       (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && 
+                       (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id))
+                    ).map(a => {
+                      const m = getMetric('ads', 'ad_id', a.ad_id);
+                      return (
+                        <tr key={a.ad_id} className="hover:bg-white/5">
+                          <td className="px-4 py-2"></td>
+                          <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
+                          <td className="px-4 py-2 font-medium">{a.ad_name}</td>
+                          <td className="px-4 py-2 text-center font-mono text-slate-300">-</td>
+                          <td className="px-4 py-2 text-center"></td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
