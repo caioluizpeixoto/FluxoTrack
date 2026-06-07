@@ -7,8 +7,7 @@ import { firebaseConfig } from './config';
 
 /**
  * Inicializa o Firebase de forma segura.
- * Se as configurações estiverem ausentes ou forem inválidas, retorna instâncias nulas
- * para evitar erros de renderização no NextJS (Hydration/Runtime Errors).
+ * Retorna instâncias nulas de forma consistente se a configuração for inválida.
  */
 export function initializeFirebase() {
   try {
@@ -17,7 +16,6 @@ export function initializeFirebase() {
                          firebaseConfig.apiKey !== "undefined";
 
     if (!isConfigValid) {
-      console.warn("Firebase: Chaves de configuração não encontradas. O login e banco de dados estarão desativados.");
       return { 
         app: null as unknown as FirebaseApp, 
         firestore: null as unknown as Firestore, 
@@ -31,7 +29,7 @@ export function initializeFirebase() {
     
     return { app, firestore, auth };
   } catch (error) {
-    console.error("Erro crítico ao inicializar Firebase:", error);
+    console.error("Erro ao inicializar Firebase:", error);
     return { 
       app: null as unknown as FirebaseApp, 
       firestore: null as unknown as Firestore, 
