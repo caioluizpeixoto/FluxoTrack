@@ -1,140 +1,113 @@
-
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target } from "lucide-react";
-import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
-import { collection, doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { useState, useMemo } from "react";
+import { Facebook, RefreshCw, CheckCircle2, Trash2, ArrowRight, Zap, Building2, Target, AlertTriangle } from "lucide-react";
+import { useUser } from "@/firebase";
+import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { supabase } from '@/lib/supabaseClient';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export default function IntegrationsPage() {
   const { user } = useUser();
-  const db = useFirestore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  const userRef = useMemo(() => user ? doc(db, "users", user.uid) : null, [db, user]);
-  const { data: profile } = useDoc(userRef);
-  
-  const accountsQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return collection(db, "users", user.uid, "ad_accounts");
-  }, [db, user]);
-  const { data: accounts } = useCollection(accountsQuery);
+  const [connections, setConnections] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [pixels, setPixels] = useState<any[]>([]);
 
-  const isConnected = !!profile?.metaAccessToken;
+  const isConnected = connections.length > 0 && connections[0].status === 'connected';
+  const connection = connections[0] || null;
 
-  const handleSyncAccounts = (userId: string) => {
-    if (!db) return;
-    setSyncing(true);
-    
-    const mockAccounts = [
-      { accountId: "act_123456789", name: "Ecom High Scale - Conta 01", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
-      { accountId: "act_987654321", name: "Retargeting Criativo - Backup", currency: "BRL", status: "ACTIVE", businessName: "AdPulse Business Media" },
-      { accountId: "act_456123789", name: "Lançamento Produto X", currency: "BRL", status: "DISABLED", businessName: "Agência Digital VIP" }
-    ];
+  useEffect(() => {
+    // Tratativa de retornos do OAuth
+    const connectedParam = searchParams?.get('connected');
+    const errorParam = searchParams?.get('error');
 
-    const accountsColl = collection(db, "users", userId, "ad_accounts");
-    
-    mockAccounts.forEach((acc) => {
-      const accRef = doc(accountsColl, acc.accountId);
-      const data = { ...acc, monitored: true, updatedAt: serverTimestamp() };
-      
-      setDoc(accRef, data, { merge: true })
-        .catch(async () => {
-          const err = new FirestorePermissionError({ path: accRef.path, operation: 'write', requestResourceData: data });
-          errorEmitter.emit('permission-error', err);
-        });
-    });
+    if (errorParam) {
+      toast({ variant: 'destructive', title: 'Erro na conexão Meta', description: decodeURIComponent(errorParam) });
+      router.replace('/integrations');
+    } else if (connectedParam === 'true') {
+      toast({ title: 'Meta Ads Conectado!', description: 'Suas contas foram importadas com sucesso.' });
+      router.replace('/integrations');
+    }
+  }, [searchParams, router]);
 
-    setTimeout(() => {
-      setSyncing(false);
-      toast({ 
-        title: "Contas Sincronizadas", 
-        description: `${mockAccounts.length} contas encontradas.` 
-      });
-    }, 1500);
-  };
+  useEffect(() => {
+    if (user) {
+      fetchMetaInfo();
+    }
+  }, [user]);
 
-  const handleMetaConnect = async () => {
+  async function fetchMetaInfo() {
+    if (!user) return;
+    try {
+      const { data: conn } = await supabase.from('meta_connections').select('*').eq('user_id', user.uid);
+      setConnections(conn || []);
+
+      const { data: accs } = await supabase.from('meta_ad_accounts').select('*').eq('user_id', user.uid);
+      setAccounts(accs || []);
+
+      const { data: pix } = await supabase.from('meta_pixels').select('*').eq('user_id', user.uid);
+      setPixels(pix || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const handleMetaConnect = () => {
     if (!user) {
-      toast({ 
-        variant: "destructive",
-        title: "Login Necessário", 
-        description: "Por favor, clique em 'Entrar' na barra lateral primeiro." 
-      });
+      toast({ variant: "destructive", title: "Login Necessário", description: "Por favor, faça login na barra lateral esquerda antes de conectar o Facebook." });
       return;
     }
+    // Passa o userId via query param para o endpoint de connect armazenar no state do OAuth
+    window.location.href = `/api/meta/connect?userId=${user.uid}`;
+  };
 
-    setLoading(true);
+  const handleSyncAccounts = async () => {
+    if (!user) return;
+    setSyncing(true);
     try {
-      const ref = doc(db, "users", user.uid);
-      const data = {
-        uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
-        metaConnected: true,
-        metaAccessToken: "EAAB_PROTOTYPE_TOKEN_" + Math.random().toString(36).substring(7),
-        lastMetaAuth: new Date().toISOString(),
-        updatedAt: serverTimestamp()
-      };
-
-      await setDoc(ref, data, { merge: true });
+      const res = await fetch('/api/meta/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, datePreset: 'maximum' }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error(data.error || 'Erro ao sincronizar');
       
       toast({ 
-        title: "Facebook Conectado!", 
-        description: "Sua conta foi vinculada com sucesso." 
+        title: "Sincronização Concluída", 
+        description: `As campanhas e métricas foram importadas com sucesso.` 
       });
-      
-      handleSyncAccounts(user.uid);
     } catch (error: any) {
-      console.error("Meta Connect Error:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erro na conexão", 
-        description: "Não foi possível salvar os dados. Tente novamente." 
-      });
+      toast({ variant: 'destructive', title: 'Erro de Sincronização', description: error.message });
     } finally {
-      setLoading(false);
+      setSyncing(false);
     }
   };
 
-  const toggleMonitoring = (accId: string, current: boolean) => {
-    if (!user || !db) return;
-    const accRef = doc(db, "users", user.uid, "ad_accounts", accId);
-    
-    updateDoc(accRef, { monitored: !current })
-      .catch(async () => {
-        const err = new FirestorePermissionError({ path: accRef.path, operation: 'update' });
-        errorEmitter.emit('permission-error', err);
-      });
-    
-    toast({ 
-      title: current ? "Monitoramento pausado" : "Monitoramento ativado",
-      description: "As métricas desta conta serão refletidas no dashboard."
-    });
-  };
-
-  const handleDisconnect = () => {
-    if (!userRef) return;
-    
-    updateDoc(userRef, {
-      metaAccessToken: null,
-      metaConnected: false
-    }).catch(async () => {
-      const err = new FirestorePermissionError({ path: userRef.path, operation: 'update' });
-      errorEmitter.emit('permission-error', err);
-    });
-
-    toast({ title: "Desconectado", description: "Sua conta Meta foi desvinculada." });
+  const handleDisconnect = async () => {
+    if (!user) return;
+    try {
+      await supabase.from('meta_connections').delete().eq('user_id', user.uid);
+      await supabase.from('profiles').update({ meta_connected: false, meta_access_token: null }).eq('id', user.uid);
+      setConnections([]);
+      setAccounts([]);
+      toast({ title: "Desconectado", description: "Sua conta Meta foi desvinculada." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erro", description: "Não foi possível desconectar." });
+    }
   };
 
   return (
@@ -143,7 +116,7 @@ export default function IntegrationsPage() {
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-headline mb-1">Integrações</h1>
-          <p className="text-muted-foreground">Conecte suas fontes de tráfego e dados para uma atribuição perfeita.</p>
+          <p className="text-muted-foreground">Conecte suas fontes de tráfego (Meta Ads) e gerencie suas contas de anúncios.</p>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -162,7 +135,7 @@ export default function IntegrationsPage() {
                   </div>
                   <div>
                     <CardTitle className="font-headline text-xl">Facebook Ads</CardTitle>
-                    <CardDescription>Métricas de campanhas e gastos via API.</CardDescription>
+                    <CardDescription>Conecte seu Business Manager para importar contas e campanhas.</CardDescription>
                   </div>
                 </div>
                 <Badge className={cn(
@@ -180,8 +153,8 @@ export default function IntegrationsPage() {
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="w-6 h-6 text-green-500" />
                         <div className="flex flex-col">
-                          <span className="text-sm font-bold">Conexão Estabelecida</span>
-                          <span className="text-xs text-muted-foreground">Token verificado via OAuth 2.0</span>
+                          <span className="text-sm font-bold">Conexão Estabelecida: {connection?.facebook_name}</span>
+                          <span className="text-xs text-muted-foreground">Você possui {accounts.length} contas e {pixels.length} pixels disponíveis.</span>
                         </div>
                       </div>
                       <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-destructive hover:bg-destructive/10 rounded-xl">
@@ -194,19 +167,19 @@ export default function IntegrationsPage() {
                     <Zap className="w-10 h-10 text-primary mb-4 animate-pulse" />
                     <h3 className="text-xl font-bold mb-2">Vincular Conta de Anúncios</h3>
                     <p className="text-sm text-muted-foreground max-w-sm mb-8 leading-relaxed">
-                      {user ? "Clique abaixo para autorizar o AdPulse a importar seus gastos e métricas." : "Faça login no app primeiro para poder salvar sua conta Meta Ads."}
+                      {user ? "Clique abaixo para autorizar o AdPulse a importar suas contas e campanhas." : "Faça login no app primeiro para poder salvar sua conta Meta Ads."}
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
                       disabled={loading} 
-                      className="glow-primary h-16 px-12 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02]"
+                      className="glow-primary h-16 px-12 font-bold gap-3 text-lg rounded-2xl transition-all hover:scale-[1.02] bg-[#1877F2] hover:bg-[#1877F2]/90 text-white border-none"
                     >
                       {loading ? (
                         <RefreshCw className="w-6 h-6 animate-spin" />
                       ) : (
                         <Facebook className="w-6 h-6" />
                       )}
-                      {user ? "Autorizar Facebook Ads" : "Fazer Login Primeiro"}
+                      Conectar com Facebook Ads
                     </Button>
                   </div>
                 )}
@@ -214,51 +187,46 @@ export default function IntegrationsPage() {
               {isConnected && (
                 <CardFooter className="border-t border-white/5 pt-6 bg-white/5">
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-muted-foreground font-mono">
-                      SYNC: {profile?.lastMetaAuth ? new Date(profile.lastMetaAuth).toLocaleTimeString() : 'PENDING'}
+                    <div className="text-xs text-muted-foreground font-mono flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                      Sincronize as campanhas para que fiquem disponíveis no Dashboard.
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => user && handleSyncAccounts(user.uid)} disabled={syncing} className="gap-2 border-primary/20 text-primary bg-primary/5 hover:bg-primary/10 rounded-xl">
+                    <Button variant="outline" size="sm" onClick={handleSyncAccounts} disabled={syncing} className="gap-2 border-primary/20 text-primary bg-primary/5 hover:bg-primary/10 rounded-xl">
                       <RefreshCw className={cn("w-4 h-4", syncing && "animate-spin")} />
-                      Sincronizar BMs
+                      {syncing ? 'Sincronizando...' : 'Sincronizar API'}
                     </Button>
                   </div>
                 </CardFooter>
               )}
             </Card>
 
-            {isConnected && accounts && accounts.length > 0 && (
+            {isConnected && accounts.length > 0 && (
               <Card className="glass-card animate-in slide-in-from-bottom-4 duration-700">
                 <CardHeader>
                   <CardTitle className="text-lg font-headline flex items-center gap-2">
                     <Building2 className="w-5 h-5 text-primary" />
-                    Contas de Anúncios Encontradas
+                    Contas de Anúncios Conectadas
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
                   {accounts.map((acc: any) => (
-                    <div key={acc.accountId} className={cn(
-                      "flex items-center justify-between p-5 rounded-2xl border transition-all",
-                      acc.monitored ? "bg-white/5 border-primary/30" : "bg-black/20 border-white/5 opacity-60"
-                    )}>
+                    <div key={acc.account_id} className="flex items-center justify-between p-5 rounded-2xl border transition-all bg-white/5 border-primary/30">
                       <div className="flex items-center gap-4">
-                        <div className={cn("p-3 rounded-xl", acc.monitored ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground")}>
+                        <div className="p-3 rounded-xl bg-primary/20 text-primary">
                           <Target className="w-6 h-6" />
                         </div>
                         <div>
-                          <p className="font-bold text-base">{acc.name}</p>
+                          <p className="font-bold text-base">{acc.account_name}</p>
                           <p className="text-[10px] text-muted-foreground uppercase font-mono tracking-widest">
-                            {acc.businessName}
+                            ID: {acc.account_id}
                           </p>
                         </div>
                       </div>
-                      <Button 
-                        onClick={() => toggleMonitoring(acc.accountId, acc.monitored)}
-                        variant={acc.monitored ? "default" : "outline"}
-                        size="sm"
-                        className={cn("rounded-xl font-bold", acc.monitored && "bg-green-600 hover:bg-green-700 glow-accent border-none")}
-                      >
-                        {acc.monitored ? "Ativo" : "Monitorar"}
-                      </Button>
+                      <Link href={`/?create_product=${acc.account_id}`}>
+                        <Button size="sm" className="rounded-xl font-bold bg-primary hover:bg-primary/90 text-white glow-primary gap-2">
+                          <CheckCircle2 className="w-4 h-4" /> Integrar Conta
+                        </Button>
+                      </Link>
                     </div>
                   ))}
                 </CardContent>
@@ -271,12 +239,14 @@ export default function IntegrationsPage() {
               <CardHeader>
                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5" />
-                  Privacidade
+                  Próximos Passos
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  O AdPulse utiliza apenas permissões de leitura. Seus dados de faturamento nunca são compartilhados com a Meta.
+                  1. Conecte sua conta.<br/>
+                  2. Clique em Sincronizar API.<br/>
+                  3. Acesse o <strong>Dashboard</strong> e crie um <strong>Produto</strong> vinculando uma dessas contas de anúncios para visualizar as métricas de investimento, CPC e ROAS.
                 </p>
               </CardContent>
             </Card>
@@ -287,7 +257,7 @@ export default function IntegrationsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Lembre-se: Para o ROAS ser calculado, você também precisa ter o **Pixel AdPulse** instalado na sua página.
+                  Para o ROAS ser calculado corretamente em tempo real, você também precisa ter o **Pixel AdPulse** instalado na sua página.
                 </p>
                 <Link href="/pixel">
                   <Button variant="link" className="p-0 h-auto text-accent text-xs group">

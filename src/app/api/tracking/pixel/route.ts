@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
 /**
  * Endpoint receptor para o Pixel AdPulse.
@@ -31,31 +30,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing mandatory fields' }, { status: 400 });
     }
 
-    const { firestore } = initializeFirebase();
+    const supabaseAdmin = getSupabaseAdmin();
     
-    // 1. Registrar o evento na coleção de rastreamento do usuário
-    const eventsRef = collection(firestore, 'users', userId, 'events');
-    await addDoc(eventsRef, {
-      eventType,
-      url: url || '',
-      utmSource: utmSource || '',
-      utmMedium: utmMedium || '',
-      utmCampaign: utmCampaign || '',
-      fbclid: fbclid || '',
-      gclid: gclid || '',
-      fbp: fbp || '',
-      fbc: fbc || '',
-      visitorId: visitorId || '',
-      sessionId: sessionId || '',
-      referrer: referrer || '',
-      userAgent: userAgent || '',
-      timestamp: new Date().toISOString(),
-      serverTimestamp: serverTimestamp(),
-      ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
-    });
+    // Registrar o evento na tabela do Supabase
+    const { error } = await supabaseAdmin
+      .from('tracking_events')
+      .insert({
+        user_id: userId,
+        event_type: eventType,
+        url: url || '',
+        utm_source: utmSource || '',
+        utm_medium: utmMedium || '',
+        utm_campaign: utmCampaign || '',
+        fbclid: fbclid || '',
+        gclid: gclid || '',
+        fbp: fbp || '',
+        fbc: fbc || '',
+        visitor_id: visitorId || '',
+        session_id: sessionId || '',
+        referrer: referrer || '',
+        user_agent: userAgent || '',
+        timestamp: new Date().toISOString(),
+        ip_address: request.headers.get('x-forwarded-for') || 'unknown'
+      });
 
-    // 2. Se for um evento de checkout ou compra, podemos disparar lógica adicional aqui
-    // Ex: Notificações, logs de sincronização, etc.
+    if (error) throw error;
 
     return NextResponse.json({ success: true, eventId: Date.now().toString() });
   } catch (error) {
@@ -63,3 +62,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

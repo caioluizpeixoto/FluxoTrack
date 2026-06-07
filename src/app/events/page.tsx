@@ -7,7 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Badge } from "@/components/ui/badge";
 import { MousePointer2, Clock, Globe, ArrowUpRight, Button } from "lucide-react";
 import { useUser, useCollection, useFirestore } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
+import { collection, query, orderBy, limit } from "@/firebase/compat/firestore";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Button as ShadButton } from "@/components/ui/button";

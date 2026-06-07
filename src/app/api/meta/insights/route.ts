@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import { getInsights, getAccountDetails } from '@/lib/metaApi';
 
 export async function POST(req: NextRequest) {
@@ -11,6 +11,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing userId or accountId' }, { status: 400 });
     }
 
+    const supabaseAdmin = getSupabaseAdmin();
+    
     // Pega o token do banco
     const { data: conn } = await supabaseAdmin
       .from('meta_connections')

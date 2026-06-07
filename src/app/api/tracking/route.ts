@@ -1,7 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
 /**
  * Endpoint de API para receber eventos de tracking.
@@ -16,23 +15,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Faltam dados obrigatórios' }, { status: 400 });
     }
 
-    const { firestore } = initializeFirebase();
+    const supabaseAdmin = getSupabaseAdmin();
     
-    // Adicionar o evento na coleção do usuário
-    const eventRef = collection(firestore, 'users', userId, 'events');
-    await addDoc(eventRef, {
-      eventType,
-      url: url || '',
-      utmSource: utmSource || '',
-      utmMedium: utmMedium || '',
-      utmCampaign: utmCampaign || '',
-      fbc: fbc || '',
-      fbp: fbp || '',
-      timestamp: new Date().toISOString(),
-      serverTimestamp: serverTimestamp(),
-      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
-      userAgent: request.headers.get('user-agent') || ''
-    });
+    // Adicionar o evento na tabela do Supabase
+    const { error } = await supabaseAdmin
+      .from('tracking_events')
+      .insert({
+        user_id: userId,
+        event_type: eventType,
+        url: url || '',
+        utm_source: utmSource || '',
+        utm_medium: utmMedium || '',
+        utm_campaign: utmCampaign || '',
+        fbc: fbc || '',
+        fbp: fbp || '',
+        timestamp: new Date().toISOString(),
+        ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+        user_agent: request.headers.get('user-agent') || ''
+      });
+
+    if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -40,3 +42,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
+

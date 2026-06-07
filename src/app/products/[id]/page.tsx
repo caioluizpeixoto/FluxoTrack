@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
-  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy
+  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -38,8 +38,8 @@ export default function ProductDetail() {
   const [taxes, setTaxes] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [rules, setRules] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
   const [utms, setUtms] = useState<any>(null);
-  const [webhook, setWebhook] = useState<any>(null);
   const [pixel, setPixel] = useState<any>(null);
   const [productAdAccount, setProductAdAccount] = useState<any>(null);
   
@@ -49,7 +49,6 @@ export default function ProductDetail() {
 
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
-  const [allCampaigns, setAllCampaigns] = useState<any[]>([]);
   const [selectedAccId, setSelectedAccId] = useState<string>("");
 
   // Drilldown Meta Ads
@@ -65,6 +64,11 @@ export default function ProductDetail() {
   const [confirmModal, setConfirmModal] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
 
+  // Forms State
+  const [newTax, setNewTax] = useState({ name: '', percentage: '', fixed: '' });
+  const [newExp, setNewExp] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
+  const [newRule, setNewRule] = useState({ name: '', metric: 'cpa', operator: '>', value: '', action: 'pause_campaign', actionValue: '' });
+
   useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
@@ -78,16 +82,15 @@ export default function ProductDetail() {
       if (!prod) throw new Error("Produto não encontrado");
       setProduct(prod);
 
-      // Fetch all links
-      const [linksRes, taxesRes, expRes, rulesRes, utmRes, webhookRes, pixelRes, accLinkRes] = await Promise.all([
+      const [linksRes, taxesRes, expRes, rulesRes, utmRes, pixelRes, accLinkRes, eventsRes] = await Promise.all([
         supabase.from('product_campaigns').select('*').eq('product_id', id),
         supabase.from('product_taxes').select('*').eq('product_id', id),
-        supabase.from('product_expenses').select('*').eq('product_id', id),
+        supabase.from('product_expenses').select('*').eq('product_id', id).order('expense_date', { ascending: false }),
         supabase.from('product_rules').select('*').eq('product_id', id),
         supabase.from('product_utms').select('*').eq('product_id', id).maybeSingle(),
-        supabase.from('product_webhooks').select('*').eq('product_id', id).maybeSingle(),
         supabase.from('product_pixels').select('*').eq('product_id', id).maybeSingle(),
-        supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', id).maybeSingle()
+        supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', id).maybeSingle(),
+        supabase.from('product_events').select('*').eq('product_id', id).order('created_at', { ascending: false })
       ]);
 
       setLinkedCampaigns(linksRes.data || []);
@@ -95,14 +98,13 @@ export default function ProductDetail() {
       setExpenses(expRes.data || []);
       setRules(rulesRes.data || []);
       setUtms(utmRes.data || null);
-      setWebhook(webhookRes.data || null);
       setPixel(pixelRes.data || null);
       setProductAdAccount(accLinkRes.data || null);
+      setEvents(eventsRes.data || []);
 
       if (accLinkRes.data?.ad_account_id) {
         fetchLiveMetrics([accLinkRes.data.ad_account_id], datePreset);
       } else if (linksRes.data && linksRes.data.length > 0) {
-        // Fallback to legacy campaign links if no main ad account is set
         const cIds = linksRes.data.map(l => l.campaign_id);
         const { data: camps } = await supabase.from('meta_campaigns').select('ad_account_id').in('campaign_id', cIds);
         const distinctAccs = Array.from(new Set(camps?.map(c => c.ad_account_id) || []));
@@ -153,6 +155,12 @@ export default function ProductDetail() {
         adsets: (filterCIds ? mergedAdsets.filter(a => filterCIds.includes(a.campaign_id)) : mergedAdsets).sort(sortActiveFirst), 
         ads: (filterCIds ? mergedAds.filter(a => filterCIds.includes(a.campaign_id)) : mergedAds).sort(sortActiveFirst)
       });
+      
+      // Auto Evaluate Rules in background if there are rules
+      if (rules.length > 0) {
+        evalRulesLocally((filterCIds ? mergedCamps.filter(c => filterCIds.includes(c.campaign_id)) : mergedCamps));
+      }
+
     } catch (e) {
       toast({ variant: 'destructive', title: 'Erro na API da Meta' });
     } finally {
@@ -174,42 +182,79 @@ export default function ProductDetail() {
     }
   }, [datePreset]);
 
+  // Regras Backend trigger
+  async function runRulesNow() {
+    if (!user) return;
+    setUpdating(true);
+    try {
+      const res = await fetch('/api/meta/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, productId: id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast({ title: 'Regras executadas com sucesso!', description: `${data.actionsTaken} ações aplicadas na Meta.` });
+      // Reload metrics
+      if (productAdAccount?.ad_account_id) fetchLiveMetrics([productAdAccount.ad_account_id], datePreset);
+    } catch(e:any) {
+      toast({ variant: 'destructive', title: 'Erro', description: e.message });
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  // Dummy local eval just for display if needed
+  function evalRulesLocally(camps: any[]) {
+    // This happens silently, real execution is done via button to avoid infinite loops
+  }
+
   // KPIs
   const kpis = useMemo(() => {
-    let spend = 0, revenue = 0, purchases = 0, clicks = 0, impressions = 0;
+    let spend = 0, clicks = 0, impressions = 0;
     liveMetrics.campaigns.forEach(c => {
       spend += Number(c.spend || 0);
       clicks += Number(c.clicks || 0);
       impressions += Number(c.impressions || 0);
-      const pAct = c.actions?.find((a:any) => a.action_type === 'purchase');
-      if (pAct) purchases += Number(pAct.value || 0);
-      const rAct = c.action_values?.find((a:any) => a.action_type === 'purchase');
-      if (rAct) revenue += Number(rAct.value || 0);
     });
 
-    // Subtrações
-    const prodCost = purchases * (product?.product_cost || 0);
+    // Real Revenue and Purchases from Webhook Events
+    let realRevenue = 0, realPurchases = 0;
+    events.filter(e => e.status === 'approved' && e.event_type === 'purchase').forEach(e => {
+       realRevenue += Number(e.event_value || 0);
+       realPurchases += 1;
+    });
+
+    // Fallback to Meta Data if no Webhook data exists
+    if (realPurchases === 0 && liveMetrics.campaigns.length > 0) {
+      liveMetrics.campaigns.forEach(c => {
+        const pAct = c.actions?.find((a:any) => a.action_type === 'purchase');
+        if (pAct) realPurchases += Number(pAct.value || 0);
+        const rAct = c.action_values?.find((a:any) => a.action_type === 'purchase');
+        if (rAct) realRevenue += Number(rAct.value || 0);
+      });
+    }
+
+    const prodCost = realPurchases * (product?.product_cost || 0);
     
-    // Taxas
     let taxesAmount = 0;
     taxes.forEach(t => {
       taxesAmount += Number(t.fixed_amount || 0);
-      if (t.percentage) taxesAmount += (revenue * (Number(t.percentage) / 100));
+      if (t.percentage) taxesAmount += (realRevenue * (Number(t.percentage) / 100));
     });
 
-    // Despesas (simples soma total aqui, ideal seria filtrar por data)
     let expensesAmount = expenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
 
-    const profit = revenue - spend - prodCost - taxesAmount - expensesAmount;
-    const roas = spend > 0 ? revenue / spend : 0;
+    const profit = realRevenue - spend - prodCost - taxesAmount - expensesAmount;
+    const roas = spend > 0 ? realRevenue / spend : 0;
     const roi = spend > 0 ? profit / spend : 0;
-    const cpa = purchases > 0 ? spend / purchases : 0;
+    const cpa = realPurchases > 0 ? spend / realPurchases : 0;
     const cpc = clicks > 0 ? spend / clicks : 0;
     const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
-    return { spend, revenue, purchases, prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr };
-  }, [liveMetrics, product, taxes, expenses]);
+    return { spend, revenue: realRevenue, purchases: realPurchases, prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr };
+  }, [liveMetrics, product, taxes, expenses, events]);
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
     const item = liveMetrics[level].find((m: any) => m[idKey] === idVal);
@@ -228,7 +273,7 @@ export default function ProductDetail() {
     return { spend, purchases, revenue, roas: spend > 0 ? revenue / spend : 0, cpa: purchases > 0 ? spend / purchases : 0, status: item.status, name: item.name };
   };
 
-  // Handlers Meta Ads
+  // Status and Budget Modals
   const confirmToggleStatus = async () => {
     if (!confirmModal || !user) return;
     setUpdating(true);
@@ -274,6 +319,72 @@ export default function ProductDetail() {
     } finally {
       setUpdating(false); setBudgetModal(null);
     }
+  };
+
+  // CRUD Despesas
+  const addExpense = async () => {
+    if(!newExp.name || !newExp.amount) return;
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.from('product_expenses').insert({
+        user_id: user!.uid, product_id: id, name: newExp.name, amount: Number(newExp.amount), expense_date: newExp.date
+      }).select().single();
+      if (error) throw error;
+      setExpenses([data, ...expenses]);
+      setNewExp({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
+      toast({ title: 'Despesa adicionada' });
+    } catch(e:any) { toast({ variant: 'destructive', description: e.message }); }
+    setUpdating(false);
+  };
+
+  const deleteExpense = async (eid: string) => {
+    await supabase.from('product_expenses').delete().eq('id', eid);
+    setExpenses(expenses.filter(e => e.id !== eid));
+  };
+
+  // CRUD Taxas
+  const addTax = async () => {
+    if(!newTax.name) return;
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.from('product_taxes').insert({
+        user_id: user!.uid, product_id: id, name: newTax.name, 
+        percentage: Number(newTax.percentage) || 0, fixed_amount: Number(newTax.fixed) || 0
+      }).select().single();
+      if (error) throw error;
+      setTaxes([data, ...taxes]);
+      setNewTax({ name: '', percentage: '', fixed: '' });
+      toast({ title: 'Taxa adicionada' });
+    } catch(e:any) { toast({ variant: 'destructive', description: e.message }); }
+    setUpdating(false);
+  };
+
+  const deleteTax = async (tid: string) => {
+    await supabase.from('product_taxes').delete().eq('id', tid);
+    setTaxes(taxes.filter(t => t.id !== tid));
+  };
+
+  // CRUD Rules
+  const addRule = async () => {
+    if(!newRule.name || !newRule.value) return;
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.from('product_rules').insert({
+        user_id: user!.uid, product_id: id, name: newRule.name, 
+        condition_metric: newRule.metric, condition_operator: newRule.operator, condition_value: Number(newRule.value),
+        action_type: newRule.action, action_value: Number(newRule.actionValue) || null
+      }).select().single();
+      if (error) throw error;
+      setRules([data, ...rules]);
+      setNewRule({ name: '', metric: 'cpa', operator: '>', value: '', action: 'pause_campaign', actionValue: '' });
+      toast({ title: 'Regra criada' });
+    } catch(e:any) { toast({ variant: 'destructive', description: e.message }); }
+    setUpdating(false);
+  };
+
+  const deleteRule = async (rid: string) => {
+    await supabase.from('product_rules').delete().eq('id', rid);
+    setRules(rules.filter(r => r.id !== rid));
   };
 
   if (!mounted || !product) return null;
@@ -334,8 +445,9 @@ export default function ProductDetail() {
             <TabsContent value="overview" className="flex-1 overflow-y-auto p-6 m-0">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                  <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto</p>
+                  <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
                   <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
                 </Card>
                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                   <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
@@ -395,7 +507,6 @@ export default function ProductDetail() {
                         </tr>
                       );
                     })}
-                    {/* Conjuntos e Anuncios omitidos pra poupar espaço mas seguem a mesma lógica */}
                     {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => !drilledCampaignId || a.campaign_id === drilledCampaignId).map(a => {
                       const m = getMetric('adsets', 'adset_id', a.adset_id);
                       return (
@@ -416,18 +527,101 @@ export default function ProductDetail() {
 
             {/* ABA: WEBHOOKS */}
             <TabsContent value="webhooks" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-2xl space-y-6">
+               <div className="max-w-4xl space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline mb-2">Webhook Exclusivo</h2>
-                   <p className="text-sm text-slate-400 mb-4">Envie eventos de Venda e Lead (Kiwify, Hotmart) para este produto usando a URL abaixo.</p>
+                   <p className="text-sm text-slate-400 mb-4">Configure esta URL na Hotmart, Kiwify ou PerfectPay. O sistema lerá os dados automaticamente.</p>
                    <div className="flex gap-2">
-                     <Input readOnly value={`https://api.adpulse.com/v1/webhook/${id}`} className="bg-[#0f1115] font-mono text-xs border-white/10" />
-                     <Button variant="secondary"><Copy className="w-4 h-4 mr-2"/> Copiar</Button>
+                     <Input readOnly value={`http://localhost:9002/api/webhook/${id}`} className="bg-[#0f1115] font-mono text-xs border-white/10 text-primary" />
+                     <Button variant="secondary" onClick={() => {navigator.clipboard.writeText(`http://localhost:9002/api/webhook/${id}`); toast({title:'Copiado'})}}><Copy className="w-4 h-4 mr-2"/> Copiar</Button>
                    </div>
                  </div>
-                 <div className="p-4 border border-white/10 rounded-lg bg-[#1a1c23]">
-                    <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><Activity className="w-4 h-4"/> Últimos Eventos</h3>
-                    <p className="text-xs text-muted-foreground text-center py-8">Nenhum evento recebido ainda.</p>
+                 <div className="border border-white/10 rounded-lg bg-[#1a1c23] overflow-hidden">
+                    <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2"><Activity className="w-4 h-4"/> Eventos Reais Recebidos</h3>
+                    {events.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-8">Nenhum evento recebido ainda.</p>
+                    ) : (
+                      <table className="w-full text-sm text-left">
+                        <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
+                          <tr>
+                            <th className="px-4 py-2">Data</th>
+                            <th className="px-4 py-2">Evento</th>
+                            <th className="px-4 py-2">Status</th>
+                            <th className="px-4 py-2">Cliente</th>
+                            <th className="px-4 py-2">Valor</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                          {events.slice(0,20).map(e => (
+                            <tr key={e.id} className="hover:bg-white/5">
+                              <td className="px-4 py-2 text-xs">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
+                              <td className="px-4 py-2 font-bold text-primary">{e.event_type.toUpperCase()}</td>
+                              <td className="px-4 py-2">{e.status === 'approved' ? <Badge className="bg-green-500">Aprovado</Badge> : <Badge variant="secondary">{e.status}</Badge>}</td>
+                              <td className="px-4 py-2 text-xs">{e.customer_email || e.customer_name || 'Desconhecido'}</td>
+                              <td className="px-4 py-2">{formatCurrency(e.event_value)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                 </div>
+               </div>
+            </TabsContent>
+
+            {/* ABA: REGRAS (AUTOMATION) */}
+            <TabsContent value="rules" className="flex-1 overflow-y-auto p-6 m-0">
+               <div className="max-w-4xl space-y-6">
+                 <div className="flex justify-between items-center">
+                   <div>
+                     <h2 className="text-xl font-bold font-headline">Motor de Regras Automáticas</h2>
+                     <p className="text-sm text-muted-foreground">O sistema avalia essas regras e atua no Meta Ads automaticamente.</p>
+                   </div>
+                   <Button onClick={runRulesNow} disabled={updating} className="bg-primary text-white"><Play className="w-4 h-4 mr-2"/> Rodar Regras Agora</Button>
+                 </div>
+                 
+                 <div className="p-4 border border-white/5 bg-[#1a1c23] rounded-lg space-y-4">
+                   <h3 className="font-bold text-sm">Criar Nova Regra</h3>
+                   <div className="grid grid-cols-5 gap-2">
+                     <Input placeholder="Nome da Regra" value={newRule.name} onChange={e=>setNewRule({...newRule, name: e.target.value})} className="bg-[#0f1115] border-white/10 col-span-5" />
+                     
+                     <Select value={newRule.metric} onValueChange={v=>setNewRule({...newRule, metric: v})}>
+                       <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue placeholder="Métrica"/></SelectTrigger>
+                       <SelectContent className="bg-[#1a1a1a]"><SelectItem value="cpa">CPA</SelectItem><SelectItem value="roas">ROAS</SelectItem><SelectItem value="spend">Gasto</SelectItem></SelectContent>
+                     </Select>
+                     
+                     <Select value={newRule.operator} onValueChange={v=>setNewRule({...newRule, operator: v})}>
+                       <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue/></SelectTrigger>
+                       <SelectContent className="bg-[#1a1a1a]"><SelectItem value=">">Maior que</SelectItem><SelectItem value="<">Menor que</SelectItem></SelectContent>
+                     </Select>
+
+                     <Input type="number" placeholder="Valor" value={newRule.value} onChange={e=>setNewRule({...newRule, value: e.target.value})} className="bg-[#0f1115] border-white/10" />
+                     
+                     <Select value={newRule.action} onValueChange={v=>setNewRule({...newRule, action: v})}>
+                       <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue/></SelectTrigger>
+                       <SelectContent className="bg-[#1a1a1a]">
+                         <SelectItem value="pause_campaign">Pausar Campanha</SelectItem>
+                         <SelectItem value="pause_adset">Pausar Conjunto</SelectItem>
+                         <SelectItem value="increase_budget">Aumentar Orçamento %</SelectItem>
+                       </SelectContent>
+                     </Select>
+
+                     <div className="flex gap-2">
+                       {newRule.action === 'increase_budget' && <Input type="number" placeholder="%" value={newRule.actionValue} onChange={e=>setNewRule({...newRule, actionValue: e.target.value})} className="bg-[#0f1115] border-white/10 w-16" />}
+                       <Button onClick={addRule} disabled={updating || !newRule.name} className="flex-1">Salvar</Button>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="space-y-2">
+                    {rules.map(r => (
+                      <div key={r.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#14151a] rounded-lg">
+                        <div>
+                          <span className="font-bold block">{r.name}</span>
+                          <span className="text-xs text-muted-foreground">SE {r.condition_metric.toUpperCase()} {r.condition_operator} {r.condition_value} ENTÃO {r.action_type} {r.action_value ? `${r.action_value}%` : ''}</span>
+                        </div>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteRule(r.id)}><Trash className="w-4 h-4"/></Button>
+                      </div>
+                    ))}
                  </div>
                </div>
             </TabsContent>
@@ -435,18 +629,57 @@ export default function ProductDetail() {
             {/* ABA: TAXAS */}
             <TabsContent value="taxes" className="flex-1 overflow-y-auto p-6 m-0">
                <div className="max-w-2xl space-y-6">
-                 <div className="flex justify-between items-center">
+                 <div>
                    <h2 className="text-xl font-bold font-headline">Taxas e Impostos</h2>
-                   <Button size="sm"><Plus className="w-4 h-4 mr-2"/> Adicionar Taxa</Button>
+                   <p className="text-sm text-muted-foreground mb-4">Elas são deduzidas automaticamente do Faturamento Bruto (via Webhook).</p>
                  </div>
+                 
+                 <div className="flex gap-2 items-center">
+                    <Input placeholder="Ex: Gateway, Imposto..." value={newTax.name} onChange={e=>setNewTax({...newTax, name: e.target.value})} className="bg-[#0f1115] border-white/10" />
+                    <Input type="number" placeholder="% (Ex: 4.99)" value={newTax.percentage} onChange={e=>setNewTax({...newTax, percentage: e.target.value})} className="bg-[#0f1115] border-white/10 w-32" />
+                    <Input type="number" placeholder="Fixo (R$ 1.00)" value={newTax.fixed} onChange={e=>setNewTax({...newTax, fixed: e.target.value})} className="bg-[#0f1115] border-white/10 w-32" />
+                    <Button onClick={addTax} disabled={updating || !newTax.name}><Plus className="w-4 h-4"/></Button>
+                 </div>
+
                  <div className="space-y-2">
-                    {taxes.length === 0 ? <p className="text-muted-foreground text-sm">Sem taxas cadastradas. O lucro não terá deduções automáticas percentuais.</p> : null}
                     {taxes.map(t => (
                       <div key={t.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#1a1c23] rounded-lg">
                         <span>{t.name}</span>
                         <div className="flex items-center gap-4">
-                           <span className="font-bold">{t.percentage ? `${t.percentage}%` : formatCurrency(t.fixed_amount)}</span>
-                           <Button variant="ghost" size="icon" className="text-red-500 h-6 w-6"><Trash className="w-3 h-3"/></Button>
+                           <span className="font-bold text-orange-400">{t.percentage ? `${t.percentage}%` : formatCurrency(t.fixed_amount)}</span>
+                           <Button variant="ghost" size="icon" className="text-red-500 h-6 w-6" onClick={() => deleteTax(t.id)}><Trash className="w-3 h-3"/></Button>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+               </div>
+            </TabsContent>
+
+            {/* ABA: DESPESAS */}
+            <TabsContent value="expenses" className="flex-1 overflow-y-auto p-6 m-0">
+               <div className="max-w-2xl space-y-6">
+                 <div>
+                   <h2 className="text-xl font-bold font-headline">Despesas Avulsas</h2>
+                   <p className="text-sm text-muted-foreground mb-4">Lancamentos de despesas da operação que corroem o seu Lucro.</p>
+                 </div>
+                 
+                 <div className="flex gap-2 items-center">
+                    <Input placeholder="Ex: Gestor, Designer..." value={newExp.name} onChange={e=>setNewExp({...newExp, name: e.target.value})} className="bg-[#0f1115] border-white/10" />
+                    <Input type="number" placeholder="Valor (R$)" value={newExp.amount} onChange={e=>setNewExp({...newExp, amount: e.target.value})} className="bg-[#0f1115] border-white/10 w-32" />
+                    <Input type="date" value={newExp.date} onChange={e=>setNewExp({...newExp, date: e.target.value})} className="bg-[#0f1115] border-white/10 w-40" />
+                    <Button onClick={addExpense} disabled={updating || !newExp.name || !newExp.amount}><Plus className="w-4 h-4"/></Button>
+                 </div>
+
+                 <div className="space-y-2">
+                    {expenses.map(e => (
+                      <div key={e.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#1a1c23] rounded-lg">
+                        <div>
+                           <span className="block font-medium">{e.name}</span>
+                           <span className="text-xs text-muted-foreground">{new Date(e.expense_date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                           <span className="font-bold text-red-400">-{formatCurrency(e.amount)}</span>
+                           <Button variant="ghost" size="icon" className="text-red-500 h-6 w-6" onClick={() => deleteExpense(e.id)}><Trash className="w-3 h-3"/></Button>
                         </div>
                       </div>
                     ))}
@@ -461,8 +694,6 @@ export default function ProductDetail() {
                 <div className="space-y-4">
                   <Select value={selectedAccId || productAdAccount?.ad_account_id} onValueChange={async (accId) => {
                     setSelectedAccId(accId);
-                    
-                    // Upsert product ad account
                     const { data: existing } = await supabase.from('product_ad_accounts').select('id').eq('product_id', id).maybeSingle();
                     if (existing) {
                       await supabase.from('product_ad_accounts').update({ ad_account_id: accId }).eq('id', existing.id);
@@ -470,7 +701,7 @@ export default function ProductDetail() {
                       await supabase.from('product_ad_accounts').insert({ user_id: user!.uid, product_id: id, ad_account_id: accId });
                     }
                     setProductAdAccount({ ad_account_id: accId });
-                    toast({ title: 'Conta de anúncio vinculada', description: 'O produto puxará todas as campanhas desta conta.' });
+                    toast({ title: 'Conta de anúncio vinculada' });
                     fetchLiveMetrics([accId], datePreset);
                   }}>
                     <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue placeholder="Escolha uma conta de anúncio..." /></SelectTrigger>
@@ -478,8 +709,7 @@ export default function ProductDetail() {
                       {allAccounts.map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.account_id})</SelectItem>)}
                     </SelectContent>
                   </Select>
-                  
-                  <p className="text-sm text-muted-foreground mt-4">Ao selecionar uma conta principal, o produto puxará automaticamente todas as campanhas desta conta. As campanhas ativas sempre serão exibidas no topo.</p>
+                  <p className="text-sm text-muted-foreground mt-4">Ao selecionar uma conta principal, o produto puxará automaticamente todas as campanhas desta conta.</p>
                 </div>
               </div>
             </TabsContent>
@@ -508,9 +738,7 @@ export default function ProductDetail() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBudgetModal(null)} disabled={updating}>Cancelar</Button>
-            <Button className="bg-primary text-white font-bold" onClick={handleApplyBudget} disabled={updating || !budgetValue}>
-              {updating ? 'Aplicando...' : 'Aplicar Orçamento'}
-            </Button>
+            <Button className="bg-primary text-white font-bold" onClick={handleApplyBudget} disabled={updating || !budgetValue}>Aplicar Orçamento</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -526,7 +754,6 @@ export default function ProductDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

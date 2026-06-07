@@ -20,7 +20,7 @@ import {
 import { useState, useMemo } from "react";
 import { aiAttributionSuggestions, type AttributionSuggestionsOutput } from "@/ai/flows/ai-attribution-suggestions";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, query, where, limit, orderBy } from "firebase/firestore";
+import { collection, query, where, limit, orderBy } from "@/firebase/compat/firestore";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 

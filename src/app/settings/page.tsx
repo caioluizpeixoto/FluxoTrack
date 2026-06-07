@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser, useFirestore, useDoc, isFirebaseConfigured } from "@/firebase";
-import { doc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, updateDoc, setDoc, serverTimestamp } from "@/firebase/compat/firestore";
 import { useState, useEffect, useMemo } from "react";
 import { Copy, Check, Shield, Code, Save, Database, AlertTriangle, Key, Hammer, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";

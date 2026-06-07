@@ -1,16 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  DocumentReference, 
-  onSnapshot, 
-  DocumentSnapshot, 
-  DocumentData 
-} from 'firebase/firestore';
-import { errorEmitter } from '../error-emitter';
-import { FirestorePermissionError } from '../errors';
+import { supabase } from '@/lib/supabaseClient';
+import { DocumentReference, mapDbToFields } from '../compat/firestore';
 
-export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
+export function useDoc<T = any>(docRef: DocumentReference | null) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -22,25 +16,59 @@ export function useDoc<T = DocumentData>(docRef: DocumentReference<T> | null) {
     }
 
     setLoading(true);
-    const unsubscribe = onSnapshot(
-      docRef,
-      (snapshot: DocumentSnapshot<T>) => {
-        setData(snapshot.exists() ? { ...snapshot.data()!, id: snapshot.id } : null);
-        setLoading(false);
-      },
-      async (serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'get',
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        setError(serverError);
+
+    const primaryKey = docRef.table === 'profiles' ? 'id' : docRef.table === 'ad_accounts' ? 'account_id' : docRef.table === 'campaigns' ? 'campaign_id' : 'id';
+
+    const fetchData = async () => {
+      try {
+        const { data: dbData, error: dbError } = await supabase
+          .from(docRef.table)
+          .select('*')
+          .eq(primaryKey, docRef.id)
+          .maybeSingle();
+
+        if (dbError) throw dbError;
+
+        const fields = mapDbToFields(docRef.table, dbData);
+        setData(fields as T);
+        setError(null);
+      } catch (err: any) {
+        console.error(`Error loading doc from ${docRef.table}:`, err);
+        setError(err);
+      } finally {
         setLoading(false);
       }
-    );
+    };
 
-    return () => unsubscribe();
-  }, [docRef]);
+    fetchData();
+
+    // Filtro para o canal realtime
+    const filter = docRef.table === 'profiles' 
+      ? `id=eq.${docRef.id}`
+      : `${primaryKey}=eq.${docRef.id}`;
+
+    const channel = supabase
+      .channel(`doc:${docRef.table}:${docRef.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: docRef.table,
+        filter
+      }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setData(null);
+        } else {
+          const fields = mapDbToFields(docRef.table, payload.new);
+          setData(fields as T);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [docRef?.table, docRef?.id]);
 
   return { data, loading, error };
 }
+

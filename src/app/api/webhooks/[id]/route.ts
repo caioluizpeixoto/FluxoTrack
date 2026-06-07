@@ -1,11 +1,10 @@
 
 import { NextResponse } from 'next/server';
-import { initializeFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
 /**
  * Receptor Genérico de Webhooks (Kiwify, Hotmart, etc.)
- * Este endpoint recebe as vendas das plataformas e salva no Firestore.
+ * Este endpoint recebe as vendas das plataformas e salva no Supabase.
  */
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -18,47 +17,55 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'UserID não fornecido na URL' }, { status: 400 });
     }
 
-    const { firestore } = initializeFirebase();
+    const supabaseAdmin = getSupabaseAdmin();
 
     // 1. Verificar se o webhook existe
-    const webhookRef = doc(firestore, 'users', userId, 'webhooks', webhookId);
-    const webhookSnap = await getDoc(webhookRef);
+    const { data: webhookConfig, error: webhookError } = await supabaseAdmin
+      .from('webhooks')
+      .select('*')
+      .eq('id', webhookId)
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    if (!webhookSnap.exists()) {
+    if (webhookError || !webhookConfig) {
       return NextResponse.json({ error: 'Configuração de webhook não encontrada' }, { status: 404 });
     }
 
-    const webhookConfig = webhookSnap.data();
-
     // 2. Normalizar dados da plataforma (Exemplo simples para Kiwify/Hotmart)
-    // Aqui você pode adicionar lógica específica para cada plataforma baseada em webhookConfig.platform
+    const platform = webhookConfig.platform;
+    const value = parseFloat(body.amount || body.price || body.full_price || 0) / (platform === 'kiwify' ? 100 : 1);
+    const status = (body.order_status || body.status || 'approved').toLowerCase();
+    const externalId = body.order_id || body.transaction || body.id || 'unknown';
+
     const conversionData = {
-      externalId: body.order_id || body.transaction || body.id || 'unknown',
-      value: parseFloat(body.amount || body.price || body.full_price || 0) / (webhookConfig.platform === 'kiwify' ? 100 : 1), // Kiwify envia em centavos
-      status: (body.order_status || body.status || 'approved').toLowerCase(),
+      user_id: userId,
+      external_id: externalId,
+      value,
+      status,
       timestamp: new Date().toISOString(),
-      serverTimestamp: serverTimestamp(),
-      platform: webhookConfig.platform,
-      webhookName: webhookConfig.name,
-      customerEmail: body.customer?.email || body.email || '',
-      rawData: body // Salva o payload completo para depuração
     };
 
     // 3. Salvar a conversão
-    const conversionsRef = collection(firestore, 'users', userId, 'conversions');
-    await addDoc(conversionsRef, conversionData);
+    const { error: conversionError } = await supabaseAdmin
+      .from('conversions')
+      .insert(conversionData);
+
+    if (conversionError) throw conversionError;
 
     // 4. Também salvar como um evento de tracking para o funil
-    const eventsRef = collection(firestore, 'users', userId, 'events');
-    await addDoc(eventsRef, {
-      eventType: 'purchase',
-      url: 'webhook-integration',
-      utmSource: body.utm_source || '',
-      utmMedium: body.utm_medium || '',
-      utmCampaign: body.utm_campaign || '',
-      timestamp: new Date().toISOString(),
-      serverTimestamp: serverTimestamp(),
-    });
+    const { error: eventError } = await supabaseAdmin
+      .from('tracking_events')
+      .insert({
+        user_id: userId,
+        event_type: 'purchase',
+        url: 'webhook-integration',
+        utm_source: body.utm_source || '',
+        utm_medium: body.utm_medium || '',
+        utm_campaign: body.utm_campaign || '',
+        timestamp: new Date().toISOString(),
+      });
+
+    if (eventError) throw eventError;
 
     return NextResponse.json({ success: true, message: 'Conversão registrada' });
   } catch (error) {
@@ -66,3 +73,4 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
   }
 }
+

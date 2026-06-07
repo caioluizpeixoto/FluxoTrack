@@ -1,4 +1,5 @@
 import type {NextConfig} from 'next';
+import path from 'path';
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -29,6 +30,15 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'firebase/app': path.resolve(__dirname, 'src/firebase/compat/app'),
+      'firebase/auth': path.resolve(__dirname, 'src/firebase/compat/auth'),
+      'firebase/firestore': path.resolve(__dirname, 'src/firebase/compat/firestore'),
+    };
+    return config;
   },
 };
 

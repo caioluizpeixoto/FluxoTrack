@@ -1,24 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { useAuth } from '../provider';
+import { User, onAuthStateChanged, getAuth } from '../compat/auth';
 
 export function useUser() {
-  const auth = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificação crítica: se o auth não existe (Firebase não configurado), não tenta registrar o listener
-    if (!auth || typeof auth.onAuthStateChanged !== 'function') {
-      setLoading(false);
-      return;
-    }
-
+    const auth = getAuth();
     try {
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        setUser(user);
+      const unsubscribe = onAuthStateChanged(auth, (u) => {
+        setUser(u);
         setLoading(false);
       });
       return () => unsubscribe();
@@ -26,7 +19,8 @@ export function useUser() {
       console.error("Auth hook error:", err);
       setLoading(false);
     }
-  }, [auth]);
+  }, []);
 
   return { user, loading };
 }
+
