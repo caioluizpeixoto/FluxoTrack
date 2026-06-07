@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getAuth, Auth } from 'firebase/auth';
-import { firebaseConfig } from './config';
+import { firebaseConfig, isFirebaseConfigured } from './config';
 
 /**
  * Inicializa o Firebase de forma segura.
@@ -11,11 +11,7 @@ import { firebaseConfig } from './config';
  */
 export function initializeFirebase() {
   try {
-    const isConfigValid = firebaseConfig.apiKey && 
-                         firebaseConfig.apiKey !== "" && 
-                         firebaseConfig.apiKey !== "undefined";
-
-    if (!isConfigValid) {
+    if (!isFirebaseConfigured()) {
       return { 
         app: null as unknown as FirebaseApp, 
         firestore: null as unknown as Firestore, 
@@ -43,3 +39,4 @@ export * from './client-provider';
 export * from './auth/use-user';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
+export { isFirebaseConfigured };

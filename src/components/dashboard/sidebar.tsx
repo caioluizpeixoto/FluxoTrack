@@ -16,10 +16,10 @@ import {
   Plug,
   Mail,
   Lock,
-  UserPlus
+  AlertTriangle
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { useAuth, useUser, useFirestore } from "@/firebase";
+import { useAuth, useUser, useFirestore, isFirebaseConfigured } from "@/firebase";
 import { 
   signOut, 
   GoogleAuthProvider, 
@@ -60,13 +60,19 @@ export function DashboardSidebar() {
   const auth = useAuth();
   const { user } = useUser();
   const [open, setOpen] = useState(false);
+  const isConfigured = isFirebaseConfigured();
 
   const handleSignOut = () => {
+    if (!auth) return;
     signOut(auth);
     toast({ title: "Sessão encerrada", description: "Até logo!" });
   };
 
   const handleGoogleSignIn = async () => {
+    if (!auth) {
+      toast({ variant: "destructive", title: "Erro", description: "Firebase não configurado corretamente." });
+      return;
+    }
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -121,10 +127,21 @@ export function DashboardSidebar() {
                 </LinkNext>
               </div>
               <div className="flex-1 px-4">
+                {!isConfigured && (
+                  <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-yellow-500">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-[10px] font-bold uppercase">Firebase Offline</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-tight">
+                      Vá em Configurações para conectar seu banco de dados.
+                    </p>
+                  </div>
+                )}
                 <NavLinks />
               </div>
               <div className="p-4 mt-auto">
-                 <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} />
+                 <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} isConfigured={isConfigured} />
               </div>
             </div>
           </SheetContent>
@@ -140,18 +157,29 @@ export function DashboardSidebar() {
         </div>
 
         <div className="flex-1 px-4">
+          {!isConfigured && (
+            <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-yellow-500">
+                <AlertTriangle className="w-4 h-4" />
+                <span className="text-[10px] font-bold uppercase">Firebase Offline</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Vá em Configurações para conectar seu banco de dados.
+              </p>
+            </div>
+          )}
           <NavLinks />
         </div>
 
         <div className="p-4 mt-auto">
-          <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} />
+          <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} isConfigured={isConfigured} />
         </div>
       </aside>
     </>
   );
 }
 
-function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
+function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: any) {
   const auth = useAuth();
   const db = useFirestore();
   const [email, setEmail] = useState("");
@@ -161,6 +189,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const initializeUserProfile = async (uid: string, userEmail: string, name: string) => {
+    if (!db) return;
     const userRef = doc(db, "users", uid);
     const snap = await getDoc(userRef);
     
@@ -179,6 +208,10 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isConfigured || !auth) {
+      toast({ variant: "destructive", title: "Erro", description: "Sistema de login indisponível." });
+      return;
+    }
     setLoading(true);
     try {
       if (isSignUp) {
@@ -197,7 +230,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
       if (error.code === 'auth/weak-password') message = "A senha deve ter pelo menos 6 caracteres.";
       if (error.code === 'auth/wrong-password') message = "Senha incorreta.";
       if (error.code === 'auth/user-not-found') message = "Usuário não encontrado.";
-      if (error.code === 'auth/operation-not-allowed') message = "O cadastro por e-mail não está ativado no Firebase Console.";
+      if (error.code === 'auth/invalid-credential') message = "E-mail ou senha inválidos.";
       
       toast({ variant: "destructive", title: "Erro", description: message });
     } finally {
@@ -208,13 +241,13 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3 p-3 rounded-lg bg-accent/10 border border-accent/20">
-        <ShieldCheck className="w-5 h-5 text-accent" />
+        <ShieldCheck className={cn("w-5 h-5", isConfigured ? "text-accent" : "text-muted-foreground")} />
         <div className="flex flex-col overflow-hidden">
           <span className="text-xs font-bold text-accent font-headline uppercase truncate">
             {user ? (user.displayName || user.email?.split('@')[0] || "Usuário") : "Visitante"}
           </span>
           <span className="text-[10px] text-muted-foreground">
-            {user ? "Plano Ativo" : "Acesso Limitado"}
+            {user ? "Plano Ativo" : isConfigured ? "Acesso Limitado" : "Offline"}
           </span>
         </div>
       </div>
@@ -233,6 +266,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut }: any) {
           <DialogTrigger asChild>
             <Button 
               variant="ghost" 
+              disabled={!isConfigured}
               className="w-full justify-start gap-3 text-primary hover:bg-primary/10 h-10 px-3"
             >
               <LogIn className="w-5 h-5" />

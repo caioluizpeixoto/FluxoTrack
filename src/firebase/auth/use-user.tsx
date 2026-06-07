@@ -10,15 +10,22 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
+    // Verificação de segurança: se auth não estiver inicializado, encerra o carregamento sem erro.
+    if (!auth || typeof auth.onAuthStateChanged !== 'function') {
       setLoading(false);
       return;
     }
 
-    return onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    try {
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    } catch (err) {
+      console.error("Auth hook error:", err);
       setLoading(false);
-    });
+    }
   }, [auth]);
 
   return { user, loading };
