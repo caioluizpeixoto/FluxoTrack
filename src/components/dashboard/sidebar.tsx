@@ -48,9 +48,7 @@ import { toast } from "@/hooks/use-toast";
 const navItems = [
   { label: "Meus Dashboards", icon: LayoutDashboard, href: "/" },
   { label: "Integrações", icon: Plug, href: "/integrations" },
-  { label: "Pixel AdPulse", icon: Code2, href: "/pixel" },
   { label: "Logs de Eventos", icon: MousePointer2, href: "/events" },
-  { label: "Webhooks", icon: Webhook, href: "/webhooks" },
   { label: "Configurações", icon: Settings, href: "/settings" },
 ];
 
