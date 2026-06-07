@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
@@ -8,17 +7,17 @@ import { firebaseConfig } from './config';
 
 /**
  * Inicializa o Firebase de forma segura.
- * Se as configurações estiverem ausentes, retorna instâncias nulas para evitar crash,
- * mas loga um aviso no console.
+ * Se as configurações estiverem ausentes ou forem inválidas, retorna instâncias nulas
+ * para evitar erros de renderização no NextJS (Hydration/Runtime Errors).
  */
 export function initializeFirebase() {
   try {
-    const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "" && firebaseConfig.apiKey !== "undefined";
+    const isConfigValid = firebaseConfig.apiKey && 
+                         firebaseConfig.apiKey !== "" && 
+                         firebaseConfig.apiKey !== "undefined";
 
     if (!isConfigValid) {
-      console.warn("Firebase: API Key não detectada. Por favor, configure as variáveis de ambiente no .env");
-      // Retornamos um objeto com tipos castados para evitar quebras em tempo de compilação, 
-      // mas as chamadas de função do Firebase falharão graciosamente.
+      console.warn("Firebase: Chaves de configuração não encontradas. O login e banco de dados estarão desativados.");
       return { 
         app: null as unknown as FirebaseApp, 
         firestore: null as unknown as Firestore, 

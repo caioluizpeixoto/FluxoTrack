@@ -1,9 +1,8 @@
-
 'use client';
 
 /**
  * Configuração do Firebase utilizando variáveis de ambiente.
- * Caso as variáveis não estejam definidas, o app usará strings vazias para evitar erros críticos de carregamento.
+ * As chaves são injetadas pelo Firebase Studio automaticamente no .env
  */
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
