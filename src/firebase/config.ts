@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Configuração do Firebase utilizando as chaves fornecidas pelo usuário.
+ * Configuração do Firebase utilizando as chaves extraídas do seu projeto.
+ * Certifique-se de que o provedor de E-mail/Senha está ativo no Console do Firebase.
  */
 export const firebaseConfig = {
   apiKey: "AIzaSyAL-BP6SgCB_Xjk_-W69m4vz8zYdNqfNHw",
@@ -18,7 +19,7 @@ export const firebaseConfig = {
 export const isFirebaseConfigured = () => {
   return !!(
     firebaseConfig.apiKey && 
-    firebaseConfig.apiKey !== "" &&
+    firebaseConfig.apiKey !== "SUA_API_KEY" &&
     firebaseConfig.projectId &&
     firebaseConfig.projectId !== ""
   );

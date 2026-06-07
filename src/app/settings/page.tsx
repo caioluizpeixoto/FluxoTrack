@@ -1,4 +1,3 @@
-
 "use client";
 
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useUser, useFirestore, useDoc, isFirebaseConfigured } from "@/firebase";
 import { doc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect, useMemo } from "react";
-import { Copy, Check, Shield, Code, Save, Database, AlertTriangle, Key } from "lucide-react";
+import { Copy, Check, Shield, Code, Save, Database, AlertTriangle, Key, Hammer, UserPlus } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +25,6 @@ export default function SettingsPage() {
 
   const [storeUrl, setStoreUrl] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -40,7 +38,7 @@ export default function SettingsPage() {
       toast({
         variant: "destructive",
         title: "Firebase não conectado",
-        description: "Configure seu projeto no console do Firebase primeiro.",
+        description: "Ative o login no console primeiro.",
       });
       return;
     }
@@ -58,7 +56,7 @@ export default function SettingsPage() {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: "O banco de dados rejeitou a alteração. Verifique se você está logado.",
+        description: "Verifique se você está logado.",
       });
     }
   };
@@ -69,7 +67,7 @@ export default function SettingsPage() {
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8 transition-all">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-headline mb-1 text-white">Configurações de Conexão</h1>
-          <p className="text-muted-foreground">Gerencie a saúde do seu banco de dados e perfil.</p>
+          <p className="text-muted-foreground">Gerencie o banco de dados e o seu perfil.</p>
         </header>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
@@ -82,45 +80,43 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-headline flex items-center gap-2">
                     <Database className="w-5 h-5 text-primary" />
-                    Status do Firebase
+                    Status da Conexão
                   </CardTitle>
                   {!isConfig && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
                 </div>
-                <CardDescription>Verificação de infraestrutura em tempo real.</CardDescription>
+                <CardDescription>O AdPulse é integrado ao Firebase para segurança máxima.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Chaves de API:</span>
                     <span className={isConfig ? "text-green-500 font-bold" : "text-yellow-500 font-bold"}>
-                      {isConfig ? "CONECTADO" : "PENDENTE"}
+                      {isConfig ? "CARREGADAS" : "PENDENTES"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Autenticação:</span>
                     <span className={user ? "text-green-500 font-bold" : "text-muted-foreground font-bold"}>
-                      {user ? "USUÁRIO LOGADO" : "DESCONECTADO"}
+                      {user ? "CONECTADO" : "DESCONECTADO"}
                     </span>
                   </div>
                 </div>
 
-                {!isConfig && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl space-y-2">
-                    <p className="text-xs text-yellow-200 leading-relaxed">
-                      <strong>Atenção:</strong> Suas variáveis de ambiente do Firebase não foram detectadas. 
-                      Certifique-se de que você vinculou o projeto correto no Firebase Studio.
-                    </p>
+                <div className="bg-primary/5 border border-primary/20 p-5 rounded-2xl space-y-4">
+                  <h4 className="text-sm font-bold flex items-center gap-2 text-primary">
+                    <Hammer className="w-4 h-4" /> 
+                    Como ativar o login (E-mail/Senha):
+                  </h4>
+                  <div className="space-y-3 text-xs text-muted-foreground">
+                    <p>Siga estes passos exatos no seu <b>Firebase Console</b>:</p>
+                    <ol className="list-decimal pl-4 space-y-2 leading-relaxed">
+                      <li>Procure o ícone de <b>Martelo (Build/Criação)</b> no menu lateral esquerdo.</li>
+                      <li>Clique em <b>Authentication</b>.</li>
+                      <li>Clique no botão <b>Começar (Get Started)</b> no centro da tela.</li>
+                      <li>Na aba <b>Método de Login</b>, escolha <b>E-mail/Senha</b>.</li>
+                      <li>Ative a primeira opção e clique em <b>Salvar</b>.</li>
+                    </ol>
                   </div>
-                )}
-
-                <div className="pt-4 space-y-2">
-                   <h4 className="text-xs font-bold uppercase text-muted-foreground">Guia de Ativação:</h4>
-                   <ol className="text-[11px] text-muted-foreground list-decimal pl-4 space-y-1">
-                     <li>Vá ao <strong>Firebase Console</strong> do seu projeto.</li>
-                     <li>Clique em <strong>Authentication</strong> &gt; <strong>Sign-in method</strong>.</li>
-                     <li>Se não houver nada, clique em <strong>Add new provider</strong>.</li>
-                     <li>Escolha <strong>E-mail/Senha</strong> e ative.</li>
-                   </ol>
                 </div>
               </CardContent>
             </Card>
@@ -145,12 +141,14 @@ export default function SettingsPage() {
                 </div>
                 <Button onClick={handleSaveProfile} className="w-full gap-2 glow-primary" disabled={!user}>
                   <Save className="w-4 h-4" />
-                  Salvar Perfil no Firestore
+                  Salvar Alterações
                 </Button>
                 {!user && (
-                  <p className="text-[10px] text-center text-muted-foreground">
-                    Faça login na barra lateral para liberar a edição do perfil.
-                  </p>
+                  <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/10 text-center">
+                    <p className="text-[11px] text-yellow-500 leading-tight">
+                      Para salvar dados no banco, você precisa clicar em <b>"Entrar"</b> na barra lateral após ativar o provedor no console.
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -161,17 +159,30 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                   <Key className="w-4 h-4" />
-                  Segurança de Dados
+                  Segurança Granular
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground leading-relaxed">
                 <p>
-                  O AdPulse usa <strong>Regras de Segurança Granulares</strong>. 
-                  Qualquer tentativa de acesso a dados que não pertencem ao seu UID será rejeitada pelo servidor.
+                  Diferente do Supabase, o AdPulse utiliza as <b>Firebase Security Rules</b> para garantir que seus dados de faturamento e anúncios nunca sejam acessados por outros usuários.
                 </p>
-                <div className="mt-4 p-3 rounded-lg bg-black/40 border border-white/5 font-mono text-[10px]">
+                <div className="mt-4 p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] text-primary/70">
                    allow read, write: if request.auth.uid == userId;
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card border-none bg-gradient-to-br from-accent/10 to-transparent">
+              <CardHeader>
+                <CardTitle className="text-sm font-bold uppercase text-accent flex items-center gap-2">
+                  <UserPlus className="w-4 h-4" /> 
+                  Pronto para escalar?
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Assim que o login estiver ativo, você poderá registrar seus Pixels, Webhooks de checkout e usar a IA para mapear conversões órfãs.
+                </p>
               </CardContent>
             </Card>
           </div>
