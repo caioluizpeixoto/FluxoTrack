@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
 
     const token = conn.access_token;
 
-    // 1. Descobrir o orçamento atual (daily_budget)
-    const getUrl = `${META_BASE_URL}/${id}?fields=daily_budget&access_token=${token}`;
+    // 1. Descobrir o orçamento atual
+    const getUrl = `${META_BASE_URL}/${id}?fields=daily_budget,lifetime_budget&access_token=${token}`;
     const getRes = await fetch(getUrl);
     const getData = await getRes.json();
 
@@ -33,16 +33,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: getData.error.message }, { status: 400 });
     }
 
-    let newBudget = 0;
-    const currentBudgetStr = getData.daily_budget; // in cents (e.g., 1000 = $10)
+    if (!getData.daily_budget && !getData.lifetime_budget) {
+      if (type === 'campaign') {
+         return NextResponse.json({ error: 'Esta campanha não possui orçamento ativo no nível de campanha (ABO). Altere o orçamento diretamente nos Conjuntos de Anúncios.' }, { status: 400 });
+      }
+      return NextResponse.json({ error: 'Este item não possui um orçamento definido.' }, { status: 400 });
+    }
 
+    if (getData.lifetime_budget && !getData.daily_budget) {
+      return NextResponse.json({ error: 'Este item usa Orçamento Vitalício. Atualmente o sistema só suporta alterar Orçamento Diário.' }, { status: 400 });
+    }
+
+    let newBudget = 0;
+    
     if (action === 'fixed') {
       newBudget = Math.round(value * 100); // Converte para centavos reais
     } else {
-      if (!currentBudgetStr) {
-        return NextResponse.json({ error: 'Orçamento diário não encontrado no item (talvez seja lifetime_budget)' }, { status: 400 });
-      }
-      
+      // Legacy code support just in case
+      const currentBudgetStr = getData.daily_budget; 
       const currentBudget = Number(currentBudgetStr);
       const percentValue = value / 100;
       

@@ -59,7 +59,6 @@ export default function ProductDetail() {
   // Modals & Forms
   const [budgetModal, setBudgetModal] = useState<any>(null);
   const [budgetValue, setBudgetValue] = useState("");
-  const [budgetType, setBudgetType] = useState("percentage_increase");
   
   const [confirmModal, setConfirmModal] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
@@ -308,7 +307,7 @@ export default function ProductDetail() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           userId: user.uid, type: budgetModal.type, id: budgetModal.id, 
-          action: budgetType, value: Number(budgetValue)
+          action: 'fixed', value: Number(budgetValue)
         })
       });
       const data = await res.json();
@@ -812,15 +811,8 @@ export default function ProductDetail() {
             <DialogDescription>Ajuste o orçamento de: {budgetModal?.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Select value={budgetType} onValueChange={setBudgetType}>
-              <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue/></SelectTrigger>
-              <SelectContent className="bg-[#1a1a1a] border-white/10">
-                <SelectItem value="percentage_increase">Aumentar em %</SelectItem>
-                <SelectItem value="percentage_decrease">Reduzir em %</SelectItem>
-                <SelectItem value="fixed">Valor Fixo Diário (R$)</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input type="number" placeholder="Ex: 20" value={budgetValue} onChange={e => setBudgetValue(e.target.value)} className="bg-[#0f1115] border-white/10"/>
+            <label className="text-xs font-bold text-slate-400 block mb-2">Novo Orçamento Diário (R$)</label>
+            <Input type="number" placeholder="Ex: 50.00" value={budgetValue} onChange={e => setBudgetValue(e.target.value)} className="bg-[#0f1115] border-white/10 text-xl font-bold font-mono h-12"/>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setBudgetModal(null)} disabled={updating}>Cancelar</Button>
