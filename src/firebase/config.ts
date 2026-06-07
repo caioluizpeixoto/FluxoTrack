@@ -16,5 +16,11 @@ export const firebaseConfig = {
  * Verifica se a configuração básica do Firebase está presente.
  */
 export const isFirebaseConfigured = () => {
-  return !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined" && firebaseConfig.apiKey !== "");
+  return !!(
+    firebaseConfig.apiKey && 
+    firebaseConfig.apiKey !== "undefined" && 
+    firebaseConfig.apiKey !== "" &&
+    firebaseConfig.projectId &&
+    firebaseConfig.projectId !== "undefined"
+  );
 };

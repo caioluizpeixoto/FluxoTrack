@@ -10,7 +10,7 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificação de segurança: se auth não estiver inicializado, encerra o carregamento sem erro.
+    // Verificação crítica: se o auth não existe (Firebase não configurado), não tenta registrar o listener
     if (!auth || typeof auth.onAuthStateChanged !== 'function') {
       setLoading(false);
       return;
