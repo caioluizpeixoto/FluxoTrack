@@ -24,6 +24,7 @@ export default function DashboardDetails() {
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
+  const [adAccounts, setAdAccounts] = useState<any[]>([]);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -31,6 +32,7 @@ export default function DashboardDetails() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [cost, setCost] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -46,14 +48,16 @@ export default function DashboardDetails() {
   async function loadData() {
     setLoading(true);
     try {
-      const [dashRes, prodRes] = await Promise.all([
+      const [dashRes, prodRes, accRes] = await Promise.all([
         supabase.from('dashboards').select('*').eq('id', id).single(),
-        supabase.from('products').select('*').eq('dashboard_id', id).order('created_at', { ascending: false })
+        supabase.from('products').select('*').eq('dashboard_id', id).order('created_at', { ascending: false }),
+        supabase.from('meta_ad_accounts').select('*').eq('user_id', user!.uid)
       ]);
       
       if (dashRes.error) throw dashRes.error;
       setDashboard(dashRes.data);
       setProducts(prodRes.data || []);
+      setAdAccounts(accRes.data || []);
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Erro ao carregar', description: e.message });
       router.push('/');
@@ -72,16 +76,33 @@ export default function DashboardDetails() {
           price: Number(price) || 0,
           product_cost: Number(cost) || 0
         }).eq('id', editId);
+        
+        if (accountId) {
+           // Upsert ad account for product
+           const { data: existing } = await supabase.from('product_ad_accounts').select('id').eq('product_id', editId).maybeSingle();
+           if (existing) {
+             await supabase.from('product_ad_accounts').update({ ad_account_id: accountId }).eq('id', existing.id);
+           } else {
+             await supabase.from('product_ad_accounts').insert({ user_id: user!.uid, product_id: editId, ad_account_id: accountId });
+           }
+        }
         toast({ title: 'Produto atualizado' });
       } else {
-        await supabase.from('products').insert({ 
+        const { data: newProd, error: prodErr } = await supabase.from('products').insert({ 
           user_id: user!.uid, 
           dashboard_id: id,
           name, 
           price: Number(price) || 0,
           product_cost: Number(cost) || 0,
           status: 'active'
-        });
+        }).select().single();
+        
+        if (prodErr) throw prodErr;
+        
+        if (accountId && newProd) {
+          await supabase.from('product_ad_accounts').insert({ user_id: user!.uid, product_id: newProd.id, ad_account_id: accountId });
+        }
+        
         toast({ title: 'Produto criado' });
       }
       setIsModalOpen(false);
@@ -226,6 +247,20 @@ export default function DashboardDetails() {
                 <label className="text-sm font-medium">Custo do Produto (R$)</label>
                 <Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" className="bg-[#0f1115] border-white/10" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Conta de Anúncios Principal</label>
+              <select 
+                 className="flex h-10 w-full rounded-md border border-white/10 bg-[#0f1115] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                 value={accountId}
+                 onChange={(e) => setAccountId(e.target.value)}
+              >
+                 <option value="">Selecione uma conta...</option>
+                 {adAccounts.map(acc => (
+                   <option key={acc.account_id} value={acc.account_id}>{acc.account_name} ({acc.account_id})</option>
+                 ))}
+              </select>
+              <p className="text-xs text-muted-foreground">O produto puxará automaticamente todas as campanhas desta conta.</p>
             </div>
           </div>
           <DialogFooter>

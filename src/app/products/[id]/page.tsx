@@ -41,6 +41,7 @@ export default function ProductDetail() {
   const [utms, setUtms] = useState<any>(null);
   const [webhook, setWebhook] = useState<any>(null);
   const [pixel, setPixel] = useState<any>(null);
+  const [productAdAccount, setProductAdAccount] = useState<any>(null);
   
   // Live Metrics
   const [fetchingLive, setFetchingLive] = useState(false);
@@ -78,14 +79,15 @@ export default function ProductDetail() {
       setProduct(prod);
 
       // Fetch all links
-      const [linksRes, taxesRes, expRes, rulesRes, utmRes, webhookRes, pixelRes] = await Promise.all([
+      const [linksRes, taxesRes, expRes, rulesRes, utmRes, webhookRes, pixelRes, accLinkRes] = await Promise.all([
         supabase.from('product_campaigns').select('*').eq('product_id', id),
         supabase.from('product_taxes').select('*').eq('product_id', id),
         supabase.from('product_expenses').select('*').eq('product_id', id),
         supabase.from('product_rules').select('*').eq('product_id', id),
         supabase.from('product_utms').select('*').eq('product_id', id).maybeSingle(),
         supabase.from('product_webhooks').select('*').eq('product_id', id).maybeSingle(),
-        supabase.from('product_pixels').select('*').eq('product_id', id).maybeSingle()
+        supabase.from('product_pixels').select('*').eq('product_id', id).maybeSingle(),
+        supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', id).maybeSingle()
       ]);
 
       setLinkedCampaigns(linksRes.data || []);
@@ -95,12 +97,16 @@ export default function ProductDetail() {
       setUtms(utmRes.data || null);
       setWebhook(webhookRes.data || null);
       setPixel(pixelRes.data || null);
+      setProductAdAccount(accLinkRes.data || null);
 
-      if (linksRes.data && linksRes.data.length > 0) {
+      if (accLinkRes.data?.ad_account_id) {
+        fetchLiveMetrics([accLinkRes.data.ad_account_id], datePreset);
+      } else if (linksRes.data && linksRes.data.length > 0) {
+        // Fallback to legacy campaign links if no main ad account is set
         const cIds = linksRes.data.map(l => l.campaign_id);
         const { data: camps } = await supabase.from('meta_campaigns').select('ad_account_id').in('campaign_id', cIds);
         const distinctAccs = Array.from(new Set(camps?.map(c => c.ad_account_id) || []));
-        fetchLiveMetrics(distinctAccs, cIds, datePreset);
+        fetchLiveMetrics(distinctAccs, datePreset, cIds);
       }
 
       const { data: accs } = await supabase.from('meta_ad_accounts').select('*').eq('user_id', user!.uid);
@@ -114,7 +120,7 @@ export default function ProductDetail() {
     }
   }
 
-  async function fetchLiveMetrics(accIds: string[], cIds: string[], preset: string) {
+  async function fetchLiveMetrics(accIds: string[], preset: string, filterCIds?: string[]) {
     if (!user || accIds.length === 0) return;
     setFetchingLive(true);
     let mergedCamps: any[] = [];
@@ -135,11 +141,17 @@ export default function ProductDetail() {
           mergedAds = [...mergedAds, ...(data.insights.ads || [])];
         }
       }));
+      
+      const sortActiveFirst = (a: any, b: any) => {
+         if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1;
+         if (b.status === 'ACTIVE' && a.status !== 'ACTIVE') return 1;
+         return 0;
+      };
 
       setLiveMetrics({ 
-        campaigns: mergedCamps.filter(c => cIds.includes(c.campaign_id)), 
-        adsets: mergedAdsets.filter(a => cIds.includes(a.campaign_id)), 
-        ads: mergedAds.filter(a => cIds.includes(a.campaign_id)) 
+        campaigns: (filterCIds ? mergedCamps.filter(c => filterCIds.includes(c.campaign_id)) : mergedCamps).sort(sortActiveFirst), 
+        adsets: (filterCIds ? mergedAdsets.filter(a => filterCIds.includes(a.campaign_id)) : mergedAdsets).sort(sortActiveFirst), 
+        ads: (filterCIds ? mergedAds.filter(a => filterCIds.includes(a.campaign_id)) : mergedAds).sort(sortActiveFirst)
       });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Erro na API da Meta' });
@@ -149,12 +161,16 @@ export default function ProductDetail() {
   }
 
   useEffect(() => {
-    if (user && linkedCampaigns.length > 0 && !loading) {
-      const cIds = linkedCampaigns.map(l => l.campaign_id);
-      supabase.from('meta_campaigns').select('ad_account_id').in('campaign_id', cIds).then(({data}) => {
-        const distinctAccs = Array.from(new Set(data?.map(c => c.ad_account_id) || []));
-        fetchLiveMetrics(distinctAccs, cIds, datePreset);
-      });
+    if (user && !loading) {
+      if (productAdAccount?.ad_account_id) {
+         fetchLiveMetrics([productAdAccount.ad_account_id], datePreset);
+      } else if (linkedCampaigns.length > 0) {
+        const cIds = linkedCampaigns.map(l => l.campaign_id);
+        supabase.from('meta_campaigns').select('ad_account_id').in('campaign_id', cIds).then(({data}) => {
+          const distinctAccs = Array.from(new Set(data?.map(c => c.ad_account_id) || []));
+          fetchLiveMetrics(distinctAccs, datePreset, cIds);
+        });
+      }
     }
   }, [datePreset]);
 
@@ -443,38 +459,27 @@ export default function ProductDetail() {
               <div className="max-w-2xl space-y-6">
                 <h3 className="text-lg font-bold font-headline border-b border-white/10 pb-2">Vínculo de Campanhas Meta Ads</h3>
                 <div className="space-y-4">
-                  <Select value={selectedAccId} onValueChange={async (accId) => {
+                  <Select value={selectedAccId || productAdAccount?.ad_account_id} onValueChange={async (accId) => {
                     setSelectedAccId(accId);
-                    const { data } = await supabase.from('meta_campaigns').select('*').eq('ad_account_id', accId);
-                    setAllCampaigns(data || []);
+                    
+                    // Upsert product ad account
+                    const { data: existing } = await supabase.from('product_ad_accounts').select('id').eq('product_id', id).maybeSingle();
+                    if (existing) {
+                      await supabase.from('product_ad_accounts').update({ ad_account_id: accId }).eq('id', existing.id);
+                    } else {
+                      await supabase.from('product_ad_accounts').insert({ user_id: user!.uid, product_id: id, ad_account_id: accId });
+                    }
+                    setProductAdAccount({ ad_account_id: accId });
+                    toast({ title: 'Conta de anúncio vinculada', description: 'O produto puxará todas as campanhas desta conta.' });
+                    fetchLiveMetrics([accId], datePreset);
                   }}>
                     <SelectTrigger className="bg-[#0f1115] border-white/10"><SelectValue placeholder="Escolha uma conta de anúncio..." /></SelectTrigger>
                     <SelectContent className="bg-[#1a1c23] border-white/10">
-                      {allAccounts.map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name}</SelectItem>)}
+                      {allAccounts.map(a => <SelectItem key={a.account_id} value={a.account_id}>{a.account_name} ({a.account_id})</SelectItem>)}
                     </SelectContent>
                   </Select>
-
-                  {allCampaigns.length > 0 && (
-                    <div className="max-h-[300px] overflow-y-auto border border-white/5 rounded-lg bg-[#0f1115] divide-y divide-white/5">
-                      {allCampaigns.map(c => {
-                        const isLinked = linkedCampaigns.some(lc => lc.campaign_id === c.campaign_id);
-                        return (
-                          <div key={c.campaign_id} className="flex items-center gap-3 p-3 hover:bg-white/5">
-                            <Checkbox checked={isLinked} onCheckedChange={async () => {
-                              if (isLinked) {
-                                await supabase.from('product_campaigns').delete().match({ product_id: id, campaign_id: c.campaign_id });
-                                setLinkedCampaigns(prev => prev.filter(x => x.campaign_id !== c.campaign_id));
-                              } else {
-                                await supabase.from('product_campaigns').insert({ user_id: user!.uid, product_id: id, campaign_id: c.campaign_id, campaign_name: c.name });
-                                setLinkedCampaigns(prev => [...prev, { campaign_id: c.campaign_id, campaign_name: c.name }]);
-                              }
-                            }} />
-                            <p className="text-sm">{c.name}</p>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  
+                  <p className="text-sm text-muted-foreground mt-4">Ao selecionar uma conta principal, o produto puxará automaticamente todas as campanhas desta conta. As campanhas ativas sempre serão exibidas no topo.</p>
                 </div>
               </div>
             </TabsContent>
