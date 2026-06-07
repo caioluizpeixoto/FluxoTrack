@@ -1,17 +1,44 @@
 
 'use client';
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getAuth, Auth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
+/**
+ * Inicializa o Firebase de forma segura.
+ * Se as configurações estiverem ausentes, retorna instâncias nulas para evitar crash,
+ * mas loga um aviso no console.
+ */
 export function initializeFirebase() {
-  const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  const firestore = getFirestore(app);
-  const auth = getAuth(app);
-  
-  return { app, firestore, auth };
+  try {
+    const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "" && firebaseConfig.apiKey !== "undefined";
+
+    if (!isConfigValid) {
+      console.warn("Firebase: API Key não detectada. Por favor, configure as variáveis de ambiente no .env");
+      // Retornamos um objeto com tipos castados para evitar quebras em tempo de compilação, 
+      // mas as chamadas de função do Firebase falharão graciosamente.
+      return { 
+        app: null as unknown as FirebaseApp, 
+        firestore: null as unknown as Firestore, 
+        auth: null as unknown as Auth 
+      };
+    }
+
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    const firestore = getFirestore(app);
+    const auth = getAuth(app);
+    
+    return { app, firestore, auth };
+  } catch (error) {
+    console.error("Erro crítico ao inicializar Firebase:", error);
+    return { 
+      app: null as unknown as FirebaseApp, 
+      firestore: null as unknown as Firestore, 
+      auth: null as unknown as Auth 
+    };
+  }
 }
 
 export * from './provider';
