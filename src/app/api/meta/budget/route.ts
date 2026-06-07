@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
+import { updateCampaign, updateAdSet } from '@/lib/metaApi';
 
 const META_API_VERSION = 'v19.0';
 const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
@@ -66,20 +67,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Aplicar novo orçamento
-    const postUrl = `${META_BASE_URL}/${id}`;
-    const formData = new URLSearchParams();
-    formData.append('daily_budget', newBudget.toString());
-    formData.append('access_token', token);
-
-    const postRes = await fetch(postUrl, {
-      method: 'POST',
-      body: formData
-    });
-
-    const postData = await postRes.json();
-
-    if (postData.error) {
-      return NextResponse.json({ error: postData.error.message }, { status: 400 });
+    if (type === 'campaign') {
+       await updateCampaign(id, token, { daily_budget: value });
+    } else if (type === 'adset') {
+       await updateAdSet(id, token, { daily_budget: value });
     }
 
     // 3. Atualizar localmente
