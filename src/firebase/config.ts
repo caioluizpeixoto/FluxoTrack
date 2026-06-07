@@ -1,15 +1,15 @@
 'use client';
 
 /**
- * Configuração do Firebase utilizando variáveis de ambiente.
+ * Configuração do Firebase utilizando as chaves fornecidas pelo usuário.
  */
 export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || ""
+  apiKey: "AIzaSyAL-BP6SgCB_Xjk_-W69m4vz8zYdNqfNHw",
+  authDomain: "studio-9464984955-22ae2.firebaseapp.com",
+  projectId: "studio-9464984955-22ae2",
+  storageBucket: "studio-9464984955-22ae2.firebasestorage.app",
+  messagingSenderId: "1065743948256",
+  appId: "1:1065743948256:web:644ca51b0b2f26f5d53385"
 };
 
 /**
@@ -18,9 +18,8 @@ export const firebaseConfig = {
 export const isFirebaseConfigured = () => {
   return !!(
     firebaseConfig.apiKey && 
-    firebaseConfig.apiKey !== "undefined" && 
     firebaseConfig.apiKey !== "" &&
     firebaseConfig.projectId &&
-    firebaseConfig.projectId !== "undefined"
+    firebaseConfig.projectId !== ""
   );
 };
