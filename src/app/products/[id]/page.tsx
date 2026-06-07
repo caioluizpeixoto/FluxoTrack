@@ -12,9 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
-  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play
+  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -492,8 +491,7 @@ export default function ProductDetail() {
                       <th className="px-4 py-3 w-10"></th>
                       <th className="px-4 py-3 w-10">Status</th>
                       <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3 text-center">Orçamento Atual</th>
-                      <th className="px-4 py-3 text-center">Alterar</th>
+                      <th className="px-4 py-3 text-center">Orçamento</th>
                       <th className="px-4 py-3 text-right">Gasto</th>
                       <th className="px-4 py-3 text-right">CPA</th>
                       <th className="px-4 py-3 text-right">ROAS</th>
@@ -511,8 +509,12 @@ export default function ProductDetail() {
                           }}/></td>
                           <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
                           <td className="px-4 py-2 font-medium">{c.campaign_name}</td>
-                          <td className="px-4 py-2 text-center font-mono text-slate-300">{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</td>
-                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10 hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}>Editar</Button></td>
+                          <td className="px-4 py-2 text-center font-mono text-slate-300">
+                             <div className="flex items-center justify-center gap-2">
+                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
+                               <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
+                             </div>
+                          </td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
@@ -530,8 +532,12 @@ export default function ProductDetail() {
                           }}/></td>
                           <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
                           <td className="px-4 py-2 font-medium">{a.adset_name}</td>
-                          <td className="px-4 py-2 text-center font-mono text-slate-300">{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</td>
-                          <td className="px-4 py-2 text-center"><Button size="sm" variant="outline" className="h-6 text-xs bg-transparent border-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}>Editar</Button></td>
+                          <td className="px-4 py-2 text-center font-mono text-slate-300">
+                             <div className="flex items-center justify-center gap-2">
+                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
+                               <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
+                             </div>
+                          </td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
@@ -549,7 +555,6 @@ export default function ProductDetail() {
                           <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
                           <td className="px-4 py-2 font-medium">{a.ad_name}</td>
                           <td className="px-4 py-2 text-center font-mono text-slate-300">-</td>
-                          <td className="px-4 py-2 text-center"></td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
                           <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
