@@ -143,16 +143,16 @@ export default function DashboardDetails() {
           {loading ? (
             <div className="h-20 w-1/3 bg-white/5 animate-pulse rounded-lg mb-8" />
           ) : (
-            <header className="flex items-center justify-between mb-8">
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
               <div>
-                <h1 className="text-3xl font-bold font-headline mb-2 flex items-center gap-2">
-                  <LayoutDashboard className="text-primary w-8 h-8" />
+                <h1 className="text-2xl lg:text-3xl font-bold font-headline mb-1 flex items-center gap-2">
+                  <LayoutDashboard className="text-primary w-7 h-7" />
                   {dashboard?.name}
                 </h1>
-                <p className="text-muted-foreground">{dashboard?.description || 'Nenhuma descrição.'}</p>
+                <p className="text-muted-foreground text-sm">{dashboard?.description || 'Nenhuma descrição.'}</p>
               </div>
               
-              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2">
+              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 w-full sm:w-auto">
                 <Plus className="w-5 h-5" /> Novo Produto
               </Button>
             </header>

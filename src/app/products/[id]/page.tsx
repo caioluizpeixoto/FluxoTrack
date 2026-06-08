@@ -41,6 +41,7 @@ export default function ProductDetail() {
   const [events, setEvents] = useState<any[]>([]);
   const [utms, setUtms] = useState<any>(null);
   const [pixel, setPixel] = useState<any>(null);
+  const [pixelToken, setPixelToken] = useState("");
   const [productAdAccount, setProductAdAccount] = useState<any>(null);
   
   // Live Metrics
@@ -98,6 +99,7 @@ export default function ProductDetail() {
       setRules(rulesRes.data || []);
       setUtms(utmRes.data || null);
       setPixel(pixelRes.data || null);
+      setPixelToken(pixelRes.data?.access_token || "");
       setProductAdAccount(accLinkRes.data || null);
       setEvents(eventsRes.data || []);
 
@@ -275,50 +277,127 @@ export default function ProductDetail() {
   // Status and Budget Modals
   const confirmToggleStatus = async () => {
     if (!confirmModal || !user) return;
-    setUpdating(true);
-    const tableMap: Record<string, string> = { campaign: 'meta_campaigns', adset: 'meta_adsets', ad: 'meta_ads' };
-    const idMap: Record<string, string> = { campaign: 'campaign_id', adset: 'adset_id', ad: 'ad_id' };
-    
-    try {
-      const { data: curr } = await supabase.from(tableMap[confirmModal.type]).select('status').eq(idMap[confirmModal.type], confirmModal.id).single();
-      const newStatus = (curr?.status || 'ACTIVE') === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
 
+    // Mapeamentos
+    const tableMap:   Record<string, string>                   = { campaign: 'meta_campaigns', adset: 'meta_adsets', ad: 'meta_ads' };
+    const idMap:      Record<string, string>                   = { campaign: 'campaign_id',    adset: 'adset_id',    ad: 'ad_id'    };
+    const levelMap:   Record<string, 'campaigns'|'adsets'|'ads'> = { campaign: 'campaigns',  adset: 'adsets',      ad: 'ads'      };
+
+    const level   = levelMap[confirmModal.type];
+    const itemKey = idMap[confirmModal.type];
+
+    // Descobre o status atual a partir dos liveMetrics (sem bater na API)
+    const currentItem   = (liveMetrics[level] as any[]).find(i => i[itemKey] === confirmModal.id);
+    const currentStatus = currentItem?.status ?? 'ACTIVE';
+    const newStatus     = currentStatus === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+
+    // Snapshot para rollback
+    const snapshot = confirmModal;
+
+    // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────
+    // Fecha modal e vira o switch instantaneamente — sem esperar a API
+    setConfirmModal(null);
+    setLiveMetrics(prev => ({
+      ...prev,
+      [level]: (prev[level] as any[]).map(i =>
+        i[itemKey] === snapshot.id ? { ...i, status: newStatus } : i
+      ),
+    }));
+    // ──────────────────────────────────────────────────────────────────
+
+    // Chamada de API em background
+    try {
       const res = await fetch('/api/meta/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid, type: confirmModal.type, id: confirmModal.id, payload: { status: newStatus }})
+        body: JSON.stringify({ userId: user.uid, type: snapshot.type, id: snapshot.id, payload: { status: newStatus } }),
       });
-      if (!res.ok) throw new Error((await res.json()).error);
-      supabase.from(tableMap[confirmModal.type]).update({status: newStatus}).eq(idMap[confirmModal.type], confirmModal.id).then();
-      toast({ title: 'Status alterado' });
+      const resData = await res.json();
+
+      if (!res.ok) {
+        // ── ROLLBACK ── reverte visualmente se a API falhar
+        setLiveMetrics(prev => ({
+          ...prev,
+          [level]: (prev[level] as any[]).map(i =>
+            i[itemKey] === snapshot.id ? { ...i, status: currentStatus } : i
+          ),
+        }));
+        const errMsg: string = resData.error || 'Erro desconhecido';
+        if (errMsg.includes('missing permissions') || errMsg.includes('does not exist') || errMsg.includes('Unsupported post')) {
+          throw new Error('Sem permissão. Vá em Integrações e reconecte sua conta Meta Ads.');
+        }
+        throw new Error(errMsg);
+      }
+
+      // Atualiza banco local silenciosamente
+      supabase.from(tableMap[snapshot.type]).update({ status: newStatus }).eq(idMap[snapshot.type], snapshot.id).then();
+      toast({ title: `${newStatus === 'ACTIVE' ? '▶ Ativado' : '⏸ Pausado'}`, description: snapshot.name });
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Erro', description: e.message });
-    } finally {
-      setUpdating(false); setConfirmModal(null);
+      toast({ variant: 'destructive', title: 'Erro ao alterar status', description: e.message });
     }
   };
 
+
   const handleApplyBudget = async () => {
     if (!budgetModal || !user || !budgetValue) return;
-    setUpdating(true);
+
+    const snapshot  = budgetModal;
+    const newBudget = Number(budgetValue);
+    const levelMap: Record<string, 'campaigns'|'adsets'|'ads'> = { campaign: 'campaigns', adset: 'adsets', ad: 'ads' };
+    const idKeyMap:  Record<string, string> = { campaign: 'campaign_id', adset: 'adset_id', ad: 'ad_id' };
+    const budgetKey  = 'daily_budget';
+    const level      = levelMap[snapshot.type];
+    const itemKey    = idKeyMap[snapshot.type];
+
+    // Guarda valor antigo para rollback
+    const currentItem = level ? (liveMetrics[level] as any[])?.find(i => i[itemKey] === snapshot.id) : null;
+    const oldBudget   = currentItem?.[budgetKey];
+
+    // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────
+    // Fecha modal e mostra novo orçamento imediatamente
+    setBudgetModal(null);
+    if (level && currentItem) {
+      setLiveMetrics(prev => ({
+        ...prev,
+        [level]: (prev[level] as any[]).map(i =>
+          i[itemKey] === snapshot.id ? { ...i, [budgetKey]: String(newBudget * 100) } : i
+        ),
+      }));
+    }
+    // ──────────────────────────────────────────────────────────────────
+
     try {
       const res = await fetch('/api/meta/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: user.uid, type: budgetModal.type, id: budgetModal.id, 
-          action: 'fixed', value: Number(budgetValue)
-        })
+        body: JSON.stringify({
+          userId: user.uid, type: snapshot.type, id: snapshot.id,
+          action: 'fixed', value: newBudget,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Falha ao atualizar orçamento');
-      toast({ title: 'Orçamento atualizado!' });
+      if (!res.ok) {
+        // ── ROLLBACK ──
+        if (level && currentItem && oldBudget !== undefined) {
+          setLiveMetrics(prev => ({
+            ...prev,
+            [level]: (prev[level] as any[]).map(i =>
+              i[itemKey] === snapshot.id ? { ...i, [budgetKey]: oldBudget } : i
+            ),
+          }));
+        }
+        const errMsg: string = data.error || 'Falha ao atualizar orçamento';
+        if (errMsg.includes('missing permissions') || errMsg.includes('does not exist') || errMsg.includes('Unsupported post')) {
+          throw new Error('Sem permissão para alterar orçamento. Vá em Integrações e reconecte sua conta Meta Ads.');
+        }
+        throw new Error(errMsg);
+      }
+      toast({ title: 'Orçamento atualizado!', description: `R$ ${newBudget.toFixed(2)}/dia aplicado em ${snapshot.name}` });
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Erro', description: e.message });
-    } finally {
-      setUpdating(false); setBudgetModal(null);
+      toast({ variant: 'destructive', title: 'Erro ao alterar orçamento', description: e.message });
     }
   };
+
 
   // CRUD Despesas
   const addExpense = async () => {
@@ -391,20 +470,20 @@ export default function ProductDetail() {
   return (
     <div className="flex min-h-screen bg-[#0f1115] text-slate-200">
       <DashboardSidebar />
-      <main className="flex-1 w-full p-4 lg:p-8 transition-all h-screen flex flex-col overflow-hidden">
+      <main className="flex-1 w-full p-4 lg:p-8 transition-all md:h-screen md:flex md:flex-col md:overflow-hidden">
         
-        <header className="mb-4 shrink-0 flex items-center justify-between">
+        <header className="mb-4 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-4">
             <LinkNext href={`/dashboards/${product.dashboard_id}`}>
               <Button variant="ghost" size="icon" className="hover:bg-white/10 rounded-full"><ArrowLeft className="w-5 h-5"/></Button>
             </LinkNext>
             <div>
-              <h1 className="text-2xl font-bold font-headline text-primary">{product.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold font-headline text-primary">{product.name}</h1>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={datePreset} onValueChange={(val) => setDatePreset(val)}>
-              <SelectTrigger className="h-9 w-[150px] bg-[#1a1c23] border-white/10 font-bold"><SelectValue placeholder="Período" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-full sm:w-[150px] bg-[#1a1c23] border-white/10 font-bold"><SelectValue placeholder="Período" /></SelectTrigger>
               <SelectContent className="bg-[#1a1a1a] border-white/10">
                 <SelectItem value="today">Hoje</SelectItem>
                 <SelectItem value="yesterday">Ontem</SelectItem>
@@ -413,20 +492,20 @@ export default function ProductDetail() {
                 <SelectItem value="this_month">Este mês</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="bg-[#1a1c23] border-white/10 hover:bg-white/5" onClick={() => loadProductData()}>
+            <Button variant="outline" className="bg-[#1a1c23] border-white/10 hover:bg-white/5 w-full sm:w-auto" onClick={() => loadProductData()}>
               <RefreshCw className={`w-4 h-4 mr-2 ${fetchingLive ? 'animate-spin' : ''}`} /> Atualizar
             </Button>
           </div>
         </header>
 
         <Card className="flex-1 bg-[#14151a] border-white/5 flex flex-col overflow-hidden relative">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col min-h-0 flex-1">
             <div className="border-b border-white/5 px-2 shrink-0 overflow-x-auto no-scrollbar">
               <TabsList className="bg-transparent h-14 p-0 justify-start gap-4 inline-flex w-max">
                 <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Activity className="w-3 h-3 mr-1"/> Resumo</TabsTrigger>
                 <TabsTrigger value="meta" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><BarChart3 className="w-3 h-3 mr-1"/> Meta Ads</TabsTrigger>
-                <TabsTrigger value="webhooks" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Webhook className="w-3 h-3 mr-1"/> Webhooks</TabsTrigger>
                 <TabsTrigger value="pixel" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Code2 className="w-3 h-3 mr-1"/> Pixel</TabsTrigger>
+                <TabsTrigger value="webhooks" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Webhook className="w-3 h-3 mr-1"/> Webhooks</TabsTrigger>
                 <TabsTrigger value="utms" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><LinkIcon className="w-3 h-3 mr-1"/> UTMs</TabsTrigger>
                 <TabsTrigger value="rules" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Zap className="w-3 h-3 mr-1"/> Regras</TabsTrigger>
                 <TabsTrigger value="taxes" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Percent className="w-3 h-3 mr-1"/> Taxas</TabsTrigger>
@@ -438,7 +517,7 @@ export default function ProductDetail() {
 
             {/* ABA: RESUMO */}
             <TabsContent value="overview" className="flex-1 overflow-y-auto p-6 m-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                   <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
                   <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
@@ -569,42 +648,103 @@ export default function ProductDetail() {
 
             {/* ABA: WEBHOOKS */}
             <TabsContent value="webhooks" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-4xl space-y-6">
+               <div className="max-w-3xl mx-auto space-y-6">
                  <div>
-                   <h2 className="text-xl font-bold font-headline mb-2">Webhook Exclusivo</h2>
-                   <p className="text-sm text-slate-400 mb-4">Configure esta URL na Hotmart, Kiwify ou PerfectPay. O sistema lerá os dados automaticamente.</p>
-                   <div className="flex gap-2">
-                     <Input readOnly value={`http://localhost:9002/api/webhook/${id}`} className="bg-[#0f1115] font-mono text-xs border-white/10 text-primary" />
-                     <Button variant="secondary" onClick={() => {navigator.clipboard.writeText(`http://localhost:9002/api/webhook/${id}`); toast({title:'Copiado'})}}><Copy className="w-4 h-4 mr-2"/> Copiar</Button>
+                   <h2 className="text-xl font-bold font-headline">Webhook de Vendas</h2>
+                   <p className="text-sm text-slate-400">Cole esta URL na plataforma de checkout (Hotmart, Kiwify, PerfectPay). O AdPulse receberá as vendas automaticamente.</p>
+                 </div>
+
+                 {/* URL do Webhook */}
+                 <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                   <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2">
+                     <Webhook className="w-4 h-4 text-primary" /> URL do Webhook
+                   </h3>
+
+                   {user ? (
+                     <div className="space-y-3">
+                       <div className="flex gap-2">
+                         <Input
+                           readOnly
+                           value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/${id}?userId=${user.uid}`}
+                           className="bg-[#0f1115] font-mono text-xs border-white/10 text-primary"
+                         />
+                         <Button
+                           variant="secondary"
+                           onClick={() => {
+                             navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/${id}?userId=${user.uid}`);
+                             toast({ title: '✓ URL copiada!' });
+                           }}
+                         >
+                           <Copy className="w-4 h-4 mr-2" /> Copiar
+                         </Button>
+                       </div>
+                       <p className="text-xs text-muted-foreground">
+                         ⚠️ Mantenha essa URL em segredo — qualquer POST para ela registrará uma venda.
+                       </p>
+                     </div>
+                   ) : (
+                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                       <p className="text-sm text-yellow-400">Faça login para ver sua URL de webhook.</p>
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Guia por plataforma */}
+                 <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-3">
+                   <h3 className="font-bold text-sm text-slate-300">Como configurar por plataforma</h3>
+                   <div className="space-y-2 text-xs text-muted-foreground">
+                     <div className="flex items-start gap-2 p-3 rounded-lg bg-white/5">
+                       <span className="font-bold text-orange-400 w-20 shrink-0">Hotmart</span>
+                       <span>Ferramentas → Webhooks → Adicionar Webhook → Cole a URL → Evento: Compra Aprovada</span>
+                     </div>
+                     <div className="flex items-start gap-2 p-3 rounded-lg bg-white/5">
+                       <span className="font-bold text-blue-400 w-20 shrink-0">Kiwify</span>
+                       <span>Configurações → Webhooks → Novo Webhook → Cole a URL → Selecione: Venda Aprovada</span>
+                     </div>
+                     <div className="flex items-start gap-2 p-3 rounded-lg bg-white/5">
+                       <span className="font-bold text-purple-400 w-20 shrink-0">PerfectPay</span>
+                       <span>Minha Conta → Webhooks → Adicionar → Cole a URL → Evento: payment_confirmed</span>
+                     </div>
                    </div>
                  </div>
-                 <div className="border border-white/10 rounded-lg bg-[#1a1c23] overflow-hidden">
-                    <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2"><Activity className="w-4 h-4"/> Eventos Reais Recebidos</h3>
+
+                 {/* Eventos recebidos */}
+                 <div className="border border-white/10 rounded-xl bg-[#1a1c23] overflow-hidden">
+                    <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-primary" /> Últimos Eventos Recebidos
+                      <span className="ml-auto text-xs text-muted-foreground font-normal">{events.length} evento{events.length !== 1 ? 's' : ''}</span>
+                    </h3>
                     {events.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-8">Nenhum evento recebido ainda.</p>
+                      <div className="py-12 text-center">
+                        <Webhook className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-sm text-muted-foreground">Nenhum evento recebido ainda.</p>
+                        <p className="text-xs text-muted-foreground mt-1">Configure a URL acima na sua plataforma de vendas.</p>
+                      </div>
                     ) : (
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
-                          <tr>
-                            <th className="px-4 py-2">Data</th>
-                            <th className="px-4 py-2">Evento</th>
-                            <th className="px-4 py-2">Status</th>
-                            <th className="px-4 py-2">Cliente</th>
-                            <th className="px-4 py-2">Valor</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                          {events.slice(0,20).map(e => (
-                            <tr key={e.id} className="hover:bg-white/5">
-                              <td className="px-4 py-2 text-xs">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
-                              <td className="px-4 py-2 font-bold text-primary">{e.event_type.toUpperCase()}</td>
-                              <td className="px-4 py-2">{e.status === 'approved' ? <Badge className="bg-green-500">Aprovado</Badge> : <Badge variant="secondary">{e.status}</Badge>}</td>
-                              <td className="px-4 py-2 text-xs">{e.customer_email || e.customer_name || 'Desconhecido'}</td>
-                              <td className="px-4 py-2">{formatCurrency(e.event_value)}</td>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
+                            <tr>
+                              <th className="px-4 py-2">Data</th>
+                              <th className="px-4 py-2">Evento</th>
+                              <th className="px-4 py-2">Status</th>
+                              <th className="px-4 py-2">Cliente</th>
+                              <th className="px-4 py-2">Valor</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {events.slice(0,20).map(e => (
+                              <tr key={e.id} className="hover:bg-white/5">
+                                <td className="px-4 py-2 text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
+                                <td className="px-4 py-2 font-bold text-primary">{e.event_type?.toUpperCase()}</td>
+                                <td className="px-4 py-2">{e.status === 'approved' ? <Badge className="bg-green-500 text-xs">Aprovado</Badge> : <Badge variant="secondary" className="text-xs">{e.status}</Badge>}</td>
+                                <td className="px-4 py-2 text-xs">{e.customer_email || e.customer_name || '—'}</td>
+                                <td className="px-4 py-2 font-bold text-green-400">{formatCurrency(e.event_value)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     )}
                  </div>
                </div>
@@ -612,7 +752,7 @@ export default function ProductDetail() {
 
             {/* ABA: REGRAS (AUTOMATION) */}
             <TabsContent value="rules" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-4xl space-y-6">
+               <div className="max-w-4xl mx-auto space-y-6">
                  <div className="flex justify-between items-center">
                    <div>
                      <h2 className="text-xl font-bold font-headline">Motor de Regras Automáticas</h2>
@@ -670,7 +810,7 @@ export default function ProductDetail() {
 
             {/* ABA: TAXAS */}
             <TabsContent value="taxes" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-2xl space-y-6">
+               <div className="max-w-2xl mx-auto space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline">Taxas e Impostos</h2>
                    <p className="text-sm text-muted-foreground mb-4">Elas são deduzidas automaticamente do Faturamento Bruto (via Webhook).</p>
@@ -699,7 +839,7 @@ export default function ProductDetail() {
 
             {/* ABA: DESPESAS */}
             <TabsContent value="expenses" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-2xl space-y-6">
+               <div className="max-w-2xl mx-auto space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline">Despesas Avulsas</h2>
                    <p className="text-sm text-muted-foreground mb-4">Lancamentos de despesas da operação que corroem o seu Lucro.</p>
@@ -731,25 +871,95 @@ export default function ProductDetail() {
 
             {/* ABA: PIXEL */}
             <TabsContent value="pixel" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-2xl space-y-6">
+               <div className="max-w-2xl mx-auto space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline">Pixel de Rastreamento</h2>
-                   <p className="text-sm text-muted-foreground mb-4">Vincule o Pixel do Facebook para marcar compras quando o Webhook não for o suficiente.</p>
+                   <p className="text-sm text-muted-foreground">Configure o Pixel do Facebook e o Token de Acesso para envio de eventos via Conversions API.</p>
                  </div>
-                 <div className="space-y-4">
-                   <div className="flex flex-col gap-2">
-                     <label className="text-xs font-bold text-slate-400">ID do Pixel Meta</label>
-                     <div className="flex gap-2">
-                        <Input value={pixel?.pixel_id || ''} onChange={(e) => setPixel({...pixel, pixel_id: e.target.value})} className="bg-[#0f1115] border-white/10 font-mono" placeholder="Ex: 100023456789" />
-                        <Button onClick={async () => {
-                           if (!pixel?.pixel_id) return;
-                           const { data: existing } = await supabase.from('product_pixels').select('id').eq('product_id', id).maybeSingle();
-                           if (existing) await supabase.from('product_pixels').update({ pixel_id: pixel.pixel_id }).eq('id', existing.id);
-                           else await supabase.from('product_pixels').insert({ user_id: user!.uid, product_id: id, pixel_id: pixel.pixel_id, provider: 'facebook' });
-                           toast({ title: 'Pixel salvo com sucesso!' });
-                        }}>Salvar Pixel</Button>
+
+                 {/* Status card */}
+                 {pixel?.pixel_id ? (
+                   <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                     <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                     <div>
+                       <p className="text-sm font-bold text-green-400">Pixel Configurado</p>
+                       <p className="text-xs text-muted-foreground font-mono">ID: {pixel.pixel_id} {pixel.access_token ? '· Token ativo ✓' : '· Sem token'}</p>
                      </div>
                    </div>
+                 ) : (
+                   <div className="flex items-center gap-3 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                     <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                     <p className="text-sm text-yellow-400">Nenhum pixel configurado ainda.</p>
+                   </div>
+                 )}
+
+                 {/* Form */}
+                 <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                   <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2">
+                     <Code2 className="w-4 h-4 text-primary" /> Dados do Pixel
+                   </h3>
+
+                   <div className="space-y-2">
+                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">ID do Pixel (obrigatório)</label>
+                     <Input
+                       value={pixel?.pixel_id || ''}
+                       onChange={(e) => setPixel({ ...(pixel || {}), pixel_id: e.target.value })}
+                       className="bg-[#0f1115] border-white/10 font-mono h-11"
+                       placeholder="Ex: 1234567890123456"
+                     />
+                     <p className="text-xs text-muted-foreground">Encontre em: Meta Business Suite → Fontes de Dados → Pixels.</p>
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Token de Acesso do Pixel (obrigatório para CAPI)</label>
+                     <Input
+                       type="password"
+                       value={pixelToken}
+                       onChange={(e) => setPixelToken(e.target.value)}
+                       className="bg-[#0f1115] border-white/10 font-mono h-11"
+                       placeholder="EAAxxxxxxxxxxxxx..."
+                     />
+                     <p className="text-xs text-muted-foreground">
+                       Encontre em: Meta Business Suite → Fontes de Dados → Pixel → Configurações → Token de Acesso da API de Conversões.
+                     </p>
+                   </div>
+
+                   <Button
+                     className="w-full bg-primary hover:bg-primary/90 text-white font-bold h-11"
+                     disabled={updating || !pixel?.pixel_id}
+                     onClick={async () => {
+                       if (!pixel?.pixel_id) return;
+                       setUpdating(true);
+                       try {
+                         const { data: existing } = await supabase.from('product_pixels').select('id').eq('product_id', id).maybeSingle();
+                         const payload = {
+                           pixel_id: pixel.pixel_id,
+                           provider: 'facebook',
+                           access_token: pixelToken || null,
+                         };
+                         if (existing) {
+                           await supabase.from('product_pixels').update(payload).eq('id', existing.id);
+                         } else {
+                           await supabase.from('product_pixels').insert({ user_id: user!.uid, product_id: id, ...payload });
+                         }
+                         toast({ title: 'Pixel salvo com sucesso!', description: pixelToken ? 'ID e Token configurados.' : 'ID configurado (sem token).' });
+                       } catch (e: any) {
+                         toast({ variant: 'destructive', title: 'Erro ao salvar', description: e.message });
+                       } finally {
+                         setUpdating(false);
+                       }
+                     }}
+                   >
+                     {updating ? 'Salvando...' : 'Salvar Configurações do Pixel'}
+                   </Button>
+                 </div>
+
+                 {/* Info box */}
+                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
+                   <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Por que o Token é importante?</h4>
+                   <p className="text-xs text-muted-foreground leading-relaxed">
+                     O <strong>Token de Acesso</strong> permite que o AdPulse envie eventos de compra diretamente para a Meta via <strong>Conversions API (CAPI)</strong>, sem depender do pixel no navegador. Isso melhora a atribuição e resolve bloqueios de ad-blockers.
+                   </p>
                  </div>
                </div>
             </TabsContent>

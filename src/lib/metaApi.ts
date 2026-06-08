@@ -381,19 +381,23 @@ export async function updateCampaign(
   token: string,
   updates: { name?: string; status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'; daily_budget?: number; lifetime_budget?: number }
 ) {
-  const url = new URL(`${GRAPH_BASE}/${campaignId}`);
-  url.searchParams.set('access_token', token);
-  
-  if (updates.name) url.searchParams.set('name', updates.name);
-  if (updates.status) url.searchParams.set('status', updates.status);
-  // No Facebook API, budget usually expects cents, except if explicit. Usually it's better to send daily_budget in cents:
-  if (updates.daily_budget !== undefined) url.searchParams.set('daily_budget', Math.round(updates.daily_budget * 100).toString());
-  if (updates.lifetime_budget !== undefined) url.searchParams.set('lifetime_budget', Math.round(updates.lifetime_budget * 100).toString());
+  // A Meta Graph API exige que os parâmetros de mutação (status, budget, etc.)
+  // sejam enviados no CORPO do POST, não na URL (query string).
+  const body = new URLSearchParams();
+  body.set('access_token', token);
+  if (updates.name)   body.set('name', updates.name);
+  if (updates.status) body.set('status', updates.status);
+  if (updates.daily_budget     !== undefined) body.set('daily_budget',     Math.round(updates.daily_budget * 100).toString());
+  if (updates.lifetime_budget  !== undefined) body.set('lifetime_budget',  Math.round(updates.lifetime_budget * 100).toString());
 
-  const res = await fetch(url.toString(), { method: 'POST' });
+  const res = await fetch(`${GRAPH_BASE}/${campaignId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
-  return data;
+  return { success: true, ...data };
 }
 
 export async function updateAdSet(
@@ -401,18 +405,21 @@ export async function updateAdSet(
   token: string,
   updates: { name?: string; status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED'; daily_budget?: number; lifetime_budget?: number }
 ) {
-  const url = new URL(`${GRAPH_BASE}/${adsetId}`);
-  url.searchParams.set('access_token', token);
-  
-  if (updates.name) url.searchParams.set('name', updates.name);
-  if (updates.status) url.searchParams.set('status', updates.status);
-  if (updates.daily_budget !== undefined) url.searchParams.set('daily_budget', Math.round(updates.daily_budget * 100).toString());
-  if (updates.lifetime_budget !== undefined) url.searchParams.set('lifetime_budget', Math.round(updates.lifetime_budget * 100).toString());
+  const body = new URLSearchParams();
+  body.set('access_token', token);
+  if (updates.name)   body.set('name', updates.name);
+  if (updates.status) body.set('status', updates.status);
+  if (updates.daily_budget    !== undefined) body.set('daily_budget',    Math.round(updates.daily_budget * 100).toString());
+  if (updates.lifetime_budget !== undefined) body.set('lifetime_budget', Math.round(updates.lifetime_budget * 100).toString());
 
-  const res = await fetch(url.toString(), { method: 'POST' });
+  const res = await fetch(`${GRAPH_BASE}/${adsetId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
-  return data;
+  return { success: true, ...data };
 }
 
 export async function updateAd(
@@ -420,14 +427,17 @@ export async function updateAd(
   token: string,
   updates: { name?: string; status?: 'ACTIVE' | 'PAUSED' | 'ARCHIVED' }
 ) {
-  const url = new URL(`${GRAPH_BASE}/${adId}`);
-  url.searchParams.set('access_token', token);
-  
-  if (updates.name) url.searchParams.set('name', updates.name);
-  if (updates.status) url.searchParams.set('status', updates.status);
+  const body = new URLSearchParams();
+  body.set('access_token', token);
+  if (updates.name)   body.set('name', updates.name);
+  if (updates.status) body.set('status', updates.status);
 
-  const res = await fetch(url.toString(), { method: 'POST' });
+  const res = await fetch(`${GRAPH_BASE}/${adId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
-  return data;
+  return { success: true, ...data };
 }

@@ -112,17 +112,17 @@ export default function Home() {
     <div className="flex min-h-screen bg-[#0f1115] text-slate-200">
       <DashboardSidebar />
       <main className="flex-1 w-full p-4 lg:p-12 transition-all">
-        <div className="max-w-6xl mx-auto pt-16">
-          <header className="flex items-center justify-between mb-8">
+        <div className="max-w-6xl mx-auto pt-16 md:pt-16">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
             <div>
-              <h1 className="text-3xl font-bold font-headline mb-2 flex items-center gap-2">
-                <LayoutDashboard className="text-primary w-8 h-8" />
+              <h1 className="text-2xl lg:text-3xl font-bold font-headline mb-1 flex items-center gap-2">
+                <LayoutDashboard className="text-primary w-7 h-7" />
                 Meus Dashboards
               </h1>
-              <p className="text-muted-foreground">Gerencie seus projetos e agrupe seus produtos.</p>
+              <p className="text-muted-foreground text-sm">Gerencie seus projetos e agrupe seus produtos.</p>
             </div>
             
-            <Button onClick={() => { setEditId(null); setName(""); setDesc(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2">
+            <Button onClick={() => { setEditId(null); setName(""); setDesc(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 w-full sm:w-auto">
               <Plus className="w-5 h-5" /> Criar Dashboard
             </Button>
           </header>
@@ -130,7 +130,7 @@ export default function Home() {
           {!user ? (
             <Card className="p-12 text-center bg-[#14151a] border-white/5">
               <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
-              <p className="text-muted-foreground">Faça login pelo menu lateral para gerenciar seus dashboards.</p>
+              <p className="text-muted-foreground">Faça login pela aba <strong>Login</strong> (ou menu lateral no desktop) para gerenciar seus dashboards.</p>
             </Card>
           ) : loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

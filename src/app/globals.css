@@ -70,3 +70,134 @@
 ::-webkit-scrollbar-thumb {
   @apply bg-muted rounded-full hover:bg-muted/80;
 }
+
+/* ───────────────────────────────────────────────
+   MOBILE RESPONSIVE — max-width 768px only
+   Desktop layout is NOT affected by any rule below
+   ─────────────────────────────────────────────── */
+
+/* Bottom Nav Bar */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: stretch;
+  background: rgba(15, 17, 21, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-shadow: 0 -8px 32px rgba(0,0,0,0.4);
+}
+
+.mobile-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 10px 4px;
+  color: hsl(215 20% 50%);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: color 0.2s, background 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-item:active {
+  background: rgba(255,255,255,0.04);
+}
+
+.mobile-nav-item--active {
+  color: hsl(217 91% 60%);
+}
+
+.mobile-nav-item--active svg {
+  filter: drop-shadow(0 0 6px hsl(217 91% 60% / 0.6));
+}
+
+/* Safe area for bottom nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px) !important;
+}
+
+/* Mobile page wrapper padding — adds room for bottom nav */
+@media (max-width: 767px) {
+  /* Hide hamburger button on mobile (using bottom nav instead) */
+  .sidebar-hamburger {
+    display: none !important;
+  }
+
+  /* All pages get bottom padding for nav bar */
+  main {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-top: 16px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  /* Page headers look great on mobile */
+  h1.page-title {
+    font-size: 1.5rem !important;
+  }
+
+  /* Cards stack better on mobile */
+  .mobile-card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Horizontal scroll tables on mobile */
+  .mobile-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* KPI grid adapts to 2 cols on mobile */
+  .kpi-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Full-width buttons on mobile */
+  .mobile-full-btn {
+    width: 100% !important;
+  }
+
+  /* Header flex on mobile becomes column */
+  .mobile-header-stack {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  /* Shrink text for mobile tables */
+  table {
+    font-size: 12px;
+  }
+
+  /* Remove overflow hidden that breaks mobile scroll */
+  .mobile-overflow-fix {
+    overflow: visible !important;
+    height: auto !important;
+  }
+}
+
+/* Responsive tab scrolling (used in product detail) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

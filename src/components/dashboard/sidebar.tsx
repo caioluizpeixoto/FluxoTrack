@@ -105,7 +105,7 @@ export function DashboardSidebar() {
 
   return (
     <>
-      <div className="fixed top-4 left-4 z-50">
+      <div className="fixed top-4 left-4 z-50 sidebar-hamburger">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="icon" className="bg-[#14151a] border-white/10 shadow-xl hover:bg-[#1a1c23] hover:text-white transition-all text-slate-300">

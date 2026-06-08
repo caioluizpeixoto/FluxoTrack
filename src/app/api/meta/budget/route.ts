@@ -67,10 +67,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Aplicar novo orçamento
+    // NOTA: updateCampaign/updateAdSet já multiplicam por 100 internamente,
+    // então passamos o valor em R$ (não em centavos)
+    const valueInBRL = action === 'fixed' ? value : newBudget / 100;
     if (type === 'campaign') {
-       await updateCampaign(id, token, { daily_budget: value });
+       await updateCampaign(id, token, { daily_budget: valueInBRL });
     } else if (type === 'adset') {
-       await updateAdSet(id, token, { daily_budget: value });
+       await updateAdSet(id, token, { daily_budget: valueInBRL });
     }
 
     // 3. Atualizar localmente
