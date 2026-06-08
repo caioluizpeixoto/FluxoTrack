@@ -7,8 +7,8 @@ import { buildFacebookOAuthUrl } from '@/lib/metaApi';
  * O App Secret NUNCA sai do servidor.
  */
 export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url);
   try {
-    const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
     if (!userId) {
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   } catch (err: any) {
     const msg = encodeURIComponent(err.message ?? 'Erro ao iniciar conexão com o Facebook.');
     return NextResponse.redirect(
-      `http://localhost:9002/meta-ads?error=${msg}`
+      `${origin}/integrations?error=${msg}`
     );
   }
 }

@@ -10,8 +10,6 @@ import {
 } from '@/lib/metaApi';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
 
-const BASE_URL = 'http://localhost:9002';
-
 /**
  * GET /auth/facebook/callback
  * Recebe o `code` do Facebook após autorização OAuth.
@@ -20,10 +18,10 @@ const BASE_URL = 'http://localhost:9002';
  *   2. Troca → long-lived token (~60 dias)
  *   3. Busca /me, /me/businesses, /me/adaccounts, pixels
  *   4. Salva tudo no Supabase
- *   5. Redireciona para /meta-ads
+ *   5. Redireciona para /integrations
  */
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams, origin } = new URL(request.url);
 
   // ── Erros vindos do Facebook (usuário cancelou, permissão negada, etc.) ──
   const fbError = searchParams.get('error');
@@ -35,14 +33,14 @@ export async function GET(request: Request) {
       msg = 'Você cancelou a autorização do Facebook.';
     }
     return NextResponse.redirect(
-      `${BASE_URL}/meta-ads?error=${encodeURIComponent(msg)}`
+      `${origin}/integrations?error=${encodeURIComponent(msg)}`
     );
   }
 
   const code = searchParams.get('code');
   if (!code) {
     return NextResponse.redirect(
-      `${BASE_URL}/meta-ads?error=${encodeURIComponent('Código de autorização ausente ou inválido.')}`
+      `${origin}/integrations?error=${encodeURIComponent('Código de autorização ausente ou inválido.')}`
     );
   }
 
@@ -88,7 +86,7 @@ export async function GET(request: Request) {
 
     if (!supabaseUserId) {
       return NextResponse.redirect(
-        `${BASE_URL}/meta-ads?error=${encodeURIComponent('Você precisa estar logado no AdPulse para conectar o Facebook.')}`
+        `${origin}/integrations?error=${encodeURIComponent('Você precisa estar logado no AdPulse para conectar o Facebook.')}`
       );
     }
 
@@ -185,7 +183,7 @@ export async function GET(request: Request) {
       businesses: String(businesses.length),
     });
 
-    return NextResponse.redirect(`${BASE_URL}/meta-ads?${params.toString()}`);
+    return NextResponse.redirect(`${origin}/integrations?${params.toString()}`);
   } catch (err: any) {
     console.error('[Facebook Callback] Erro:', err);
 
@@ -193,8 +191,7 @@ export async function GET(request: Request) {
     if (err instanceof MetaApiError) msg = err.userMessage();
 
     return NextResponse.redirect(
-      `${BASE_URL}/meta-ads?error=${encodeURIComponent(msg)}`
+      `${origin}/integrations?error=${encodeURIComponent(msg)}`
     );
   }
 }
-
