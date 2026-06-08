@@ -1,0 +1,24 @@
+{
+  "name": "AdPulse",
+  "short_name": "AdPulse",
+  "description": "Attribution and sales tracking dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://placehold.co/192x192/1877F2/FFF?text=AP",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://placehold.co/512x512/1877F2/FFF?text=AdPulse",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

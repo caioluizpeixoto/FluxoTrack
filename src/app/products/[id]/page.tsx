@@ -14,7 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
-  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2
+  Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2,
+  Bell, Volume2
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -69,7 +70,88 @@ export default function ProductDetail() {
   const [newExp, setNewExp] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
   const [newRule, setNewRule] = useState({ name: '', metric: 'cpa', operator: '>', value: '', action: 'pause_campaign', actionValue: '' });
 
-  useEffect(() => { setMounted(true); }, []);
+  // Notifications State
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [notifyApp, setNotifyApp] = useState(true);
+  const [notifyPend, setNotifyPend] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundType, setSoundType] = useState("default");
+  const [permissionStatus, setPermissionStatus] = useState("default");
+
+  useEffect(() => { 
+    setMounted(true); 
+    if (typeof window !== "undefined") {
+      setNotifyEnabled(localStorage.getItem("notifications_enabled") !== "false");
+      setNotifyApp(localStorage.getItem("notify_approved") !== "false");
+      setNotifyPend(localStorage.getItem("notify_pending") !== "false");
+      setSoundEnabled(localStorage.getItem("sound_enabled") !== "false");
+      setSoundType(localStorage.getItem("sound_type") || "default");
+      if ("Notification" in window) {
+        setPermissionStatus(Notification.permission);
+      }
+    }
+  }, []);
+
+  const requestNotificationPermission = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setPermissionStatus(permission);
+      if (permission === "granted") {
+        toast({ title: "✓ Permissão Concedida!", description: "Você receberá alertas de vendas em tempo real." });
+      } else {
+        toast({ variant: "destructive", title: "Permissão Negada", description: "Ative nas configurações do seu navegador para receber alertas." });
+      }
+    }
+  };
+
+  const handleCustomSoundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 500 * 1024) {
+      toast({ variant: "destructive", title: "Arquivo muito grande", description: "Escolha um arquivo de áudio de até 500KB." });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      localStorage.setItem("custom_sound_base64", base64String);
+      localStorage.setItem("sound_type", "custom");
+      setSoundType("custom");
+      toast({ title: "✓ Som carregado!", description: "Som customizado salvo localmente." });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const testNotification = async () => {
+    // Play sound
+    if (soundEnabled) {
+      try {
+        let audioUrl = "https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav";
+        if (soundType === "custom") {
+          const customBase64 = localStorage.getItem("custom_sound_base64");
+          if (customBase64) {
+            audioUrl = customBase64;
+          }
+        }
+        const audio = new Audio(audioUrl);
+        await audio.play();
+      } catch (soundErr) {
+        console.warn("Falha ao tocar áudio no teste:", soundErr);
+      }
+    }
+
+    // Show push notification
+    if (notifyEnabled && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      new Notification("💰 Venda Aprovada! (Teste)", {
+        body: "Produto: Teste de Notificações | Valor: R$ 97,00",
+        icon: "https://placehold.co/192x192/1877F2/FFF?text=AP",
+      });
+    }
+
+    toast({ title: "🔊 Teste executado!", description: "Disparamos o alerta de teste." });
+  };
 
   useEffect(() => {
     if (user && id) loadProductData();
@@ -519,6 +601,7 @@ export default function ProductDetail() {
                 <TabsTrigger value="expenses" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><DollarSign className="w-3 h-3 mr-1"/> Despesas</TabsTrigger>
                 <TabsTrigger value="reports" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><FileText className="w-3 h-3 mr-1"/> Relatórios</TabsTrigger>
                 <TabsTrigger value="settings" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Settings className="w-3 h-3 mr-1"/> Config</TabsTrigger>
+                <TabsTrigger value="notifications" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Bell className="w-3 h-3 mr-1"/> Notificações</TabsTrigger>
               </TabsList>
             </div>
 
@@ -1023,6 +1106,150 @@ export default function ProductDetail() {
                     </SelectContent>
                   </Select>
                   <p className="text-sm text-muted-foreground mt-4">Ao selecionar uma conta principal, o produto puxará automaticamente todas as campanhas desta conta.</p>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ABA: NOTIFICAÇÕES */}
+            <TabsContent value="notifications" className="flex-1 overflow-y-auto p-6 m-0">
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div>
+                  <h2 className="text-xl font-bold font-headline flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-primary" /> Configuração de Alertas de Venda
+                  </h2>
+                  <p className="text-sm text-slate-400">Configure notificações push no navegador e sons de alerta em tempo real para vendas pendentes e aprovadas.</p>
+                </div>
+
+                {/* Browser permission */}
+                <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] flex items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-300">Permissão do Navegador</h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {permissionStatus === "granted" 
+                        ? "✓ As notificações estão permitidas neste dispositivo." 
+                        : "É necessário permitir para ver os popups de vendas."}
+                    </p>
+                  </div>
+                  {permissionStatus !== "granted" ? (
+                    <Button onClick={requestNotificationPermission} className="bg-primary text-white font-bold h-9">
+                      Ativar Notificações
+                    </Button>
+                  ) : (
+                    <Badge className="bg-green-500/10 text-green-500 border-none font-bold py-1 px-3">
+                      ATIVO ✓
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Toggles */}
+                <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                  <h3 className="font-bold text-sm text-slate-300">Alertas Ativos</h3>
+
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <div>
+                      <span className="text-sm font-medium block">Notificar Popups no Navegador</span>
+                      <span className="text-xs text-muted-foreground">Exibe caixas de alerta push mesmo com a aba em segundo plano.</span>
+                    </div>
+                    <Switch 
+                      checked={notifyEnabled} 
+                      onCheckedChange={(val) => {
+                        setNotifyEnabled(val);
+                        localStorage.setItem("notifications_enabled", val ? "true" : "false");
+                      }} 
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <div>
+                      <span className="text-sm font-medium block">Vendas Aprovadas</span>
+                      <span className="text-xs text-muted-foreground">Alertar quando compras forem confirmadas.</span>
+                    </div>
+                    <Switch 
+                      checked={notifyApp} 
+                      onCheckedChange={(val) => {
+                        setNotifyApp(val);
+                        localStorage.setItem("notify_approved", val ? "true" : "false");
+                      }} 
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <div>
+                      <span className="text-sm font-medium block">Vendas Pendentes</span>
+                      <span className="text-xs text-muted-foreground">Alertar quando boletos forem gerados ou PIX emitidos.</span>
+                    </div>
+                    <Switch 
+                      checked={notifyPend} 
+                      onCheckedChange={(val) => {
+                        setNotifyPend(val);
+                        localStorage.setItem("notify_pending", val ? "true" : "false");
+                      }} 
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="text-sm font-medium block">Tocar Som de Notificação</span>
+                      <span className="text-xs text-muted-foreground">Efetua um som clássico de caixa registradora ou um som customizado.</span>
+                    </div>
+                    <Switch 
+                      checked={soundEnabled} 
+                      onCheckedChange={(val) => {
+                        setSoundEnabled(val);
+                        localStorage.setItem("sound_enabled", val ? "true" : "false");
+                      }} 
+                    />
+                  </div>
+                </div>
+
+                {/* Sound Customization */}
+                <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                  <h3 className="font-bold text-sm text-slate-300">Escolha o Som de Alerta</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button 
+                      variant={soundType === "default" ? "default" : "outline"} 
+                      onClick={() => {
+                        setSoundType("default");
+                        localStorage.setItem("sound_type", "default");
+                      }}
+                      className="font-bold h-11"
+                    >
+                      Som Padrão (Caixa Registradora)
+                    </Button>
+                    <Button 
+                      variant={soundType === "custom" ? "default" : "outline"} 
+                      onClick={() => {
+                        setSoundType("custom");
+                        localStorage.setItem("sound_type", "custom");
+                      }}
+                      className="font-bold h-11"
+                    >
+                      Som Customizado (Upload)
+                    </Button>
+                  </div>
+
+                  {soundType === "custom" && (
+                    <div className="p-4 bg-black/20 border border-white/5 rounded-lg space-y-3">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Fazer Upload do Arquivo de Áudio (.mp3 ou .wav)</label>
+                      <Input 
+                        type="file" 
+                        accept="audio/mpeg, audio/wav, audio/mp3" 
+                        onChange={handleCustomSoundUpload}
+                        className="bg-[#0f1115] border-white/10 file:bg-primary file:text-white file:font-bold file:border-none file:px-3 file:py-1 file:rounded cursor-pointer"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Limite de 500KB. O áudio será salvo localmente no seu dispositivo.</p>
+                    </div>
+                  )}
+
+                  <div className="pt-2">
+                    <Button 
+                      onClick={testNotification} 
+                      className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-11 gap-2"
+                    >
+                      <Volume2 className="w-5 h-5" /> Testar Alerta & Som de Venda
+                    </Button>
+                  </div>
                 </div>
               </div>
             </TabsContent>
