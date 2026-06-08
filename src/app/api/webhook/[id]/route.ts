@@ -21,11 +21,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, generic)
     const eventType = body.event || body.event_type || body.type || body.status || 'unknown';
-    const eventValue = body.value || body.amount || body.price || body.comission || body.liquid || 0;
-    const customerEmail = body.email || body.customer_email || body.customer?.email || '';
-    const customerName = body.name || body.customer_name || body.customer?.name || '';
-    const transactionId = body.transaction_id || body.transaction || body.id || '';
-    const currency = body.currency || 'BRL';
+    
+    // Parse Value
+    let rawValue = 0;
+    if (body.Order?.price_cents !== undefined) {
+      rawValue = Number(body.Order.price_cents) / 100;
+    } else if (body.Order?.order_approved_amount !== undefined) {
+      rawValue = Number(body.Order.order_approved_amount) / 100;
+    } else if (body.purchase?.price?.value !== undefined) {
+      rawValue = Number(body.purchase.price.value);
+    } else if (body.sale_value !== undefined) {
+      rawValue = Number(body.sale_value);
+    } else if (body.value_cents !== undefined) {
+      rawValue = Number(body.value_cents) / 100;
+    } else if (body.price_cents !== undefined) {
+      rawValue = Number(body.price_cents) / 100;
+    } else {
+      rawValue = Number(body.value || body.amount || body.price || body.comission || body.liquid || 0);
+    }
+    const eventValue = rawValue;
+
+    // Parse Email
+    const customerEmail = body.Customer?.email || body.buyer?.email || body.customer?.email || body.email || body.customer_email || '';
+
+    // Parse Name
+    const customerName = body.Customer?.name || body.buyer?.name || body.customer?.name || body.name || body.customer_name || '';
+
+    // Parse Transaction ID
+    const transactionId = body.Order?.order_id || body.purchase?.transaction || body.sale_id || body.transaction_id || body.transaction || body.id || '';
+
+    const currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
 
     // Normalize Status
     let status = 'pending';
