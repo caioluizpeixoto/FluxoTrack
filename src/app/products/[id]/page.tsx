@@ -226,6 +226,13 @@ export default function ProductDetail() {
        realPurchases += 1;
     });
 
+    // Pending Purchases calculation
+    let pendingPurchases = 0, pendingRevenue = 0;
+    events.filter(e => e.status !== 'approved' && e.status !== 'refunded' && e.status !== 'chargeback' && e.status !== 'refused' && e.event_type === 'purchase').forEach(e => {
+       pendingRevenue += Number(e.event_value || 0);
+       pendingPurchases += 1;
+    });
+
     // Fallback to Meta Data if no Webhook data exists
     if (realPurchases === 0 && liveMetrics.campaigns.length > 0) {
       liveMetrics.campaigns.forEach(c => {
@@ -254,7 +261,7 @@ export default function ProductDetail() {
     const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
 
-    return { spend, revenue: realRevenue, purchases: realPurchases, prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr };
+    return { spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr };
   }, [liveMetrics, product, taxes, expenses, events]);
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
@@ -517,25 +524,30 @@ export default function ProductDetail() {
 
             {/* ABA: RESUMO */}
             <TabsContent value="overview" className="flex-1 overflow-y-auto p-6 m-0">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                  <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
-                  <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
-                </Card>
-                <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                  <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
-                  <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
-                </Card>
-                <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                  <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
-                  <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
-                </Card>
-                <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
-                  <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
-                  <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
-                </Card>
-              </div>
+               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
+                   <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
+                   <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
+                 </Card>
+                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
+                   <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue)}</p>
+                   <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
+                 </Card>
+                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
+                   <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
+                 </Card>
+                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
+                   <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
+                 </Card>
+                 <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
+                   <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
+                   <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
+                 </Card>
+               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                  <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>
