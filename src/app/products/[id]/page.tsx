@@ -677,13 +677,13 @@ export default function ProductDetail() {
                        <div className="flex gap-2">
                          <Input
                            readOnly
-                           value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/${id}?userId=${user.uid}`}
+                           value={`${typeof window !== 'undefined' ? window.location.origin : ''}/api/webhook/${id}`}
                            className="bg-[#0f1115] font-mono text-xs border-white/10 text-primary"
                          />
                          <Button
                            variant="secondary"
                            onClick={() => {
-                             navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/${id}?userId=${user.uid}`);
+                             navigator.clipboard.writeText(`${window.location.origin}/api/webhook/${id}`);
                              toast({ title: '✓ URL copiada!' });
                            }}
                          >

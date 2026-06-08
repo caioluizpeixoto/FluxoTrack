@@ -35,13 +35,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
        status = 'approved';
     } else if (normalizedEvent.includes('refund') || normalizedEvent.includes('chargeback') || normalizedEvent.includes('reembolso')) {
        status = 'refunded';
+    } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject')) {
+       status = 'refused';
+    } else {
+       status = 'pending';
     }
 
     // Normalize Event Type for DB (purchase, lead, checkout)
-    let finalType = 'other';
-    if (status === 'approved' || status === 'refunded') finalType = 'purchase';
-    else if (normalizedEvent.includes('lead') || normalizedEvent.includes('pix')) finalType = 'lead';
-    else if (normalizedEvent.includes('checkout') || normalizedEvent.includes('cart')) finalType = 'checkout';
+    let finalType = 'purchase';
+    if (normalizedEvent.includes('abandoned') || normalizedEvent.includes('cart') || normalizedEvent.includes('checkout')) {
+      finalType = 'checkout';
+    } else if (normalizedEvent.includes('lead')) {
+      finalType = 'lead';
+    }
 
     // Insert into DB
     const { error } = await supabaseAdmin.from('product_events').insert({
