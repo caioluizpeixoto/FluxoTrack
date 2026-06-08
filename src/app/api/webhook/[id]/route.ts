@@ -22,22 +22,30 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, generic)
     const eventType = body.event || body.event_type || body.type || body.status || 'unknown';
     
+    const cleanValue = (val: any): number => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      // Remove R$, spaces, and format decimal separator
+      const clean = val.toString().replace(/[^\d.,]/g, '').replace(',', '.');
+      return parseFloat(clean) || 0;
+    };
+
     // Parse Value
     let rawValue = 0;
     if (body.Order?.price_cents !== undefined) {
-      rawValue = Number(body.Order.price_cents) / 100;
+      rawValue = cleanValue(body.Order.price_cents) / 100;
     } else if (body.Order?.order_approved_amount !== undefined) {
-      rawValue = Number(body.Order.order_approved_amount) / 100;
+      rawValue = cleanValue(body.Order.order_approved_amount) / 100;
     } else if (body.purchase?.price?.value !== undefined) {
-      rawValue = Number(body.purchase.price.value);
+      rawValue = cleanValue(body.purchase.price.value);
     } else if (body.sale_value !== undefined) {
-      rawValue = Number(body.sale_value);
+      rawValue = cleanValue(body.sale_value);
     } else if (body.value_cents !== undefined) {
-      rawValue = Number(body.value_cents) / 100;
+      rawValue = cleanValue(body.value_cents) / 100;
     } else if (body.price_cents !== undefined) {
-      rawValue = Number(body.price_cents) / 100;
+      rawValue = cleanValue(body.price_cents) / 100;
     } else {
-      rawValue = Number(body.value || body.amount || body.price || body.comission || body.liquid || 0);
+      rawValue = cleanValue(body.value || body.amount || body.price || body.comission || body.liquid || 0);
     }
     const eventValue = rawValue;
 
