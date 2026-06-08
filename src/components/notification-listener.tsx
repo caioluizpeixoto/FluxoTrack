@@ -55,16 +55,27 @@ export function NotificationListener() {
               }
             }
 
-            // 2. Exibe Notificação Push no Navegador (se concedido)
+            // 2. Exibe Notificação Push via Service Worker (funciona em mobile/PWA)
             if (notificationsEnabled && typeof window !== "undefined" && "Notification" in window) {
               if (Notification.permission === "granted") {
                 const title = isApproved ? "💰 Venda Aprovada!" : "⏳ Venda Pendente!";
                 const bodyMsg = `Valor: R$ ${Number(newEvent.event_value || 0).toFixed(2)} | Cliente: ${newEvent.customer_name || newEvent.customer_email || "Sem Nome"}`;
-                
-                new Notification(title, {
-                  body: bodyMsg,
-                  icon: "https://placehold.co/192x192/1877F2/FFF?text=AP",
-                });
+                const icon = "https://placehold.co/192x192/1877F2/FFF?text=AP";
+                const tag = `sale-${newEvent.id || Date.now()}`;
+
+                // Tenta via Service Worker primeiro (necessário em mobile/PWA)
+                if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({
+                    type: "SHOW_NOTIFICATION",
+                    title,
+                    body: bodyMsg,
+                    icon,
+                    tag,
+                  });
+                } else {
+                  // Fallback para desktop com new Notification()
+                  new Notification(title, { body: bodyMsg, icon });
+                }
               }
             }
 
