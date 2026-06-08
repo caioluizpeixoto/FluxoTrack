@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import IntegrationsContent from "./IntegrationsContent";
 import { Loader2 } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function IntegrationsPage() {
   return (
     <Suspense
