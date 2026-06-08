@@ -32,7 +32,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Parse Value
     let rawValue = 0;
-    if (body.Order?.price_cents !== undefined) {
+    if (body.payment?.amount !== undefined) {
+      rawValue = cleanValue(body.payment.amount);
+    } else if (body.Order?.price_cents !== undefined) {
       rawValue = cleanValue(body.Order.price_cents) / 100;
     } else if (body.Order?.order_approved_amount !== undefined) {
       rawValue = cleanValue(body.Order.order_approved_amount) / 100;
@@ -50,13 +52,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const eventValue = rawValue;
 
     // Parse Email
-    const customerEmail = body.Customer?.email || body.buyer?.email || body.customer?.email || body.email || body.customer_email || '';
+    const customerEmail = body.customer?.email || body.Customer?.email || body.buyer?.email || body.email || body.customer_email || '';
 
     // Parse Name
-    const customerName = body.Customer?.name || body.buyer?.name || body.customer?.name || body.name || body.customer_name || '';
+    const customerName = body.customer?.name || body.Customer?.name || body.buyer?.name || body.name || body.customer_name || '';
 
     // Parse Transaction ID
-    const transactionId = body.Order?.order_id || body.purchase?.transaction || body.sale_id || body.transaction_id || body.transaction || body.id || '';
+    const transactionId = body.payment?.id || body.Order?.order_id || body.purchase?.transaction || body.sale_id || body.transaction_id || body.transaction || body.id || '';
 
     const currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
 
