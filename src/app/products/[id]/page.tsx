@@ -738,7 +738,7 @@ export default function ProductDetail() {
                  )}
                  {visibleCards.includes('meta_balance') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Fatura Atual (Meta)</p>
+                     <p className="text-sm text-slate-400 font-medium mb-1">Saldo na Conta (Meta)</p>
                      
                      {metaAccountData?.error ? (
                         <p className="text-xs text-red-400 mt-1 line-clamp-2" title={metaAccountData.error}>
