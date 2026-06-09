@@ -1051,9 +1051,9 @@ export default function ProductDetail() {
                         <p className="text-sm text-muted-foreground">Nenhuma venda recebida ainda.</p>
                       </div>
                     ) : (
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[600px] relative">
                         <table className="w-full text-sm text-left whitespace-nowrap">
-                          <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
+                          <thead className="bg-[#14151a] text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-md">
                             <tr>
                               <th className="px-4 py-3">Data</th>
                               <th className="px-4 py-3">Cliente</th>
@@ -1071,8 +1071,8 @@ export default function ProductDetail() {
                               return (
                                 <tr key={e.id} className="hover:bg-white/5">
                                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
-                                  <td className="px-4 py-3 font-medium text-slate-200">{e.customer_name || '—'}</td>
-                                  <td className="px-4 py-3 text-xs text-slate-400">{e.customer_email || '—'}</td>
+                                  <td className="px-4 py-3 font-medium text-slate-200 max-w-[150px] sm:max-w-[200px] truncate" title={e.customer_name || ''}>{e.customer_name || '—'}</td>
+                                  <td className="px-4 py-3 text-xs text-slate-400 max-w-[150px] sm:max-w-[200px] truncate" title={e.customer_email || ''}>{e.customer_email || '—'}</td>
                                   <td className="px-4 py-3 text-xs text-slate-400">{phone}</td>
                                   <td className="px-4 py-3">
                                     {e.status === 'approved' ? (
