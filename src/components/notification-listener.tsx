@@ -40,7 +40,7 @@ export function NotificationListener() {
             // 1. Toca o Som
             if (soundEnabled) {
               try {
-                let audioUrl = "https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav";
+                let audioUrl = "/sounds/notification.mp3";
                 if (soundType === "custom") {
                   const customBase64 = localStorage.getItem("custom_sound_base64");
                   if (customBase64) {
