@@ -19,8 +19,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Get Raw JSON
     const body = await req.json();
 
-    // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, generic)
-    const eventType = body.event || body.event_type || body.type || body.status || 'unknown';
+    // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, Wiapy, generic)
+    const eventType = body.event || body.event_type || body.type || body.status || body.payment?.status || 'unknown';
     
     const cleanValue = (val: any): number => {
       if (typeof val === 'number') return val;
@@ -34,6 +34,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     let rawValue = 0;
     if (body.payment?.amount !== undefined) {
       rawValue = cleanValue(body.payment.amount);
+      // Wiapy sends amount in cents, identified by the presence of checkout.id and payment.fee
+      if (body.payment.fee !== undefined && body.checkout?.id) {
+         rawValue = rawValue / 100;
+      }
     } else if (body.Order?.price_cents !== undefined) {
       rawValue = cleanValue(body.Order.price_cents) / 100;
     } else if (body.Order?.order_approved_amount !== undefined) {
@@ -72,6 +76,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
        status = 'refunded';
     } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject')) {
        status = 'refused';
+    } else if (normalizedEvent.includes('unpaid') || normalizedEvent.includes('generated') || normalizedEvent.includes('pending')) {
+       status = 'pending';
     } else {
        status = 'pending';
     }
