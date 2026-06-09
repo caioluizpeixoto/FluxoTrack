@@ -43,6 +43,8 @@ export default function ProductDetail() {
   const [utms, setUtms] = useState<any>(null);
   const [pixel, setPixel] = useState<any>(null);
   const [pixelToken, setPixelToken] = useState("");
+  const [icTriggerText, setIcTriggerText] = useState("");
+  const [icTriggerUrl, setIcTriggerUrl] = useState("");
   const [productAdAccount, setProductAdAccount] = useState<any>(null);
   
   // Live Metrics
@@ -86,11 +88,13 @@ export default function ProductDetail() {
       setNotifyPend(localStorage.getItem("notify_pending") !== "false");
       setSoundEnabled(localStorage.getItem("sound_enabled") !== "false");
       setSoundType(localStorage.getItem("sound_type") || "default");
+      setIcTriggerText(localStorage.getItem(`ic_text_${id}`) || "");
+      setIcTriggerUrl(localStorage.getItem(`ic_url_${id}`) || "");
       if ("Notification" in window) {
         setPermissionStatus(Notification.permission);
       }
     }
-  }, []);
+  }, [id]);
 
   const requestNotificationPermission = async () => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -1111,6 +1115,41 @@ export default function ProductDetail() {
                    </Button>
                  </div>
 
+                  {/* Disparo de IC (InitiateCheckout) */}
+                  <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                    <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2">
+                      <Code2 className="w-4 h-4 text-primary" /> Configuração do InitiateCheckout (Opcional)
+                    </h3>
+                    <p className="text-xs text-muted-foreground">O pixel já detecta automaticamente cliques em botões de "Comprar" ou links de checkout. Se desejar, force a detecção preenchendo abaixo (isso alterará o código do script gerado).</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Se o botão contiver este Texto:</label>
+                        <Input
+                          value={icTriggerText}
+                          onChange={(e) => {
+                            setIcTriggerText(e.target.value);
+                            localStorage.setItem(`ic_text_${id}`, e.target.value);
+                          }}
+                          className="bg-[#0f1115] border-white/10 text-sm h-10"
+                          placeholder="Ex: Assinar Agora"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase">Se o link apontar para esta URL:</label>
+                        <Input
+                          value={icTriggerUrl}
+                          onChange={(e) => {
+                            setIcTriggerUrl(e.target.value);
+                            localStorage.setItem(`ic_url_${id}`, e.target.value);
+                          }}
+                          className="bg-[#0f1115] border-white/10 text-sm h-10"
+                          placeholder="Ex: pay.kiwify.com.br"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                  {/* Código do Pixel para a Página */}
                  {pixel?.pixel_id && (
                     <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
@@ -1138,7 +1177,7 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
 /></noscript>
 <!-- AdPulse Tracking Integration -->
-<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid || ''}"></script>
+<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid || ''}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>
 <!-- End Pixel Code -->`}
                         </pre>
                         <Button 
@@ -1146,7 +1185,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                           size="sm"
                           className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white"
                           onClick={() => {
-                            const code = `<!-- AdPulse & Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- AdPulse Tracking Integration -->\n<script src="${window.location.origin}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid}"></script>\n<!-- End Pixel Code -->`;
+                            const code = `<!-- AdPulse & Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- AdPulse Tracking Integration -->\n<script src="${window.location.origin}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>\n<!-- End Pixel Code -->`;
                             navigator.clipboard.writeText(code);
                             toast({ title: '✓ Código copiado!' });
                           }}
