@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useUser, useFirestore, useDoc, isFirebaseConfigured } from "@/firebase";
 import { doc, updateDoc, setDoc, serverTimestamp } from "@/firebase/compat/firestore";
 import { useState, useEffect, useMemo } from "react";
-import { Copy, Check, Shield, Code, Save, Database, AlertTriangle, Key, Hammer, UserPlus } from "lucide-react";
+import { Copy, Check, Shield, Code, Save, Database, AlertTriangle, Key, Hammer, UserPlus, Bell, BellRing, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,33 @@ export default function SettingsPage() {
 
   const [storeUrl, setStoreUrl] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [testingNotif, setTestingNotif] = useState(false);
+  const [notifStatus, setNotifStatus] = useState<"idle" | "ok" | "error">("idle");
+
+  const handleTestNotification = async () => {
+    setTestingNotif(true);
+    setNotifStatus("idle");
+    try {
+      const res = await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "⏰ Teste de Notificação!",
+          message: "Se você recebeu isso, as notificações estão funcionando! 🎉",
+          url: "/settings",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(JSON.stringify(data.error));
+      setNotifStatus("ok");
+      toast({ title: "Notificação enviada!", description: "Verifique seu celular." });
+    } catch (err: any) {
+      setNotifStatus("error");
+      toast({ variant: "destructive", title: "Erro", description: err?.message || "Falha ao enviar notificação." });
+    } finally {
+      setTestingNotif(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -183,6 +210,45 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Assim que o login estiver ativo, você poderá registrar seus Pixels, Webhooks de checkout e usar a IA para mapear conversões órfãs.
                 </p>
+              </CardContent>
+            </Card>
+
+            {/* Notification Test Card */}
+            <Card className="glass-card border-primary/20">
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2 text-base">
+                  <BellRing className="w-5 h-5 text-primary" />
+                  Testar Notificações Push
+                </CardTitle>
+                <CardDescription>
+                  Envia uma notificação de teste para todos os dispositivos inscritos no OneSignal.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  onClick={handleTestNotification}
+                  disabled={testingNotif}
+                  className="w-full gap-2"
+                  variant={notifStatus === "ok" ? "outline" : "default"}
+                >
+                  {testingNotif ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                  ) : notifStatus === "ok" ? (
+                    <><Check className="w-4 h-4 text-green-400" /> Enviado com sucesso!</>
+                  ) : (
+                    <><Bell className="w-4 h-4" /> Enviar Notificação Teste</>
+                  )}
+                </Button>
+                {notifStatus === "ok" && (
+                  <p className="text-xs text-green-400 text-center">
+                    ✅ Verifique seu celular agora!
+                  </p>
+                )}
+                {notifStatus === "error" && (
+                  <p className="text-xs text-red-400 text-center">
+                    ❌ Falhou. Verifique se as variáveis do OneSignal estão configuradas no Vercel.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
