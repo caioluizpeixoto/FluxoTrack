@@ -88,7 +88,7 @@ export async function POST(
        status = 'refunded';
     } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject') || normalizedEvent.includes('recusado')) {
        status = 'refused';
-    } else if (normalizedEvent.includes('pending') || normalizedEvent.includes('pendente') || normalizedEvent.includes('waiting') || normalizedEvent.includes('aguardando') || normalizedEvent.includes('generated') || normalizedEvent.includes('gerado') || normalizedEvent.includes('unpaid') || normalizedEvent.includes('billet') || normalizedEvent.includes('boleto') || normalizedEvent.includes('pix') || normalizedEvent.includes('processing') || normalizedEvent.includes('processando') || normalizedEvent.includes('analise') || normalizedEvent.includes('review')) {
+    } else if (normalizedEvent.includes('pending') || normalizedEvent.includes('pendente') || normalizedEvent.includes('waiting') || normalizedEvent.includes('aguardando') || normalizedEvent.includes('generated') || normalizedEvent.includes('gerado') || normalizedEvent.includes('unpaid') || normalizedEvent.includes('processing') || normalizedEvent.includes('processando') || normalizedEvent.includes('analise') || normalizedEvent.includes('review')) {
        status = 'pending';
     } else if (normalizedEvent.includes('approved') || normalizedEvent.includes('paid') || normalizedEvent.includes('completed') || normalizedEvent.includes('concluido') || normalizedEvent.includes('aprovado') || normalizedEvent.includes('sucesso')) {
        status = 'approved';
