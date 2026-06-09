@@ -1148,6 +1148,19 @@ export default function ProductDetail() {
                         />
                       </div>
                     </div>
+                    
+                    <Button 
+                      variant="secondary" 
+                      className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                      onClick={() => {
+                        toast({ 
+                          title: 'Configurações Aplicadas!', 
+                          description: 'O Código do Pixel abaixo foi atualizado. Copie-o novamente para o seu site.' 
+                        });
+                      }}
+                    >
+                      Salvar Regras de Checkout
+                    </Button>
                   </div>
 
                  {/* Código do Pixel para a Página */}
