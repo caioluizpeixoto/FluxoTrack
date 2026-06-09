@@ -1111,6 +1111,50 @@ export default function ProductDetail() {
                    </Button>
                  </div>
 
+                 {/* Código do Pixel para a Página */}
+                 {pixel?.pixel_id && (
+                    <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
+                      <h3 className="font-bold text-sm text-slate-300 flex items-center gap-2">
+                        <Code2 className="w-4 h-4 text-primary" /> Código do Pixel (Instalar no Site)
+                      </h3>
+                      <p className="text-xs text-muted-foreground">Copie o código abaixo e cole dentro da tag <code>&lt;head&gt;</code> de todas as páginas do seu site para rastrear visitantes (Pageview):</p>
+                      
+                      <div className="relative">
+                        <pre className="p-4 bg-[#0f1115] rounded border border-white/5 font-mono text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap">
+{`<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '${pixel.pixel_id}');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->`}
+                        </pre>
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white"
+                          onClick={() => {
+                            const code = `<!-- Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- End Meta Pixel Code -->`;
+                            navigator.clipboard.writeText(code);
+                            toast({ title: '✓ Código copiado!' });
+                          }}
+                        >
+                          <Copy className="w-3 h-3 mr-2" /> Copiar Código
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                  {/* Info box */}
                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
                    <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Por que o Token é importante?</h4>
