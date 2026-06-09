@@ -1048,7 +1048,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
@@ -1081,7 +1081,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
@@ -1108,7 +1108,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
@@ -1128,7 +1128,7 @@ export default function ProductDetail() {
 
             {/* ABA: VENDAS */}
             <TabsContent value="vendas" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="max-w-6xl mx-auto space-y-6">
+               <div className="max-w-4xl mx-auto space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline">Lista de Vendas</h2>
                    <p className="text-sm text-slate-400">Histórico de compras aprovadas e pendentes (PIX e Boleto).</p>
