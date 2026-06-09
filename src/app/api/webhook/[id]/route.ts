@@ -14,8 +14,12 @@ export async function POST(
 
     const supabaseAdmin = getSupabaseAdmin();
     
-    // Verify product exists
-    const { data: product } = await supabaseAdmin.from('products').select('id, user_id').eq('id', productId).single();
+    // Verifica se o produto existe
+    const { data: product, error: productError } = await supabaseAdmin
+      .from('products')
+      .select('id, user_id, name')
+      .eq('id', productId)
+      .maybeSingle();
     if (!product) {
       return NextResponse.json({ error: 'Invalid product' }, { status: 404 });
     }
