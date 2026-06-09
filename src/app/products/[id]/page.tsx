@@ -732,6 +732,7 @@ export default function ProductDetail() {
                 <TabsTrigger value="overview" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Activity className="w-3 h-3 mr-1"/> Resumo</TabsTrigger>
                 <TabsTrigger value="meta" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><BarChart3 className="w-3 h-3 mr-1"/> Meta Ads</TabsTrigger>
                 <TabsTrigger value="pixel" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Code2 className="w-3 h-3 mr-1"/> Pixel</TabsTrigger>
+                <TabsTrigger value="vendas" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><DollarSign className="w-3 h-3 mr-1"/> Vendas</TabsTrigger>
                 <TabsTrigger value="webhooks" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Webhook className="w-3 h-3 mr-1"/> Webhooks</TabsTrigger>
                 <TabsTrigger value="utms" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><LinkIcon className="w-3 h-3 mr-1"/> UTMs</TabsTrigger>
                 <TabsTrigger value="rules" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary data-[state=active]:text-primary rounded-none h-full text-xs font-bold uppercase tracking-wider text-muted-foreground"><Zap className="w-3 h-3 mr-1"/> Regras</TabsTrigger>
@@ -1031,6 +1032,70 @@ export default function ProductDetail() {
               </div>
             </TabsContent>
 
+            {/* ABA: VENDAS */}
+            <TabsContent value="vendas" className="flex-1 overflow-y-auto p-6 m-0">
+               <div className="max-w-6xl mx-auto space-y-6">
+                 <div>
+                   <h2 className="text-xl font-bold font-headline">Lista de Vendas</h2>
+                   <p className="text-sm text-slate-400">Histórico de compras aprovadas e pendentes (PIX e Boleto).</p>
+                 </div>
+
+                 <div className="border border-white/10 rounded-xl bg-[#1a1c23] overflow-hidden">
+                    <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-primary" /> Vendas Recebidas
+                      <span className="ml-auto text-xs text-muted-foreground font-normal">{events.length} venda{events.length !== 1 ? 's' : ''}</span>
+                    </h3>
+                    {events.length === 0 ? (
+                      <div className="py-12 text-center">
+                        <DollarSign className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-50" />
+                        <p className="text-sm text-muted-foreground">Nenhuma venda recebida ainda.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left whitespace-nowrap">
+                          <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
+                            <tr>
+                              <th className="px-4 py-3">Data</th>
+                              <th className="px-4 py-3">Cliente</th>
+                              <th className="px-4 py-3">Email</th>
+                              <th className="px-4 py-3">Telefone</th>
+                              <th className="px-4 py-3">Status</th>
+                              <th className="px-4 py-3">Método</th>
+                              <th className="px-4 py-3 text-right">Valor</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {events.map(e => {
+                              const method = e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || 'Desconhecido';
+                              const phone = e.raw_payload?.customer?.mobile_phone || e.raw_payload?.customer?.phone || e.raw_payload?.Customer?.mobile || 'Não Informado';
+                              return (
+                                <tr key={e.id} className="hover:bg-white/5">
+                                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
+                                  <td className="px-4 py-3 font-medium text-slate-200">{e.customer_name || '—'}</td>
+                                  <td className="px-4 py-3 text-xs text-slate-400">{e.customer_email || '—'}</td>
+                                  <td className="px-4 py-3 text-xs text-slate-400">{phone}</td>
+                                  <td className="px-4 py-3">
+                                    {e.status === 'approved' ? (
+                                      <Badge className="bg-green-500/10 text-green-500 hover:bg-green-500/20 text-xs">Pago</Badge>
+                                    ) : e.status === 'pending' ? (
+                                      <Badge className="bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 text-xs">Pendente</Badge>
+                                    ) : (
+                                      <Badge variant="secondary" className="text-xs">{e.status}</Badge>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs uppercase text-slate-400">{method}</td>
+                                  <td className="px-4 py-3 text-right font-bold text-green-400">{formatCurrency(e.event_value)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                 </div>
+               </div>
+            </TabsContent>
+
             {/* ABA: WEBHOOKS */}
             <TabsContent value="webhooks" className="flex-1 overflow-y-auto p-6 m-0">
                <div className="max-w-3xl mx-auto space-y-6">
@@ -1093,44 +1158,6 @@ export default function ProductDetail() {
                    </div>
                  </div>
 
-                 {/* Eventos recebidos */}
-                 <div className="border border-white/10 rounded-xl bg-[#1a1c23] overflow-hidden">
-                    <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-primary" /> Últimos Eventos Recebidos
-                      <span className="ml-auto text-xs text-muted-foreground font-normal">{events.length} evento{events.length !== 1 ? 's' : ''}</span>
-                    </h3>
-                    {events.length === 0 ? (
-                      <div className="py-12 text-center">
-                        <Webhook className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-50" />
-                        <p className="text-sm text-muted-foreground">Nenhum evento recebido ainda.</p>
-                        <p className="text-xs text-muted-foreground mt-1">Configure a URL acima na sua plataforma de vendas.</p>
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                          <thead className="bg-[#14151a] text-xs uppercase text-slate-400">
-                            <tr>
-                              <th className="px-4 py-2">Data</th>
-                              <th className="px-4 py-2">Evento</th>
-                              <th className="px-4 py-2">Status</th>
-                              <th className="px-4 py-2">Cliente</th>
-                              <th className="px-4 py-2">Valor</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-white/5">
-                            {events.slice(0,20).map(e => (
-                              <tr key={e.id} className="hover:bg-white/5">
-                                <td className="px-4 py-2 text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
-                                <td className="px-4 py-2 font-bold text-primary">{e.event_type?.toUpperCase()}</td>
-                                <td className="px-4 py-2">{e.status === 'approved' ? <Badge className="bg-green-500 text-xs">Aprovado</Badge> : <Badge variant="secondary" className="text-xs">{e.status}</Badge>}</td>
-                                <td className="px-4 py-2 text-xs">{e.customer_email || e.customer_name || '—'}</td>
-                                <td className="px-4 py-2 font-bold text-green-400">{formatCurrency(e.event_value)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                  </div>
                </div>
             </TabsContent>

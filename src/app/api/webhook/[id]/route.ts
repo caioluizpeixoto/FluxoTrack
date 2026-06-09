@@ -106,28 +106,74 @@ export async function POST(
       finalType = 'lead';
     }
 
-    // Insert into DB
-    const { error } = await supabaseAdmin.from('product_events').insert({
-      product_id: productId,
-      event_type: finalType,
-      event_value: Number(eventValue),
-      currency: currency,
-      status: status,
-      customer_email: customerEmail,
-      customer_name: customerName,
-      transaction_id: transactionId,
-      raw_payload: body
-    });
-
-    if (error) {
-      console.error('Error inserting event:', error);
-      return NextResponse.json({ error: 'Failed to insert event' }, { status: 500 });
+    // Ignore empty sales completely
+    if (eventValue === 0) {
+      return NextResponse.json({ success: true, message: 'Ignored zero value sale' }, { status: 200 });
     }
+
+    let existingEvent = null;
+    let isNewApproval = false;
+
+    if (transactionId) {
+      const { data } = await supabaseAdmin.from('product_events')
+        .select('id, status')
+        .eq('product_id', productId)
+        .eq('transaction_id', transactionId)
+        .maybeSingle();
+      existingEvent = data;
+    }
+
+    if (existingEvent) {
+      // Update existing record
+      const { error } = await supabaseAdmin.from('product_events').update({
+        event_type: finalType,
+        event_value: Number(eventValue),
+        currency: currency,
+        status: status,
+        customer_email: customerEmail,
+        customer_name: customerName,
+        raw_payload: body
+      }).eq('id', existingEvent.id);
+
+      if (error) {
+        console.error('Error updating event:', error);
+        return NextResponse.json({ error: 'Failed to update event' }, { status: 500 });
+      }
+      
+      // If it was not approved before, but is now
+      if (existingEvent.status !== 'approved' && status === 'approved') {
+         isNewApproval = true;
+      }
+    } else {
+      // Insert new record
+      const { error } = await supabaseAdmin.from('product_events').insert({
+        product_id: productId,
+        event_type: finalType,
+        event_value: Number(eventValue),
+        currency: currency,
+        status: status,
+        customer_email: customerEmail,
+        customer_name: customerName,
+        transaction_id: transactionId,
+        raw_payload: body
+      });
+
+      if (error) {
+        console.error('Error inserting event:', error);
+        return NextResponse.json({ error: 'Failed to insert event' }, { status: 500 });
+      }
+      
+      if (status === 'approved') isNewApproval = true;
+    }
+
+    // Trigger integrations only if it's a new insert, or if a pending turned into approved.
+    const shouldTriggerCAPI = finalType === 'purchase' && isNewApproval;
+    const shouldTriggerPush = finalType === 'purchase' && (!existingEvent || isNewApproval);
 
     // ----------------------------------------------------------------------
     // Integração Facebook API de Conversões (CAPI)
     // ----------------------------------------------------------------------
-    if (finalType === 'purchase' && status === 'approved') {
+    if (shouldTriggerCAPI) {
       try {
         const { data: pixelInfo } = await supabaseAdmin.from('product_pixels').select('*').eq('product_id', productId).maybeSingle();
         
@@ -204,7 +250,7 @@ export async function POST(
     // ----------------------------------------------------------------------
     // Disparo de Notificação Push OneSignal (Background)
     // ----------------------------------------------------------------------
-    if (finalType === 'purchase') {
+    if (shouldTriggerPush) {
       try {
         const onesignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
         const onesignalApiKey = process.env.ONESIGNAL_REST_API_KEY;

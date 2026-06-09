@@ -96,6 +96,10 @@ export async function POST(
        status = 'pending';
     }
 
+    if (value === 0) {
+      return NextResponse.json({ success: true, message: 'Ignored zero value conversion' });
+    }
+
     const conversionData = {
       user_id: userId,
       external_id: externalId,
@@ -104,12 +108,38 @@ export async function POST(
       timestamp: new Date().toISOString(),
     };
 
-    // 3. Salvar a conversão
-    const { error: conversionError } = await supabaseAdmin
-      .from('conversions')
-      .insert(conversionData);
+    let isNewApproval = false;
+    let existingConversion = null;
 
-    if (conversionError) throw conversionError;
+    if (externalId && externalId !== 'unknown') {
+      const { data } = await supabaseAdmin
+        .from('conversions')
+        .select('id, status')
+        .eq('user_id', userId)
+        .eq('external_id', externalId)
+        .maybeSingle();
+      existingConversion = data;
+    }
+
+    // 3. Salvar ou atualizar a conversão
+    if (existingConversion) {
+      const { error: conversionError } = await supabaseAdmin
+        .from('conversions')
+        .update(conversionData)
+        .eq('id', existingConversion.id);
+      if (conversionError) throw conversionError;
+
+      if (existingConversion.status !== 'approved' && status === 'approved') {
+        isNewApproval = true;
+      }
+    } else {
+      const { error: conversionError } = await supabaseAdmin
+        .from('conversions')
+        .insert(conversionData);
+      if (conversionError) throw conversionError;
+      
+      if (status === 'approved') isNewApproval = true;
+    }
 
     // 4. Também salvar como um evento de tracking para o funil
     const { error: eventError } = await supabaseAdmin
@@ -129,7 +159,10 @@ export async function POST(
     // ----------------------------------------------------------------------
     // Disparo de Notificação Push OneSignal (Background)
     // ----------------------------------------------------------------------
-    try {
+    const shouldTriggerPush = !existingConversion || isNewApproval;
+    
+    if (shouldTriggerPush) {
+      try {
       const onesignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
       const onesignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
       if (onesignalAppId && onesignalApiKey) {
