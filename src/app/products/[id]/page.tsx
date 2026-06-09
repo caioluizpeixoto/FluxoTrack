@@ -117,50 +117,32 @@ export default function ProductDetail() {
     }
   };
 
-  const handleCustomSoundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 500 * 1024) {
-      toast({ variant: "destructive", title: "Arquivo muito grande", description: "Escolha um arquivo de áudio de até 500KB." });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      localStorage.setItem("custom_sound_base64", base64String);
-      localStorage.setItem("sound_type", "custom");
-      setSoundType("custom");
-      toast({ title: "✓ Som carregado!", description: "Som customizado salvo localmente." });
-    };
-    reader.readAsDataURL(file);
-  };
-
   const testNotification = async () => {
     // Play sound
     if (soundEnabled) {
       try {
-        let audioUrl = "https://assets.mixkit.co/active_storage/sfx/2019/2019-84.wav";
-        if (soundType === "custom") {
-          const customBase64 = localStorage.getItem("custom_sound_base64");
-          if (customBase64) {
-            audioUrl = customBase64;
-          }
-        }
-        const audio = new Audio(audioUrl);
+        const audio = new Audio("/sounds/notification.mp3");
         await audio.play();
       } catch (soundErr) {
         console.warn("Falha ao tocar áudio no teste:", soundErr);
       }
     }
 
-    // Show push notification
-    if (notifyEnabled && typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-      new Notification("💰 Venda Aprovada! (Teste)", {
-        body: "Produto: Teste de Notificações | Valor: R$ 97,00",
-        icon: "https://placehold.co/192x192/1877F2/FFF?text=AP",
-      });
+    // Show push notification via OneSignal
+    if (notifyEnabled) {
+      try {
+        await fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            title: "💰 Venda Aprovada! (Teste)", 
+            message: "Produto: Teste de Notificações | Valor: R$ 97,00", 
+            url: window.location.href 
+          }),
+        });
+      } catch (e) {
+        console.warn("Falha ao enviar Push de teste", e);
+      }
     }
 
     toast({ title: "🔊 Teste executado!", description: "Disparamos o alerta de teste." });
@@ -1450,9 +1432,9 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                   <h3 className="font-bold text-sm text-slate-300">Alertas Ativos</h3>
 
                   <div className="flex items-center justify-between py-2 border-b border-white/5">
-                    <div>
-                      <span className="text-sm font-medium block">Notificar Popups no Navegador</span>
-                      <span className="text-xs text-muted-foreground">Exibe caixas de alerta push mesmo com a aba em segundo plano.</span>
+                    <div className="flex-1 pr-4">
+                      <span className="text-sm font-medium block leading-tight">Notificar Popups no Navegador</span>
+                      <span className="text-xs text-muted-foreground mt-1 block leading-snug">Exibe caixas de alerta push mesmo com a aba em segundo plano.</span>
                     </div>
                     <Switch 
                       checked={notifyEnabled} 
@@ -1464,9 +1446,9 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-white/5">
-                    <div>
-                      <span className="text-sm font-medium block">Vendas Aprovadas</span>
-                      <span className="text-xs text-muted-foreground">Alertar quando compras forem confirmadas.</span>
+                    <div className="flex-1 pr-4">
+                      <span className="text-sm font-medium block leading-tight">Vendas Aprovadas</span>
+                      <span className="text-xs text-muted-foreground mt-1 block leading-snug">Alertar quando compras forem confirmadas.</span>
                     </div>
                     <Switch 
                       checked={notifyApp} 
@@ -1478,9 +1460,9 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                   </div>
 
                   <div className="flex items-center justify-between py-2 border-b border-white/5">
-                    <div>
-                      <span className="text-sm font-medium block">Vendas Pendentes</span>
-                      <span className="text-xs text-muted-foreground">Alertar quando boletos forem gerados ou PIX emitidos.</span>
+                    <div className="flex-1 pr-4">
+                      <span className="text-sm font-medium block leading-tight">Vendas Pendentes</span>
+                      <span className="text-xs text-muted-foreground mt-1 block leading-snug">Alertar quando boletos forem gerados ou PIX emitidos.</span>
                     </div>
                     <Switch 
                       checked={notifyPend} 
@@ -1491,10 +1473,10 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <span className="text-sm font-medium block">Tocar Som de Notificação</span>
-                      <span className="text-xs text-muted-foreground">Efetua um som clássico de caixa registradora ou um som customizado.</span>
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <div className="flex-1 pr-4">
+                      <span className="text-sm font-medium block leading-tight">Tocar Som de Notificação</span>
+                      <span className="text-xs text-muted-foreground mt-1 block leading-snug">Toca o arquivo de som padrão do aplicativo.</span>
                     </div>
                     <Switch 
                       checked={soundEnabled} 
@@ -1506,47 +1488,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                   </div>
                 </div>
 
-                {/* Sound Customization */}
-                <div className="p-5 border border-white/10 rounded-xl bg-[#1a1c23] space-y-4">
-                  <h3 className="font-bold text-sm text-slate-300">Escolha o Som de Alerta</h3>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button 
-                      variant={soundType === "default" ? "default" : "outline"} 
-                      onClick={() => {
-                        setSoundType("default");
-                        localStorage.setItem("sound_type", "default");
-                      }}
-                      className="font-bold h-11"
-                    >
-                      Som Padrão (Caixa Registradora)
-                    </Button>
-                    <Button 
-                      variant={soundType === "custom" ? "default" : "outline"} 
-                      onClick={() => {
-                        setSoundType("custom");
-                        localStorage.setItem("sound_type", "custom");
-                      }}
-                      className="font-bold h-11"
-                    >
-                      Som Customizado (Upload)
-                    </Button>
-                  </div>
-
-                  {soundType === "custom" && (
-                    <div className="p-4 bg-black/20 border border-white/5 rounded-lg space-y-3">
-                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Fazer Upload do Arquivo de Áudio (.mp3 ou .wav)</label>
-                      <Input 
-                        type="file" 
-                        accept="audio/mpeg, audio/wav, audio/mp3" 
-                        onChange={handleCustomSoundUpload}
-                        className="bg-[#0f1115] border-white/10 file:bg-primary file:text-white file:font-bold file:border-none file:px-3 file:py-1 file:rounded cursor-pointer"
-                      />
-                      <p className="text-[10px] text-muted-foreground">Limite de 500KB. O áudio será salvo localmente no seu dispositivo.</p>
-                    </div>
-                  )}
-
-                  <div className="pt-2">
+                  <div className="pt-4">
                     <Button 
                       onClick={testNotification} 
                       className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-11 gap-2"
