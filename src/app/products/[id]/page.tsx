@@ -676,35 +676,35 @@ export default function ProductDetail() {
                </div>
 
                {/* Principais Cards Grandes */}
-               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+               <div className="flex flex-wrap gap-4 mb-4">
                  {visibleCards.includes('revenue') && (
-                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
                      <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
                      <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
                    </Card>
                  )}
                  {visibleCards.includes('pending') && (
-                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
                      <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue)}</p>
                      <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
                    </Card>
                  )}
                  {visibleCards.includes('spend') && (
-                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
                      <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
                    </Card>
                  )}
                  {visibleCards.includes('costs') && (
-                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
                      <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
                    </Card>
                  )}
                  {visibleCards.includes('profit') && (
-                   <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
                      <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
                      <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
                    </Card>
@@ -712,16 +712,16 @@ export default function ProductDetail() {
                </div>
 
                {/* Cards Secundários */}
-               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
-                 {visibleCards.includes('roi') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>}
-                 {visibleCards.includes('roas') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
-                 {visibleCards.includes('cpa') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>}
-                 {visibleCards.includes('cpc') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>}
-                 {visibleCards.includes('cpm') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>}
-                 {visibleCards.includes('ctr') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
-                 {visibleCards.includes('arpu') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
+               <div className="flex flex-wrap gap-3 mb-6">
+                 {visibleCards.includes('roi') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>}
+                 {visibleCards.includes('roas') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
+                 {visibleCards.includes('cpa') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>}
+                 {visibleCards.includes('cpc') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>}
+                 {visibleCards.includes('cpm') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>}
+                 {visibleCards.includes('ctr') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
+                 {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
                  {visibleCards.includes('last_sale') && (
-                   <Card className="bg-[#1a1c23] border-white/5 p-3 flex flex-col justify-center text-center col-span-2">
+                   <Card className="flex-1 min-w-[180px] bg-[#1a1c23] border-white/5 p-3 flex flex-col justify-center text-center">
                      <p className="text-xs text-slate-400 mb-1">Última Venda</p>
                      <p className="text-sm font-bold text-slate-200 truncate" title={kpis.lastSaleProduct}>{kpis.lastSaleProduct}</p>
                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1 truncate" title={kpis.lastSaleSource}>Via: {kpis.lastSaleSource}</p>
