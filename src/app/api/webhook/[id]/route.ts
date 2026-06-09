@@ -78,14 +78,16 @@ export async function POST(
     let status = 'pending';
     const normalizedEvent = eventType.toString().toLowerCase();
     
-    if (normalizedEvent.includes('approved') || normalizedEvent.includes('paid') || normalizedEvent.includes('compra') || normalizedEvent.includes('purchase')) {
-       status = 'approved';
-    } else if (normalizedEvent.includes('refund') || normalizedEvent.includes('chargeback') || normalizedEvent.includes('reembolso')) {
+    if (normalizedEvent.includes('refund') || normalizedEvent.includes('chargeback') || normalizedEvent.includes('reembolso') || normalizedEvent.includes('devolvido')) {
        status = 'refunded';
-    } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject')) {
+    } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject') || normalizedEvent.includes('recusado')) {
        status = 'refused';
-    } else if (normalizedEvent.includes('unpaid') || normalizedEvent.includes('generated') || normalizedEvent.includes('pending')) {
+    } else if (normalizedEvent.includes('approved') || normalizedEvent.includes('paid') || normalizedEvent.includes('completed') || normalizedEvent.includes('concluido') || normalizedEvent.includes('aprovado') || normalizedEvent.includes('sucesso')) {
+       status = 'approved';
+    } else if (normalizedEvent.includes('pending') || normalizedEvent.includes('waiting') || normalizedEvent.includes('aguardando') || normalizedEvent.includes('generated') || normalizedEvent.includes('gerado') || normalizedEvent.includes('unpaid') || normalizedEvent.includes('billet') || normalizedEvent.includes('boleto') || normalizedEvent.includes('pix')) {
        status = 'pending';
+    } else if (normalizedEvent.includes('purchase') || normalizedEvent.includes('compra')) {
+       status = 'approved'; 
     } else {
        status = 'pending';
     }

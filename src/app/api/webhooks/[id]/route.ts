@@ -37,8 +37,24 @@ export async function POST(
     // 2. Normalizar dados da plataforma (Exemplo simples para Kiwify/Hotmart)
     const platform = webhookConfig.platform;
     const value = parseFloat(body.amount || body.price || body.full_price || 0) / (platform === 'kiwify' ? 100 : 1);
-    const status = (body.order_status || body.status || 'approved').toLowerCase();
     const externalId = body.order_id || body.transaction || body.id || 'unknown';
+
+    const rawEvent = (body.event || body.event_type || body.type || body.order_status || body.status || 'approved').toLowerCase();
+    let status = 'pending';
+    
+    if (rawEvent.includes('refund') || rawEvent.includes('chargeback') || rawEvent.includes('reembolso') || rawEvent.includes('devolvido')) {
+       status = 'refunded';
+    } else if (rawEvent.includes('refused') || rawEvent.includes('cancel') || rawEvent.includes('reject') || rawEvent.includes('recusado')) {
+       status = 'refused';
+    } else if (rawEvent.includes('approved') || rawEvent.includes('paid') || rawEvent.includes('completed') || rawEvent.includes('concluido') || rawEvent.includes('aprovado') || rawEvent.includes('sucesso')) {
+       status = 'approved';
+    } else if (rawEvent.includes('pending') || rawEvent.includes('waiting') || rawEvent.includes('aguardando') || rawEvent.includes('generated') || rawEvent.includes('gerado') || rawEvent.includes('unpaid') || rawEvent.includes('billet') || rawEvent.includes('boleto') || rawEvent.includes('pix')) {
+       status = 'pending';
+    } else if (rawEvent.includes('purchase') || rawEvent.includes('compra')) {
+       status = 'approved'; 
+    } else {
+       status = 'pending';
+    }
 
     const conversionData = {
       user_id: userId,
