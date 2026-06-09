@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
+import crypto from 'crypto';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -106,6 +107,83 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (error) {
       console.error('Error inserting event:', error);
       return NextResponse.json({ error: 'Failed to insert event' }, { status: 500 });
+    }
+
+    // ----------------------------------------------------------------------
+    // Integração Facebook API de Conversões (CAPI)
+    // ----------------------------------------------------------------------
+    if (finalType === 'purchase' && status === 'approved') {
+      try {
+        const { data: pixelInfo } = await supabaseAdmin.from('product_pixels').select('*').eq('product_id', productId).maybeSingle();
+        
+        if (pixelInfo && pixelInfo.access_token && pixelInfo.pixel_id) {
+          // Extrair IP para tentar cruzar com o tracking do AdPulse Pixel
+          const clientIp = body.tracking?.ip || body.customer?.ip || body.customerIp || '';
+          
+          let matchedTracking = null;
+          if (clientIp) {
+             const { data: match } = await supabaseAdmin
+               .from('tracking_events')
+               .select('*')
+               .eq('user_id', product.user_id)
+               .eq('ip_address', clientIp)
+               .order('timestamp', { ascending: false })
+               .limit(1)
+               .maybeSingle();
+             matchedTracking = match;
+          }
+
+          const fbp = matchedTracking?.fbp || body.tracking?.fbp || undefined;
+          const fbc = matchedTracking?.fbc || body.tracking?.fbc || undefined;
+          const userAgent = matchedTracking?.user_agent || body.tracking?.useragent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+          const eventUrl = matchedTracking?.url || '';
+
+          const hash = (str: string) => {
+            if (!str) return undefined;
+            const clean = str.trim().toLowerCase();
+            return crypto.createHash('sha256').update(clean).digest('hex');
+          };
+
+          const phone = body.customer?.mobile_phone || body.customer?.phone || body.Customer?.phone || '';
+
+          const capiEvent = {
+            data: [{
+              event_name: 'Purchase',
+              event_time: Math.floor(Date.now() / 1000),
+              action_source: 'website',
+              event_source_url: eventUrl,
+              user_data: {
+                em: customerEmail ? [hash(customerEmail)] : undefined,
+                ph: phone ? [hash(phone.replace(/\D/g, ''))] : undefined,
+                client_ip_address: clientIp || undefined,
+                client_user_agent: userAgent,
+                fbc: fbc,
+                fbp: fbp
+              },
+              custom_data: {
+                currency: currency,
+                value: eventValue
+              }
+            }]
+          };
+
+          // Limpa undefineds para não dar erro no JSON do FB
+          if(!capiEvent.data[0].user_data.em) delete capiEvent.data[0].user_data.em;
+          if(!capiEvent.data[0].user_data.ph) delete capiEvent.data[0].user_data.ph;
+          if(!capiEvent.data[0].user_data.client_ip_address) delete capiEvent.data[0].user_data.client_ip_address;
+          if(!capiEvent.data[0].user_data.fbc) delete capiEvent.data[0].user_data.fbc;
+          if(!capiEvent.data[0].user_data.fbp) delete capiEvent.data[0].user_data.fbp;
+
+          // Disparo para o Facebook
+          await fetch(`https://graph.facebook.com/v19.0/${pixelInfo.pixel_id}/events?access_token=${pixelInfo.access_token}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(capiEvent)
+          });
+        }
+      } catch(e) {
+        console.error('Erro no disparo CAPI do Facebook:', e);
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Event logged successfully' }, { status: 200 });

@@ -1121,7 +1121,7 @@ export default function ProductDetail() {
                       
                       <div className="relative">
                         <pre className="p-4 bg-[#0f1115] rounded border border-white/5 font-mono text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap">
-{`<!-- Meta Pixel Code -->
+{`<!-- AdPulse & Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -1137,14 +1137,16 @@ fbq('track', 'PageView');
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
 /></noscript>
-<!-- End Meta Pixel Code -->`}
+<!-- AdPulse Tracking Integration -->
+<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid || ''}"></script>
+<!-- End Pixel Code -->`}
                         </pre>
                         <Button 
                           variant="secondary" 
                           size="sm"
                           className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white"
                           onClick={() => {
-                            const code = `<!-- Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- End Meta Pixel Code -->`;
+                            const code = `<!-- AdPulse & Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- AdPulse Tracking Integration -->\n<script src="${window.location.origin}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid}"></script>\n<!-- End Pixel Code -->`;
                             navigator.clipboard.writeText(code);
                             toast({ title: '✓ Código copiado!' });
                           }}
