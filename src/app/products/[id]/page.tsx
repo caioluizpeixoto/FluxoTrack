@@ -1066,7 +1066,7 @@ export default function ProductDetail() {
                           </thead>
                           <tbody className="divide-y divide-white/5">
                             {events.map(e => {
-                              const rawMethod = String(e.raw_payload?.payment?.paymentMethod || e.raw_payload?.payment?.method || e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || e.raw_payload?.event || e.event_type || 'Desconhecido').toLowerCase();
+                              const rawMethod = String(e.raw_payload?.payment?.payment_method || e.raw_payload?.payment?.paymentMethod || e.raw_payload?.payment?.method || e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || e.raw_payload?.event || e.event_type || 'Desconhecido').toLowerCase();
                               let methodIcon = null;
                               let methodName = 'Desconhecido';
 
