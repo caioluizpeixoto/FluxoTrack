@@ -733,41 +733,60 @@ export default function ProductDetail() {
                {visibleCards.includes('funnel') && (
                  <div>
                    <h3 className="font-bold text-slate-300 mb-3 text-sm flex items-center gap-2"><Filter className="w-4 h-4 text-primary" /> Rastreamento de Funil</h3>
-                   <Card className="bg-[#1a1c23] border-white/5 p-4 sm:p-6 overflow-hidden">
-                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center justify-between">
+                   <Card className="bg-[#1a1c23] border-white/5 p-6 overflow-hidden">
+                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6 sm:gap-2">
                        
                        {/* Clicks */}
-                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
-                          <MousePointerClick className="w-6 h-6 text-blue-400 mb-2"/>
-                          <p className="text-xs font-bold uppercase text-slate-400">Cliques no Link</p>
-                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.clicks.toLocaleString('pt-BR')}</p>
-                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       <div className="flex-1 w-full flex flex-col items-center text-center relative group">
+                          <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-blue-500/20">
+                            <MousePointerClick className="w-5 h-5 text-blue-400"/>
+                          </div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Cliques no Link</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200">{kpis.clicks.toLocaleString('pt-BR')}</p>
+                          <div className="hidden sm:block absolute -right-3 top-6 z-10 text-white/10"><ChevronRight className="w-5 h-5"/></div>
                        </div>
                
                        {/* PageViews */}
-                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
-                          <Eye className="w-6 h-6 text-cyan-400 mb-2"/>
-                          <p className="text-xs font-bold uppercase text-slate-400">Viram a Página</p>
-                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.pageViews.toLocaleString('pt-BR')}</p>
-                          <p className="text-[10px] font-bold text-cyan-400/80 mt-1 bg-cyan-400/10 px-2 py-0.5 rounded-full">{kpis.clicks > 0 ? ((kpis.pageViews / kpis.clicks)*100).toFixed(1) : 0}% dos cliques</p>
-                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       <div className="flex-1 w-full flex flex-col items-center text-center relative group">
+                          <div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-cyan-500/20">
+                            <Eye className="w-5 h-5 text-cyan-400"/>
+                          </div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Viram a Página</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200">{kpis.pageViews.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-cyan-400 mt-1">{kpis.clicks > 0 ? ((kpis.pageViews / kpis.clicks)*100).toFixed(1) : 0}% dos cliques</p>
+                          <div className="hidden sm:block absolute -right-3 top-6 z-10 text-white/10"><ChevronRight className="w-5 h-5"/></div>
                        </div>
                
                        {/* IC */}
-                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
-                          <ShoppingCart className="w-6 h-6 text-orange-400 mb-2"/>
-                          <p className="text-xs font-bold uppercase text-slate-400">Checkouts Abertos</p>
-                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.ic.toLocaleString('pt-BR')}</p>
-                          <p className="text-[10px] font-bold text-orange-400/80 mt-1 bg-orange-400/10 px-2 py-0.5 rounded-full">{kpis.pageViews > 0 ? ((kpis.ic / kpis.pageViews)*100).toFixed(1) : 0}% das visitas</p>
-                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       <div className="flex-1 w-full flex flex-col items-center text-center relative group">
+                          <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-orange-500/20">
+                            <ShoppingCart className="w-5 h-5 text-orange-400"/>
+                          </div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Checkouts Abertos</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200">{kpis.ic.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-orange-400 mt-1">{kpis.pageViews > 0 ? ((kpis.ic / kpis.pageViews)*100).toFixed(1) : 0}% das visitas</p>
+                          <div className="hidden sm:block absolute -right-3 top-6 z-10 text-white/10"><ChevronRight className="w-5 h-5"/></div>
+                       </div>
+
+                       {/* Vendas Geradas */}
+                       <div className="flex-1 w-full flex flex-col items-center text-center relative group">
+                          <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-purple-500/20">
+                            <FileText className="w-5 h-5 text-purple-400"/>
+                          </div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Vendas Geradas</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200">{(kpis.purchases + kpis.pendingPurchases).toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-purple-400 mt-1">{kpis.ic > 0 ? (((kpis.purchases + kpis.pendingPurchases) / kpis.ic)*100).toFixed(1) : 0}% de conv. do IC</p>
+                          <div className="hidden sm:block absolute -right-3 top-6 z-10 text-white/10"><ChevronRight className="w-5 h-5"/></div>
                        </div>
                
                        {/* Purchases */}
-                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
-                          <DollarSign className="w-6 h-6 text-green-400 mb-2"/>
-                          <p className="text-xs font-bold uppercase text-slate-400">Compras Pagas</p>
-                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.purchases.toLocaleString('pt-BR')}</p>
-                          <p className="text-[10px] font-bold text-green-400/80 mt-1 bg-green-400/10 px-2 py-0.5 rounded-full">{kpis.ic > 0 ? ((kpis.purchases / kpis.ic)*100).toFixed(1) : 0}% de conv. do IC</p>
+                       <div className="flex-1 w-full flex flex-col items-center text-center relative group">
+                          <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform border border-green-500/20">
+                            <DollarSign className="w-5 h-5 text-green-400"/>
+                          </div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Vendas Pagas</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200">{kpis.purchases.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-green-400 mt-1">{(kpis.purchases + kpis.pendingPurchases) > 0 ? ((kpis.purchases / (kpis.purchases + kpis.pendingPurchases))*100).toFixed(1) : 0}% de aprovação</p>
                        </div>
                
                      </div>
