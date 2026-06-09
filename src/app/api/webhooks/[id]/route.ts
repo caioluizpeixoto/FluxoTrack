@@ -39,7 +39,10 @@ export async function POST(
     const value = parseFloat(body.amount || body.price || body.full_price || 0) / (platform === 'kiwify' ? 100 : 1);
     const externalId = body.order_id || body.transaction || body.id || 'unknown';
 
-    const rawEvent = (body.event || body.event_type || body.type || body.order_status || body.status || 'approved').toLowerCase();
+    const statusValues = [
+      body.event, body.event_type, body.type, body.status, body.order_status, body.payment?.status
+    ].filter(Boolean);
+    const rawEvent = (statusValues.length > 0 ? statusValues.join(' ') : 'approved').toLowerCase();
     let status = 'pending';
     
     if (rawEvent.includes('refund') || rawEvent.includes('chargeback') || rawEvent.includes('reembolso') || rawEvent.includes('devolvido')) {
