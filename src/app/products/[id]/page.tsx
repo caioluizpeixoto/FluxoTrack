@@ -50,6 +50,7 @@ export default function ProductDetail() {
   // Live Metrics
   const [fetchingLive, setFetchingLive] = useState(false);
   const [liveMetrics, setLiveMetrics] = useState<{ campaigns: any[], adsets: any[], ads: any[] }>({ campaigns: [], adsets: [], ads: [] });
+  const [metaBalance, setMetaBalance] = useState<number | null>(null);
 
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
@@ -60,7 +61,7 @@ export default function ProductDetail() {
   const [selectedAdsetIds, setSelectedAdsetIds] = useState<string[]>([]);
 
   // Layout State
-  const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
+  const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'meta_balance', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
   const [visibleCards, setVisibleCards] = useState<string[]>(defaultLayout);
   const [layoutModal, setLayoutModal] = useState(false);
 
@@ -225,6 +226,8 @@ export default function ProductDetail() {
     let mergedAds: any[] = [];
 
     try {
+      let totalBalance = 0;
+
       await Promise.all(accIds.map(async (accId) => {
         const res = await fetch('/api/meta/insights', {
           method: 'POST',
@@ -236,8 +239,13 @@ export default function ProductDetail() {
           mergedCamps = [...mergedCamps, ...(data.insights.campaigns || [])];
           mergedAdsets = [...mergedAdsets, ...(data.insights.adsets || [])];
           mergedAds = [...mergedAds, ...(data.insights.ads || [])];
+          if (data.accountData && data.accountData.balance !== undefined) {
+             totalBalance += (Number(data.accountData.balance) / 100);
+          }
         }
       }));
+      
+      setMetaBalance(totalBalance);
       
       const sortActiveFirst = (a: any, b: any) => {
          if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1;
@@ -701,6 +709,15 @@ export default function ProductDetail() {
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
                      <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
+                   </Card>
+                 )}
+                 {visibleCards.includes('meta_balance') && (
+                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden">
+                     <p className="text-sm text-slate-400 font-medium mb-1">Saldo Conta Meta</p>
+                     <p className="text-2xl font-bold font-headline text-blue-400">
+                       {metaBalance !== null ? formatCurrency(metaBalance) : 'R$ 0,00'}
+                     </p>
+                     <p className="text-xs text-muted-foreground mt-1">Limite / Fatura</p>
                    </Card>
                  )}
                  {visibleCards.includes('profit') && (
@@ -1587,6 +1604,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                {id: 'pending', label: 'Faturamento Pendente'},
                {id: 'spend', label: 'Gasto Ads'},
                {id: 'costs', label: 'Custos & Taxas'},
+               {id: 'meta_balance', label: 'Saldo Conta Ads'},
                {id: 'profit', label: 'Lucro Líquido'},
                {id: 'roi', label: 'ROI'},
                {id: 'roas', label: 'ROAS'},
