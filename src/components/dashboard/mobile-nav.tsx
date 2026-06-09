@@ -39,56 +39,7 @@ export function MobileNav() {
     setProfileOpen(false);
   };
 
-  const handleGoogleSignIn = async () => {
-    if (!auth) return;
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      toast({ title: "Bem-vindo!" });
-      setProfileOpen(false);
-    } catch {
-      toast({ variant: "destructive", title: "Erro no login" });
-    }
-  };
 
-  const initializeUserProfile = async (uid: string, userEmail: string, name: string) => {
-    if (!db) return;
-    const userRef = doc(db, "users", uid);
-    const snap = await getDoc(userRef);
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        uid,
-        email: userEmail,
-        displayName: name,
-        plan: "free",
-        metaConnected: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
-  };
-
-  const handleEmailAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isConfigured || !auth) return;
-    setLoading(true);
-    try {
-      if (isSignUp) {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await initializeUserProfile(result.user.uid, email, email.split("@")[0]);
-        toast({ title: "Conta criada!" });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Bem-vindo de volta!" });
-      }
-      setIsDialogOpen(false);
-      setProfileOpen(false);
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Erro", description: error?.message });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>

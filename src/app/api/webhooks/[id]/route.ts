@@ -6,9 +6,12 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
  * Receptor Genérico de Webhooks (Kiwify, Hotmart, etc.)
  * Este endpoint recebe as vendas das plataformas e salva no Supabase.
  */
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const { id: webhookId } = params;
+    const { id: webhookId } = await params;
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const body = await request.json();

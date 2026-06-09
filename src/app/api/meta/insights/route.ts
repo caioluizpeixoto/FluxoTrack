@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
            campaigns: merge(c, cStruct, 'campaign_id', 'id'), 
            adsets: merge(a, aStruct, 'adset_id', 'id'), 
            ads: merge(ad, adStruct, 'ad_id', 'id') 
-        };
+        } as any;
       } else {
         insights = await getInsights(accountId, token, realLevel as any, dateParams);
       }

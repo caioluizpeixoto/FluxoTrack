@@ -1533,7 +1533,6 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                       <Volume2 className="w-5 h-5" /> Testar Alerta & Som de Venda
                     </Button>
                   </div>
-                </div>
               </div>
             </TabsContent>
 

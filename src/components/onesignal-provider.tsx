@@ -19,7 +19,6 @@ export function OneSignalProvider() {
     OneSignal.init({
       appId,
       allowLocalhostAsSecureOrigin: true,
-      notifyButton: { enable: false },
       serviceWorkerPath: "/OneSignalSDKWorker.js",
     })
       .then(() => {
