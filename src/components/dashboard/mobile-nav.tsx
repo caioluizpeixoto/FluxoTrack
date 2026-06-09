@@ -1,17 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Plug, MousePointer2, Settings, LogIn, LogOut, User, Menu, Zap } from "lucide-react";
-import { usePathname } from "next/navigation";
-import { useAuth, useUser, useFirestore, isFirebaseConfigured } from "@/firebase";
+import { LayoutDashboard, Plug, MousePointer2, Settings, LogIn, LogOut, User, Zap } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useUser } from "@/firebase";
 import {
   signOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
 } from "@/firebase/compat/auth";
-import { doc, setDoc, serverTimestamp, getDoc } from "@/firebase/compat/firestore";
+import { getAuth } from "@/firebase/compat/auth";
 import { useState } from "react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -22,15 +18,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
 const navItems = [
   { label: "Dashboards", icon: LayoutDashboard, href: "/" },
@@ -41,19 +28,12 @@ const navItems = [
 
 export function MobileNav() {
   const pathname = usePathname();
-  const auth = useAuth();
+  const router = useRouter();
   const { user } = useUser();
-  const db = useFirestore();
-  const isConfigured = isFirebaseConfigured();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const handleSignOut = () => {
-    if (!auth) return;
+    const auth = getAuth();
     signOut(auth);
     toast({ title: "Sessão encerrada", description: "Até logo!" });
     setProfileOpen(false);
@@ -134,14 +114,14 @@ export function MobileNav() {
         {/* Profile / Auth tab */}
         <button
           className={cn("mobile-nav-item", profileOpen && "mobile-nav-item--active")}
-          onClick={() => setProfileOpen(true)}
+          onClick={() => user ? setProfileOpen(true) : router.push("/login")}
         >
           <User className="w-5 h-5" />
           <span>{user ? "Perfil" : "Login"}</span>
         </button>
       </nav>
 
-      {/* Profile Sheet */}
+      {/* Profile Sheet — only shown when logged in */}
       <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
         <SheetContent
           side="bottom"
@@ -167,7 +147,7 @@ export function MobileNav() {
                   {user ? user.displayName || user.email?.split("@")[0] || "Usuário" : "Visitante"}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {user ? "Plano Ativo" : isConfigured ? "Acesso Limitado" : "Offline"}
+                  {user ? user.email : "Não autenticado"}
                 </span>
               </div>
             </div>
@@ -181,86 +161,17 @@ export function MobileNav() {
                 <LogOut className="w-5 h-5" /> Sair da Conta
               </Button>
             ) : (
-              <div className="space-y-3">
-                <Button
-                  onClick={handleGoogleSignIn}
-                  variant="outline"
-                  className="w-full h-12 rounded-xl border-white/10 hover:bg-white/5 gap-3"
-                  disabled={!isConfigured}
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                  </svg>
-                  Entrar com Google
-                </Button>
-
-                <Button
-                  onClick={() => setIsDialogOpen(true)}
-                  className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold gap-2"
-                  disabled={!isConfigured}
-                >
-                  <LogIn className="w-5 h-5" />
-                  Entrar com E-mail
-                </Button>
-              </div>
+              <Button
+                onClick={() => { setProfileOpen(false); router.push("/login"); }}
+                className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 font-bold gap-2"
+              >
+                <LogIn className="w-5 h-5" />
+                Fazer Login
+              </Button>
             )}
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Email Auth Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-[#121212] border-white/10 text-white mx-4 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="font-headline text-xl">
-              {isSignUp ? "Criar Conta" : "Entrar no AdPulse"}
-            </DialogTitle>
-            <DialogDescription>
-              {isSignUp ? "Crie sua conta para salvar suas atribuições." : "Acesse sua conta."}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEmailAuth} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="mobile-email">E-mail</Label>
-              <Input
-                id="mobile-email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="bg-white/5 border-white/10 h-12 rounded-xl"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="mobile-password">Senha</Label>
-              <Input
-                id="mobile-password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-white/5 border-white/10 h-12 rounded-xl"
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full h-12 rounded-xl font-bold" disabled={loading}>
-              {loading ? "Processando..." : isSignUp ? "Cadastrar" : "Entrar"}
-            </Button>
-          </form>
-          <div className="text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-xs text-primary hover:underline"
-            >
-              {isSignUp ? "Já tem conta? Entre aqui" : "Não tem conta? Cadastre-se"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
