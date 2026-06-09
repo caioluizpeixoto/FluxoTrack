@@ -61,19 +61,60 @@
     userAgent: navigator.userAgent
   };
 
-  // Send to AdPulse backend
-  // In a real environment, we'd use the host where the script is loaded from
-  const apiHost = currentScript ? new URL(currentScript.src).origin : window.location.origin;
+  // Helper to send events
+  function sendEvent(eventType, additionalData = {}) {
+    const apiHost = currentScript ? new URL(currentScript.src).origin : window.location.origin;
+    const finalPayload = { ...payload, eventType: eventType, ...additionalData };
 
-  fetch(apiHost + '/api/tracking/pixel', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload),
-    keepalive: true // Ensure it sends even if the page unloads
-  }).catch(function(err) {
-    console.error('AdPulse Pixel Tracking Error:', err);
+    fetch(apiHost + '/api/tracking/pixel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(finalPayload),
+      keepalive: true
+    }).catch(function(err) {
+      console.error('AdPulse Pixel Tracking Error:', err);
+    });
+  }
+
+  // Send initial PageView
+  sendEvent('PageView');
+
+  // Auto-detect InitiateCheckout (IC) clicks
+  document.addEventListener('click', function(e) {
+    let target = e.target;
+    // Bubble up to find the nearest anchor or button
+    while (target && target.tagName !== 'A' && target.tagName !== 'BUTTON') {
+      target = target.parentElement;
+    }
+
+    if (target) {
+      const text = (target.textContent || '').toLowerCase();
+      const href = (target.href || '').toLowerCase();
+      const id = (target.id || '').toLowerCase();
+      const className = (target.className || '').toLowerCase();
+
+      // Check if it looks like a checkout button
+      const isCheckout = 
+        text.includes('comprar') || 
+        text.includes('quero') || 
+        text.includes('checkout') || 
+        text.includes('assinar') || 
+        href.includes('pay.') || 
+        href.includes('checkout') || 
+        href.includes('hotmart.com') || 
+        href.includes('kiwify.com') ||
+        href.includes('perfectpay.com') ||
+        href.includes('wiapy.com');
+
+      if (isCheckout) {
+        sendEvent('InitiateCheckout', { 
+          clickedUrl: target.href || null, 
+          clickedText: target.textContent?.trim() || null 
+        });
+      }
+    }
   });
 
 })();
