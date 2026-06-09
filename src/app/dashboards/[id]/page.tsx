@@ -25,7 +25,7 @@ export default function DashboardDetails() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
-  const [metrics, setMetrics] = useState<Record<string, { spend: number, sales: number, profit: number, loaded: boolean }>>({});
+  const [metrics, setMetrics] = useState<Record<string, { spend: number, sales: number, profit: number, roi: number, loaded: boolean }>>({});
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -93,23 +93,44 @@ export default function DashboardDetails() {
 
       // 2. Fetch Facebook Spend
       let spend = 0;
+      let accountIds: string[] = [];
+      let campaignIds: string[] | undefined = undefined;
+
       const { data: accLink } = await supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', prod.id).maybeSingle();
+      if (accLink?.ad_account_id) {
+        accountIds.push(accLink.ad_account_id);
+      } else {
+        const { data: linksRes } = await supabase.from('product_campaigns').select('campaign_id').eq('product_id', prod.id);
+        if (linksRes && linksRes.length > 0) {
+          campaignIds = linksRes.map(l => l.campaign_id);
+          const { data: camps } = await supabase.from('meta_campaigns').select('ad_account_id').in('campaign_id', campaignIds);
+          const distinctAccs = Array.from(new Set(camps?.map(c => c.ad_account_id) || []));
+          accountIds = distinctAccs.filter(Boolean) as string[];
+        }
+      }
       
-      if (accLink?.ad_account_id && user) {
-        const res = await fetch('/api/meta/insights', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, accountId: accLink.ad_account_id, level: 'campaigns', datePreset: 'today' })
-        });
-        const data = await res.json();
-        if (data.success && data.insights?.campaigns) {
-          spend = data.insights.campaigns.reduce((acc: number, c: any) => acc + Number(c.spend || 0), 0);
+      if (accountIds.length > 0 && user) {
+        for (const accId of accountIds) {
+          const res = await fetch('/api/meta/insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.uid, accountId: accId, level: 'campaigns', datePreset: 'today' })
+          });
+          const data = await res.json();
+          if (data.success && data.insights?.campaigns) {
+            let camps = data.insights.campaigns;
+            if (campaignIds) {
+               camps = camps.filter((c: any) => campaignIds!.includes(c.campaign_id));
+            }
+            spend += camps.reduce((acc: number, c: any) => acc + Number(c.spend || 0), 0);
+          }
         }
       }
 
-      // Calculate profit
+      // Calculate profit and ROI
       const cost = internalSales * (prod.product_cost || 0);
       const profit = internalRevenue - spend - cost;
+      const roi = spend > 0 ? profit / spend : 0;
 
       setMetrics(prev => ({
         ...prev,
@@ -117,6 +138,7 @@ export default function DashboardDetails() {
           spend,
           sales: internalSales,
           profit,
+          roi,
           loaded: true
         }
       }));
@@ -124,7 +146,7 @@ export default function DashboardDetails() {
       console.error("Failed to fetch metrics for product", prod.id);
       setMetrics(prev => ({
         ...prev,
-        [prod.id]: { spend: 0, sales: 0, profit: 0, loaded: true }
+        [prod.id]: { spend: 0, sales: 0, profit: 0, roi: 0, loaded: true }
       }));
     }
   }
@@ -249,23 +271,29 @@ export default function DashboardDetails() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5">
+                      <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/5">
                          <div className="text-center">
-                            <p className="text-xs text-muted-foreground uppercase mb-1">Gasto Hoje</p>
-                            <p className="font-bold text-slate-300">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Gasto Hoje</p>
+                            <p className="text-sm sm:text-base font-bold text-slate-300">
                                {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].spend) : <span className="animate-pulse">...</span>}
                             </p>
                          </div>
-                         <div className="text-center">
-                            <p className="text-xs text-muted-foreground uppercase mb-1">Vendas Hoje</p>
-                            <p className="font-bold text-slate-300">
+                         <div className="text-center border-l border-white/5">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Vendas Hoje</p>
+                            <p className="text-sm sm:text-base font-bold text-slate-300">
                                {metrics[prod.id]?.loaded ? metrics[prod.id].sales : <span className="animate-pulse">...</span>}
                             </p>
                          </div>
-                         <div className="text-center">
-                            <p className="text-xs text-muted-foreground uppercase mb-1">Lucro Hoje</p>
-                            <p className={`font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].profit >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
+                         <div className="text-center border-l border-white/5">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Lucro Hoje</p>
+                            <p className={`text-sm sm:text-base font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].profit >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
                                {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].profit) : <span className="animate-pulse">...</span>}
+                            </p>
+                         </div>
+                         <div className="text-center border-l border-white/5">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">ROI Hoje</p>
+                            <p className={`text-sm sm:text-base font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].roi >= 1 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
+                               {metrics[prod.id]?.loaded ? metrics[prod.id].roi.toFixed(2) : <span className="animate-pulse">...</span>}
                             </p>
                          </div>
                       </div>
