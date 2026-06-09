@@ -1079,7 +1079,12 @@ export default function ProductDetail() {
                               } else if (rawMethod.includes('boleto') || rawMethod.includes('billet')) {
                                  methodName = 'Boleto';
                               } else {
-                                 methodName = rawMethod.toUpperCase();
+                                 const rawUpper = rawMethod.toUpperCase();
+                                 if (rawUpper === 'PURCHASE' || rawUpper === 'PAYMENT' || rawUpper === 'DESCONHECIDO') {
+                                    methodName = '—';
+                                 } else {
+                                    methodName = rawUpper;
+                                 }
                               }
                               const phone = e.raw_payload?.customer?.mobile_phone || e.raw_payload?.customer?.phone || e.raw_payload?.Customer?.mobile || 'Não Informado';
                               return (
@@ -1100,7 +1105,7 @@ export default function ProductDetail() {
                                   <td className="px-4 py-3 text-xs uppercase text-slate-400">
                                     <div className="flex items-center gap-2">
                                       {methodIcon && <img src={methodIcon} alt={methodName} className="w-5 h-5 object-contain" />}
-                                      <span>{methodName !== 'DESCONHECIDO' ? methodName : rawMethod}</span>
+                                      <span>{methodName}</span>
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 text-right font-bold text-green-400">{formatCurrency(e.event_value)}</td>
