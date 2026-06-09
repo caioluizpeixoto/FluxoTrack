@@ -25,6 +25,7 @@ export default function DashboardDetails() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [adAccounts, setAdAccounts] = useState<any[]>([]);
+  const [metrics, setMetrics] = useState<Record<string, { spend: number, sales: number, profit: number, loaded: boolean }>>({});
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,13 +57,75 @@ export default function DashboardDetails() {
       
       if (dashRes.error) throw dashRes.error;
       setDashboard(dashRes.data);
-      setProducts(prodRes.data || []);
+      const prods = prodRes.data || [];
+      setProducts(prods);
       setAdAccounts(accRes.data || []);
+      
+      // Fetch metrics
+      prods.forEach(p => fetchProductMetrics(p));
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Erro ao carregar', description: e.message });
       router.push('/');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchProductMetrics(prod: any) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0,0,0,0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23,59,59,999);
+
+    try {
+      // 1. Fetch internal events for today
+      const { data: events } = await supabase
+        .from('product_events')
+        .select('event_value')
+        .eq('product_id', prod.id)
+        .eq('status', 'approved')
+        .eq('event_type', 'purchase')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString());
+
+      const internalSales = events?.length || 0;
+      const internalRevenue = events?.reduce((acc, e) => acc + Number(e.event_value || 0), 0) || 0;
+
+      // 2. Fetch Facebook Spend
+      let spend = 0;
+      const { data: accLink } = await supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', prod.id).maybeSingle();
+      
+      if (accLink?.ad_account_id && user) {
+        const res = await fetch('/api/meta/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid, accountId: accLink.ad_account_id, level: 'campaigns', datePreset: 'today' })
+        });
+        const data = await res.json();
+        if (data.success && data.insights?.campaigns) {
+          spend = data.insights.campaigns.reduce((acc: number, c: any) => acc + Number(c.spend || 0), 0);
+        }
+      }
+
+      // Calculate profit
+      const cost = internalSales * (prod.product_cost || 0);
+      const profit = internalRevenue - spend - cost;
+
+      setMetrics(prev => ({
+        ...prev,
+        [prod.id]: {
+          spend,
+          sales: internalSales,
+          profit,
+          loaded: true
+        }
+      }));
+    } catch (e) {
+      console.error("Failed to fetch metrics for product", prod.id);
+      setMetrics(prev => ({
+        ...prev,
+        [prod.id]: { spend: 0, sales: 0, profit: 0, loaded: true }
+      }));
     }
   }
 
@@ -180,10 +243,6 @@ export default function DashboardDetails() {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                            <h3 className="text-xl font-bold font-headline mb-1 group-hover:text-primary transition-colors">{prod.name}</h3>
-                           <div className="flex items-center gap-4 text-sm text-slate-400">
-                              <span className="flex items-center gap-1"><DollarSign className="w-4 h-4 text-green-500"/> {formatCurrency(prod.price || 0)}</span>
-                              <span>Custo: {formatCurrency(prod.product_cost || 0)}</span>
-                           </div>
                         </div>
                         <div className={`px-2 py-1 rounded text-xs font-bold ${prod.status === 'active' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                           {prod.status === 'active' ? 'Ativo' : 'Inativo'}
@@ -193,15 +252,21 @@ export default function DashboardDetails() {
                       <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5">
                          <div className="text-center">
                             <p className="text-xs text-muted-foreground uppercase mb-1">Gasto Hoje</p>
-                            <p className="font-bold text-slate-300">-</p>
+                            <p className="font-bold text-slate-300">
+                               {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].spend) : <span className="animate-pulse">...</span>}
+                            </p>
                          </div>
                          <div className="text-center">
                             <p className="text-xs text-muted-foreground uppercase mb-1">Vendas Hoje</p>
-                            <p className="font-bold text-slate-300">-</p>
+                            <p className="font-bold text-slate-300">
+                               {metrics[prod.id]?.loaded ? metrics[prod.id].sales : <span className="animate-pulse">...</span>}
+                            </p>
                          </div>
                          <div className="text-center">
                             <p className="text-xs text-muted-foreground uppercase mb-1">Lucro Hoje</p>
-                            <p className="font-bold text-green-400">-</p>
+                            <p className={`font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].profit >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
+                               {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].profit) : <span className="animate-pulse">...</span>}
+                            </p>
                          </div>
                       </div>
                     </div>

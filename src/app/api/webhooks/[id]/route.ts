@@ -36,7 +36,44 @@ export async function POST(
 
     // 2. Normalizar dados da plataforma (Exemplo simples para Kiwify/Hotmart)
     const platform = webhookConfig.platform;
-    const value = parseFloat(body.amount || body.price || body.full_price || 0) / (platform === 'kiwify' ? 100 : 1);
+
+    const cleanValue = (val: any): number => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const clean = val.toString().replace(/[^\d.,]/g, '').replace(',', '.');
+      return parseFloat(clean) || 0;
+    };
+
+    let rawValue = 0;
+    if (body.payment?.amount !== undefined) {
+      rawValue = cleanValue(body.payment.amount);
+      if (body.payment.fee !== undefined && body.checkout?.id) {
+         rawValue = rawValue / 100;
+      }
+    } else if (body.Order?.price_cents !== undefined) {
+      rawValue = cleanValue(body.Order.price_cents) / 100;
+    } else if (body.Order?.order_approved_amount !== undefined) {
+      rawValue = cleanValue(body.Order.order_approved_amount) / 100;
+    } else if (body.purchase?.price?.value !== undefined) {
+      rawValue = cleanValue(body.purchase.price.value);
+    } else if (body.sale_value !== undefined) {
+      rawValue = cleanValue(body.sale_value);
+    } else if (body.value_cents !== undefined) {
+      rawValue = cleanValue(body.value_cents) / 100;
+    } else if (body.price_cents !== undefined) {
+      rawValue = cleanValue(body.price_cents) / 100;
+    } else if (body.Commissions?.charge_amount !== undefined) {
+      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
+    } else if (body.Commissions?.my_commission !== undefined) {
+      rawValue = cleanValue(body.Commissions.my_commission) / 100;
+    } else {
+      let fallback = cleanValue(body.value || body.amount || body.price || body.full_price || body.comission || body.liquid || 0);
+      if (platform === 'kiwify' && fallback > 0 && fallback > 100 && fallback.toString().indexOf('.') === -1) {
+        fallback = fallback / 100;
+      }
+      rawValue = fallback;
+    }
+    const value = rawValue;
     const externalId = body.order_id || body.transaction || body.id || 'unknown';
 
     const statusValues = [
@@ -49,10 +86,10 @@ export async function POST(
        status = 'refunded';
     } else if (rawEvent.includes('refused') || rawEvent.includes('cancel') || rawEvent.includes('reject') || rawEvent.includes('recusado')) {
        status = 'refused';
+    } else if (rawEvent.includes('pending') || rawEvent.includes('pendente') || rawEvent.includes('waiting') || rawEvent.includes('aguardando') || rawEvent.includes('generated') || rawEvent.includes('gerado') || rawEvent.includes('unpaid') || rawEvent.includes('billet') || rawEvent.includes('boleto') || rawEvent.includes('pix') || rawEvent.includes('processing') || rawEvent.includes('processando') || rawEvent.includes('analise') || rawEvent.includes('review')) {
+       status = 'pending';
     } else if (rawEvent.includes('approved') || rawEvent.includes('paid') || rawEvent.includes('completed') || rawEvent.includes('concluido') || rawEvent.includes('aprovado') || rawEvent.includes('sucesso')) {
        status = 'approved';
-    } else if (rawEvent.includes('pending') || rawEvent.includes('waiting') || rawEvent.includes('aguardando') || rawEvent.includes('generated') || rawEvent.includes('gerado') || rawEvent.includes('unpaid') || rawEvent.includes('billet') || rawEvent.includes('boleto') || rawEvent.includes('pix')) {
-       status = 'pending';
     } else if (rawEvent.includes('purchase') || rawEvent.includes('compra')) {
        status = 'approved'; 
     } else {

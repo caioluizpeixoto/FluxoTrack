@@ -42,7 +42,6 @@ export async function POST(
     let rawValue = 0;
     if (body.payment?.amount !== undefined) {
       rawValue = cleanValue(body.payment.amount);
-      // Wiapy sends amount in cents, identified by the presence of checkout.id and payment.fee
       if (body.payment.fee !== undefined && body.checkout?.id) {
          rawValue = rawValue / 100;
       }
@@ -58,8 +57,12 @@ export async function POST(
       rawValue = cleanValue(body.value_cents) / 100;
     } else if (body.price_cents !== undefined) {
       rawValue = cleanValue(body.price_cents) / 100;
+    } else if (body.Commissions?.charge_amount !== undefined) {
+      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
+    } else if (body.Commissions?.my_commission !== undefined) {
+      rawValue = cleanValue(body.Commissions.my_commission) / 100;
     } else {
-      rawValue = cleanValue(body.value || body.amount || body.price || body.comission || body.liquid || 0);
+      rawValue = cleanValue(body.value || body.amount || body.price || body.full_price || body.comission || body.liquid || 0);
     }
     const eventValue = rawValue;
 
@@ -85,10 +88,10 @@ export async function POST(
        status = 'refunded';
     } else if (normalizedEvent.includes('refused') || normalizedEvent.includes('cancel') || normalizedEvent.includes('reject') || normalizedEvent.includes('recusado')) {
        status = 'refused';
+    } else if (normalizedEvent.includes('pending') || normalizedEvent.includes('pendente') || normalizedEvent.includes('waiting') || normalizedEvent.includes('aguardando') || normalizedEvent.includes('generated') || normalizedEvent.includes('gerado') || normalizedEvent.includes('unpaid') || normalizedEvent.includes('billet') || normalizedEvent.includes('boleto') || normalizedEvent.includes('pix') || normalizedEvent.includes('processing') || normalizedEvent.includes('processando') || normalizedEvent.includes('analise') || normalizedEvent.includes('review')) {
+       status = 'pending';
     } else if (normalizedEvent.includes('approved') || normalizedEvent.includes('paid') || normalizedEvent.includes('completed') || normalizedEvent.includes('concluido') || normalizedEvent.includes('aprovado') || normalizedEvent.includes('sucesso')) {
        status = 'approved';
-    } else if (normalizedEvent.includes('pending') || normalizedEvent.includes('waiting') || normalizedEvent.includes('aguardando') || normalizedEvent.includes('generated') || normalizedEvent.includes('gerado') || normalizedEvent.includes('unpaid') || normalizedEvent.includes('billet') || normalizedEvent.includes('boleto') || normalizedEvent.includes('pix')) {
-       status = 'pending';
     } else if (normalizedEvent.includes('purchase') || normalizedEvent.includes('compra')) {
        status = 'approved'; 
     } else {
