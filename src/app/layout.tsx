@@ -6,6 +6,7 @@ import { FirebaseErrorListener } from "@/components/firebase-error-listener";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PWARegistration } from "@/components/pwa-register";
 import { NotificationListener } from "@/components/notification-listener";
+import { OneSignalProvider } from "@/components/onesignal-provider";
 
 export const metadata: Metadata = {
   title: 'AdPulse | Advanced Marketing Attribution',
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <PWARegistration />
+          <OneSignalProvider />
           <NotificationListener />
           {children}
           <MobileNav />
