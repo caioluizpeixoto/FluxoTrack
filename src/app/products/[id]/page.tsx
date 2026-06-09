@@ -1066,7 +1066,21 @@ export default function ProductDetail() {
                           </thead>
                           <tbody className="divide-y divide-white/5">
                             {events.map(e => {
-                              const method = e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || 'Desconhecido';
+                              const rawMethod = String(e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || 'Desconhecido').toLowerCase();
+                              let methodIcon = null;
+                              let methodName = 'Desconhecido';
+
+                              if (rawMethod.includes('pix')) {
+                                 methodIcon = '/icons/pix.png';
+                                 methodName = 'Pix';
+                              } else if (rawMethod.includes('credit') || rawMethod.includes('cartao') || rawMethod.includes('card')) {
+                                 methodIcon = '/icons/cartao.png';
+                                 methodName = 'Cartão';
+                              } else if (rawMethod.includes('boleto') || rawMethod.includes('billet')) {
+                                 methodName = 'Boleto';
+                              } else {
+                                 methodName = rawMethod.toUpperCase();
+                              }
                               const phone = e.raw_payload?.customer?.mobile_phone || e.raw_payload?.customer?.phone || e.raw_payload?.Customer?.mobile || 'Não Informado';
                               return (
                                 <tr key={e.id} className="hover:bg-white/5">
@@ -1083,7 +1097,12 @@ export default function ProductDetail() {
                                       <Badge variant="secondary" className="text-xs">{e.status}</Badge>
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 text-xs uppercase text-slate-400">{method}</td>
+                                  <td className="px-4 py-3 text-xs uppercase text-slate-400">
+                                    <div className="flex items-center gap-2">
+                                      {methodIcon && <img src={methodIcon} alt={methodName} className="w-5 h-5 object-contain" />}
+                                      <span>{methodName !== 'DESCONHECIDO' ? methodName : rawMethod}</span>
+                                    </div>
+                                  </td>
                                   <td className="px-4 py-3 text-right font-bold text-green-400">{formatCurrency(e.event_value)}</td>
                                 </tr>
                               );
