@@ -50,7 +50,7 @@ export default function ProductDetail() {
   // Live Metrics
   const [fetchingLive, setFetchingLive] = useState(false);
   const [liveMetrics, setLiveMetrics] = useState<{ campaigns: any[], adsets: any[], ads: any[] }>({ campaigns: [], adsets: [], ads: [] });
-  const [metaBalance, setMetaBalance] = useState<number | null>(null);
+  const [metaAccountData, setMetaAccountData] = useState<{balance: number, spent: number} | null>(null);
 
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
@@ -209,6 +209,7 @@ export default function ProductDetail() {
 
     try {
       let totalBalance = 0;
+      let totalSpent = 0;
 
       await Promise.all(accIds.map(async (accId) => {
         const res = await fetch('/api/meta/insights', {
@@ -221,13 +222,14 @@ export default function ProductDetail() {
           mergedCamps = [...mergedCamps, ...(data.insights.campaigns || [])];
           mergedAdsets = [...mergedAdsets, ...(data.insights.adsets || [])];
           mergedAds = [...mergedAds, ...(data.insights.ads || [])];
-          if (data.accountData && data.accountData.balance !== undefined) {
-             totalBalance += (Number(data.accountData.balance) / 100);
+          if (data.accountData) {
+             totalBalance += (Number(data.accountData.balance || 0) / 100);
+             totalSpent += (Number(data.accountData.amount_spent || 0) / 100);
           }
         }
       }));
       
-      setMetaBalance(totalBalance);
+      setMetaAccountData({ balance: totalBalance, spent: totalSpent });
       
       const sortActiveFirst = (a: any, b: any) => {
          if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1;
@@ -695,11 +697,11 @@ export default function ProductDetail() {
                  )}
                  {visibleCards.includes('meta_balance') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Saldo Conta Meta</p>
+                     <p className="text-sm text-slate-400 font-medium mb-1">Fatura Atual (Meta)</p>
                      <p className="text-2xl font-bold font-headline text-blue-400">
-                       {metaBalance !== null ? formatCurrency(metaBalance) : 'R$ 0,00'}
+                       {metaAccountData ? formatCurrency(metaAccountData.balance) : 'R$ 0,00'}
                      </p>
-                     <p className="text-xs text-muted-foreground mt-1">Limite / Fatura</p>
+                     <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent) : 'R$ 0,00'}</p>
                    </Card>
                  )}
                  {visibleCards.includes('profit') && (
