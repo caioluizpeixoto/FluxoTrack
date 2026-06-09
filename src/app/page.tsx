@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, LayoutDashboard, Copy, Trash, Settings } from "lucide-react";
+import { Plus, LayoutDashboard, Copy, Trash, Settings, DollarSign } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -21,6 +21,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dashboards, setDashboards] = useState<any[]>([]);
+  const [balance, setBalance] = useState<number>(0);
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,6 +53,27 @@ export default function Home() {
         
       if (error) throw error;
       setDashboards(data || []);
+
+      // Calculate global balance
+      if (data && data.length > 0) {
+        const dashIds = data.map((d:any) => d.id);
+        const { data: prods } = await supabase.from('products').select('id').in('dashboard_id', dashIds);
+        
+        if (prods && prods.length > 0) {
+          const prodIds = prods.map((p:any) => p.id);
+          const { data: evts } = await supabase.from('events')
+            .select('event_value')
+            .in('product_id', prodIds)
+            .eq('event_type', 'purchase')
+            .eq('status', 'approved');
+            
+          if (evts) {
+            const total = evts.reduce((acc: number, curr: any) => acc + Number(curr.event_value || 0), 0);
+            setBalance(total);
+          }
+        }
+      }
+
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Erro ao carregar', description: e.message });
     } finally {
@@ -113,7 +135,7 @@ export default function Home() {
       <DashboardSidebar />
       <main className="flex-1 w-full p-4 lg:p-12 transition-all">
         <div className="max-w-6xl mx-auto pt-16 md:pt-16">
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+          <header className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold font-headline mb-1 flex items-center gap-2">
                 <LayoutDashboard className="text-primary w-7 h-7" />
@@ -122,9 +144,24 @@ export default function Home() {
               <p className="text-muted-foreground text-sm">Gerencie seus projetos e agrupe seus produtos.</p>
             </div>
             
-            <Button onClick={() => { setEditId(null); setName(""); setDesc(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 w-full sm:w-auto">
-              <Plus className="w-5 h-5" /> Criar Dashboard
-            </Button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              {user && !loading && (
+                <div className="bg-[#1a1c23] border border-white/10 rounded-lg px-4 py-2 flex items-center gap-3">
+                  <div className="bg-green-500/20 p-2 rounded-full">
+                    <DollarSign className="w-5 h-5 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Saldo da Conta</p>
+                    <p className="text-lg font-headline font-bold text-slate-200">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
+                    </p>
+                  </div>
+                </div>
+              )}
+              <Button onClick={() => { setEditId(null); setName(""); setDesc(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 h-full py-4 sm:py-2">
+                <Plus className="w-5 h-5" /> Criar Dashboard
+              </Button>
+            </div>
           </header>
 
           {!user ? (
