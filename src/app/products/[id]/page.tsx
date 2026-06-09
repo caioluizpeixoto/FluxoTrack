@@ -515,7 +515,7 @@ export default function ProductDetail() {
     const cpv = videoViews > 0 ? spend / videoViews : 0;
     const cpi = checkoutInits > 0 ? spend / checkoutInits : 0;
     const ic = clicks > 0 ? (purchases / clicks) * 100 : 0;
-    const roi = spend > 0 ? ((revenue - spend) / spend) * 100 : 0;
+    const roi = spend > 0 ? (revenue - spend) / spend : 0;
 
     return { 
       spend, purchases, revenue, roas, cpa, clicks, impressions, ctr, cpc, cpv, cpi, ic, roi,
@@ -883,7 +883,7 @@ export default function ProductDetail() {
 
                {/* Cards Secundários */}
                <div className="flex flex-wrap gap-3 mb-6">
-                 {visibleCards.includes('roi') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>}
+                 {visibleCards.includes('roi') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}</p></Card>}
                  {visibleCards.includes('roas') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
                  {visibleCards.includes('cpa') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>}
                  {visibleCards.includes('cpc') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>}
@@ -1048,7 +1048,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
@@ -1081,7 +1081,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
@@ -1108,7 +1108,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
