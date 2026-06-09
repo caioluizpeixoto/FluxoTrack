@@ -305,20 +305,6 @@ export default function ProductDetail() {
   }
 
   // KPIs
-  const kpis = useMemo(() => {
-    let spend = 0, clicks = 0, impressions = 0, ic = 0, pageViews = 0;
-    liveMetrics.campaigns.forEach(c => {
-      spend += Number(c.spend || 0);
-      clicks += Number(c.clicks || 0);
-      impressions += Number(c.impressions || 0);
-      const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout');
-      if (icAction) ic += Number(icAction.value || 0);
-      const pvAction = c.actions?.find((a:any) => a.action_type === 'landing_page_view' || a.action_type === 'outbound_clicks');
-      if (pvAction) pageViews += Number(pvAction.value || 0);
-    });
-
-    if (pageViews === 0) pageViews = clicks;
-
     const isEventInDateRange = (dateString: string) => {
       if (!dateString) return true;
       const eventDate = new Date(dateString);
@@ -351,6 +337,20 @@ export default function ProductDetail() {
           return true;
       }
     };
+
+  const kpis = useMemo(() => {
+    let spend = 0, clicks = 0, impressions = 0, ic = 0, pageViews = 0;
+    liveMetrics.campaigns.forEach(c => {
+      spend += Number(c.spend || 0);
+      clicks += Number(c.clicks || 0);
+      impressions += Number(c.impressions || 0);
+      const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout');
+      if (icAction) ic += Number(icAction.value || 0);
+      const pvAction = c.actions?.find((a:any) => a.action_type === 'landing_page_view' || a.action_type === 'outbound_clicks');
+      if (pvAction) pageViews += Number(pvAction.value || 0);
+    });
+
+    if (pageViews === 0) pageViews = clicks;
 
     let realRevenue = 0, realPurchases = 0;
     let pendingPurchases = 0, pendingRevenue = 0;
@@ -441,6 +441,50 @@ export default function ProductDetail() {
       const pRev = item.action_values.find((a: any) => a.action_type === 'purchase');
       if (pRev) revenue = Number(pRev.value || 0);
     }
+
+    // --- INTERNAL TRACKING MERGE ---
+    let internalPurchases = 0;
+    let internalRevenue = 0;
+    
+    events.filter(e => e.event_type === 'purchase' && e.status === 'approved' && isEventInDateRange(e.created_at)).forEach(e => {
+       const payload = e.raw_payload || {};
+       const tracking = payload.tracking || {};
+       const utmCampaign = tracking.utm_campaign || payload.utm_campaign || '';
+       const utmMedium = tracking.utm_medium || payload.utm_medium || '';
+       const utmContent = tracking.utm_content || payload.utm_content || '';
+       const utmSource = tracking.utm_source || payload.utm_source || '';
+       
+       // Try to extract standard IDs from pipe separated format (like UTMify: NAME|ID)
+       const extractId = (str: string) => {
+          const match = str.match(/\|(\d{15,})/);
+          return match ? match[1] : str;
+       };
+       
+       const campId = extractId(utmCampaign);
+       const adsetId = extractId(utmMedium);
+       const adId = extractId(utmContent);
+       
+       let match = false;
+       if (level === 'campaigns') {
+           match = (campId === item.campaign_id || campId === item.name || utmCampaign === item.name || utmMedium === item.name);
+       } else if (level === 'adsets') {
+           match = (adsetId === item.adset_id || adsetId === item.name || utmMedium === item.name || utmContent === item.name);
+       } else if (level === 'ads') {
+           match = (adId === item.ad_id || adId === item.name || utmContent === item.name || utmSource === item.name);
+       }
+       
+       if (match) {
+           internalPurchases++;
+           internalRevenue += Number(e.event_value || 0);
+       }
+    });
+
+    // Se o painel interno registrou mais vendas que o Facebook, usamos o interno para ter o ROAS real em tempo real
+    if (internalPurchases > purchases) {
+       purchases = internalPurchases;
+       revenue = internalRevenue > 0 ? internalRevenue : revenue;
+    }
+    // --------------------------------
 
     const roas = spend > 0 ? revenue / spend : 0;
     const cpa = purchases > 0 ? spend / purchases : 0;

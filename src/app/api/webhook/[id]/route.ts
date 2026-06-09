@@ -74,9 +74,12 @@ export async function POST(
 
     const currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
 
-    // Normalize Status
+    // Normalize Status by evaluating ALL possible status fields at once
     let status = 'pending';
-    const normalizedEvent = eventType.toString().toLowerCase();
+    const statusValues = [
+      body.event, body.event_type, body.type, body.status, body.order_status, body.payment?.status
+    ];
+    const normalizedEvent = statusValues.filter(Boolean).join(' ').toLowerCase();
     
     if (normalizedEvent.includes('refund') || normalizedEvent.includes('chargeback') || normalizedEvent.includes('reembolso') || normalizedEvent.includes('devolvido')) {
        status = 'refunded';
@@ -204,7 +207,8 @@ export async function POST(
         const onesignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
         if (onesignalAppId && onesignalApiKey) {
           const title = status === 'approved' ? 'Venda Aprovada! 💰' : 'Venda Pendente! ⏳';
-          const msg = `Nova venda no produto ${product.name} no valor de ${currency} ${eventValue.toFixed(2)}`;
+          const custName = customerName ? `\nCliente: ${customerName}` : '';
+          const msg = `Nova venda no produto ${product.name} no valor de ${currency} ${eventValue.toFixed(2)}${custName}`;
           await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
             headers: {
