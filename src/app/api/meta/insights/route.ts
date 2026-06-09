@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
     // Se o level for account, talvez também queira o saldo real.
     let accountData = null;
+    let accountError = null;
     if (level === 'account' || level === 'all') {
       try {
         const details = await getAccountDetails(accountId, token);
@@ -52,8 +53,9 @@ export async function POST(req: NextRequest) {
           account_status: details.account_status?.toString(),
           currency: details.currency,
         }).eq('account_id', accountId.replace('act_', ''));
-      } catch (e) {
+      } catch (e: any) {
         console.error("Erro ao buscar detalhes da conta", e);
+        accountError = e.message;
       }
     }
 
@@ -93,7 +95,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, insights, accountData });
+    return NextResponse.json({ success: true, insights, accountData, accountError });
 
   } catch (error: any) {
     console.error('Meta Insights Proxy Error:', error);

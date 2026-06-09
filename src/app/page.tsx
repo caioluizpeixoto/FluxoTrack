@@ -145,19 +145,6 @@ export default function Home() {
             </div>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              {user && !loading && (
-                <div className="bg-[#1a1c23] border border-white/10 rounded-lg px-4 py-2 flex items-center gap-3">
-                  <div className="bg-green-500/20 p-2 rounded-full">
-                    <DollarSign className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">Saldo da Conta</p>
-                    <p className="text-lg font-headline font-bold text-slate-200">
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
-                    </p>
-                  </div>
-                </div>
-              )}
               <Button onClick={() => { setEditId(null); setName(""); setDesc(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 h-full py-4 sm:py-2">
                 <Plus className="w-5 h-5" /> Criar Dashboard
               </Button>

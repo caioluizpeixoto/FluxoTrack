@@ -50,7 +50,7 @@ export default function ProductDetail() {
   // Live Metrics
   const [fetchingLive, setFetchingLive] = useState(false);
   const [liveMetrics, setLiveMetrics] = useState<{ campaigns: any[], adsets: any[], ads: any[] }>({ campaigns: [], adsets: [], ads: [] });
-  const [metaAccountData, setMetaAccountData] = useState<{balance: number, spent: number} | null>(null);
+  const [metaAccountData, setMetaAccountData] = useState<{balance: number, spent: number, error?: string} | null>(null);
 
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
@@ -210,6 +210,7 @@ export default function ProductDetail() {
     try {
       let totalBalance = 0;
       let totalSpent = 0;
+      let accountErrorMsg = '';
 
       await Promise.all(accIds.map(async (accId) => {
         const res = await fetch('/api/meta/insights', {
@@ -226,10 +227,13 @@ export default function ProductDetail() {
              totalBalance += (Number(data.accountData.balance || 0) / 100);
              totalSpent += (Number(data.accountData.amount_spent || 0) / 100);
           }
+          if (data.accountError) {
+             accountErrorMsg = data.accountError;
+          }
         }
       }));
       
-      setMetaAccountData({ balance: totalBalance, spent: totalSpent });
+      setMetaAccountData({ balance: totalBalance, spent: totalSpent, error: accountErrorMsg });
       
       const sortActiveFirst = (a: any, b: any) => {
          if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1;
@@ -311,10 +315,43 @@ export default function ProductDetail() {
 
     if (pageViews === 0) pageViews = clicks;
 
+    const isEventInDateRange = (dateString: string) => {
+      if (!dateString) return true;
+      const eventDate = new Date(dateString);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      switch(datePreset) {
+        case 'today':
+          return eventDate >= today;
+        case 'yesterday': {
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          return eventDate >= yesterday && eventDate < today;
+        }
+        case 'last_7d': {
+          const last7 = new Date(today);
+          last7.setDate(last7.getDate() - 7);
+          return eventDate >= last7;
+        }
+        case 'last_30d': {
+          const last30 = new Date(today);
+          last30.setDate(last30.getDate() - 30);
+          return eventDate >= last30;
+        }
+        case 'this_month': {
+          const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          return eventDate >= thisMonth;
+        }
+        default:
+          return true;
+      }
+    };
+
     let realRevenue = 0, realPurchases = 0;
     let pendingPurchases = 0, pendingRevenue = 0;
     
-    events.filter(e => e.event_type === 'purchase').forEach(e => {
+    events.filter(e => e.event_type === 'purchase' && isEventInDateRange(e.created_at)).forEach(e => {
        if (e.status === 'approved') {
          realRevenue += Number(e.event_value || 0);
          realPurchases += 1;
@@ -375,7 +412,7 @@ export default function ProductDetail() {
       prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr, arpu, 
       lastSaleProduct, lastSaleSource, clicks, impressions, ic, pageViews 
     };
-  }, [liveMetrics, product, taxes, expenses, events]);
+  }, [liveMetrics, product, taxes, expenses, events, datePreset]);
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
     const item = liveMetrics[level].find((m: any) => m[idKey] === idVal);
@@ -698,10 +735,21 @@ export default function ProductDetail() {
                  {visibleCards.includes('meta_balance') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden">
                      <p className="text-sm text-slate-400 font-medium mb-1">Fatura Atual (Meta)</p>
-                     <p className="text-2xl font-bold font-headline text-blue-400">
-                       {metaAccountData ? formatCurrency(metaAccountData.balance) : 'R$ 0,00'}
-                     </p>
-                     <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent) : 'R$ 0,00'}</p>
+                     
+                     {metaAccountData?.error ? (
+                        <p className="text-xs text-red-400 mt-1 line-clamp-2" title={metaAccountData.error}>
+                          Permissão Negada ou Conta Inválida: {metaAccountData.error}
+                        </p>
+                     ) : (
+                        <>
+                           <p className="text-2xl font-bold font-headline text-blue-400">
+                             {metaAccountData ? formatCurrency(metaAccountData.balance) : 'R$ 0,00'}
+                           </p>
+                           <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                             Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent) : 'R$ 0,00'}
+                           </p>
+                        </>
+                     )}
                    </Card>
                  )}
                  {visibleCards.includes('profit') && (
@@ -1475,19 +1523,6 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between py-2 border-b border-white/5">
-                    <div className="flex-1 pr-4">
-                      <span className="text-sm font-medium block leading-tight">Tocar Som de Notificação</span>
-                      <span className="text-xs text-muted-foreground mt-1 block leading-snug">Toca o arquivo de som padrão do aplicativo.</span>
-                    </div>
-                    <Switch 
-                      checked={soundEnabled} 
-                      onCheckedChange={(val) => {
-                        setSoundEnabled(val);
-                        localStorage.setItem("sound_enabled", val ? "true" : "false");
-                      }} 
-                    />
-                  </div>
                 </div>
 
                   <div className="pt-4">
