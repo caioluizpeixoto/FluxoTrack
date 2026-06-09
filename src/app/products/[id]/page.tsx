@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
   Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2,
-  Bell, Volume2
+  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -55,10 +55,14 @@ export default function ProductDetail() {
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
   const [selectedAccId, setSelectedAccId] = useState<string>("");
 
-  // Drilldown Meta Ads
   const [metaTab, setMetaTab] = useState("campanhas");
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdsetIds, setSelectedAdsetIds] = useState<string[]>([]);
+
+  // Layout State
+  const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
+  const [visibleCards, setVisibleCards] = useState<string[]>(defaultLayout);
+  const [layoutModal, setLayoutModal] = useState(false);
 
   // Modals & Forms
   const [budgetModal, setBudgetModal] = useState<any>(null);
@@ -90,6 +94,10 @@ export default function ProductDetail() {
       setSoundType(localStorage.getItem("sound_type") || "default");
       setIcTriggerText(localStorage.getItem(`ic_text_${id}`) || "");
       setIcTriggerUrl(localStorage.getItem(`ic_url_${id}`) || "");
+      
+      const savedLayout = localStorage.getItem(`dashboard_layout_${id}`);
+      if (savedLayout) setVisibleCards(JSON.parse(savedLayout));
+
       if ("Notification" in window) {
         setPermissionStatus(Notification.permission);
       }
@@ -298,28 +306,52 @@ export default function ProductDetail() {
 
   // KPIs
   const kpis = useMemo(() => {
-    let spend = 0, clicks = 0, impressions = 0;
+    let spend = 0, clicks = 0, impressions = 0, ic = 0, pageViews = 0;
     liveMetrics.campaigns.forEach(c => {
       spend += Number(c.spend || 0);
       clicks += Number(c.clicks || 0);
       impressions += Number(c.impressions || 0);
+      const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout');
+      if (icAction) ic += Number(icAction.value || 0);
+      const pvAction = c.actions?.find((a:any) => a.action_type === 'landing_page_view' || a.action_type === 'outbound_clicks');
+      if (pvAction) pageViews += Number(pvAction.value || 0);
     });
 
-    // Real Revenue and Purchases from Webhook Events
+    if (pageViews === 0) pageViews = clicks;
+
     let realRevenue = 0, realPurchases = 0;
-    events.filter(e => e.status === 'approved' && e.event_type === 'purchase').forEach(e => {
-       realRevenue += Number(e.event_value || 0);
-       realPurchases += 1;
-    });
-
-    // Pending Purchases calculation
     let pendingPurchases = 0, pendingRevenue = 0;
-    events.filter(e => e.status !== 'approved' && e.status !== 'refunded' && e.status !== 'chargeback' && e.status !== 'refused' && e.event_type === 'purchase').forEach(e => {
-       pendingRevenue += Number(e.event_value || 0);
-       pendingPurchases += 1;
+    
+    events.filter(e => e.event_type === 'purchase').forEach(e => {
+       if (e.status === 'approved') {
+         realRevenue += Number(e.event_value || 0);
+         realPurchases += 1;
+       } else if (e.status === 'pending' || e.status === 'generated') {
+         pendingRevenue += Number(e.event_value || 0);
+         pendingPurchases += 1;
+       }
     });
 
-    // Fallback to Meta Data if no Webhook data exists
+    const lastSale = events.find(e => e.status === 'approved' && e.event_type === 'purchase');
+    let lastSaleProduct = 'Nenhum';
+    let lastSaleSource = 'Desconhecido';
+    
+    if (lastSale && lastSale.raw_payload) {
+      const payload = lastSale.raw_payload;
+      if (payload.product?.title || payload.product?.name) {
+         lastSaleProduct = payload.product.title || payload.product.name;
+      } else if (payload.checkout?.title) {
+         lastSaleProduct = payload.checkout.title;
+      }
+      if (payload.tracking) {
+         const source = payload.tracking.utm_source || 'Orgânico';
+         const medium = payload.tracking.utm_medium || '';
+         lastSaleSource = medium ? `${source} / ${medium}` : source;
+      } else {
+         lastSaleSource = 'Orgânico / Direto';
+      }
+    }
+
     if (realPurchases === 0 && liveMetrics.campaigns.length > 0) {
       liveMetrics.campaigns.forEach(c => {
         const pAct = c.actions?.find((a:any) => a.action_type === 'purchase');
@@ -330,7 +362,6 @@ export default function ProductDetail() {
     }
 
     const prodCost = realPurchases * (product?.product_cost || 0);
-    
     let taxesAmount = 0;
     taxes.forEach(t => {
       taxesAmount += Number(t.fixed_amount || 0);
@@ -338,7 +369,6 @@ export default function ProductDetail() {
     });
 
     let expensesAmount = expenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
-
     const profit = realRevenue - spend - prodCost - taxesAmount - expensesAmount;
     const roas = spend > 0 ? realRevenue / spend : 0;
     const roi = spend > 0 ? profit / spend : 0;
@@ -346,8 +376,13 @@ export default function ProductDetail() {
     const cpc = clicks > 0 ? spend / clicks : 0;
     const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
     const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+    const arpu = realPurchases > 0 ? realRevenue / realPurchases : 0;
 
-    return { spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr };
+    return { 
+      spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, 
+      prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr, arpu, 
+      lastSaleProduct, lastSaleSource, clicks, impressions, ic, pageViews 
+    };
   }, [liveMetrics, product, taxes, expenses, events]);
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
@@ -633,39 +668,112 @@ export default function ProductDetail() {
 
             {/* ABA: RESUMO */}
             <TabsContent value="overview" className="flex-1 overflow-y-auto p-6 m-0">
-               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                   <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
-                   <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
-                   <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
-                 </Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                   <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
-                   <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue)}</p>
-                   <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
-                 </Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                   <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
-                   <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
-                 </Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                   <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
-                   <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
-                 </Card>
-                 <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
-                   <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
-                   <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
-                 </Card>
+               <div className="flex items-center justify-between mb-4">
+                 <h2 className="text-lg font-bold text-slate-200">Painel de Métricas</h2>
+                 <Button variant="outline" size="sm" onClick={() => setLayoutModal(true)} className="bg-[#1a1c23] border-white/10 text-slate-300 hover:text-white hover:bg-white/5">
+                   <Pencil className="w-4 h-4 mr-2"/> Customizar Layout
+                 </Button>
                </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>
-                 <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>
-              </div>
+               {/* Principais Cards Grandes */}
+               <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                 {visibleCards.includes('revenue') && (
+                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                     <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
+                     <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
+                     <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
+                   </Card>
+                 )}
+                 {visibleCards.includes('pending') && (
+                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                     <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
+                     <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue)}</p>
+                     <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
+                   </Card>
+                 )}
+                 {visibleCards.includes('spend') && (
+                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                     <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
+                     <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
+                   </Card>
+                 )}
+                 {visibleCards.includes('costs') && (
+                   <Card className="bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
+                     <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
+                     <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
+                   </Card>
+                 )}
+                 {visibleCards.includes('profit') && (
+                   <Card className="bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
+                     <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
+                     <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
+                   </Card>
+                 )}
+               </div>
+
+               {/* Cards Secundários */}
+               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+                 {visibleCards.includes('roi') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}%</p></Card>}
+                 {visibleCards.includes('roas') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
+                 {visibleCards.includes('cpa') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>}
+                 {visibleCards.includes('cpc') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>}
+                 {visibleCards.includes('cpm') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>}
+                 {visibleCards.includes('ctr') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
+                 {visibleCards.includes('arpu') && <Card className="bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
+                 {visibleCards.includes('last_sale') && (
+                   <Card className="bg-[#1a1c23] border-white/5 p-3 flex flex-col justify-center text-center col-span-2">
+                     <p className="text-xs text-slate-400 mb-1">Última Venda</p>
+                     <p className="text-sm font-bold text-slate-200 truncate" title={kpis.lastSaleProduct}>{kpis.lastSaleProduct}</p>
+                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1 truncate" title={kpis.lastSaleSource}>Via: {kpis.lastSaleSource}</p>
+                   </Card>
+                 )}
+               </div>
+
+               {/* Funil de Vendas */}
+               {visibleCards.includes('funnel') && (
+                 <div>
+                   <h3 className="font-bold text-slate-300 mb-3 text-sm flex items-center gap-2"><Filter className="w-4 h-4 text-primary" /> Rastreamento de Funil</h3>
+                   <Card className="bg-[#1a1c23] border-white/5 p-4 sm:p-6 overflow-hidden">
+                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-center justify-between">
+                       
+                       {/* Clicks */}
+                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
+                          <MousePointerClick className="w-6 h-6 text-blue-400 mb-2"/>
+                          <p className="text-xs font-bold uppercase text-slate-400">Cliques no Link</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.clicks.toLocaleString('pt-BR')}</p>
+                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       </div>
+               
+                       {/* PageViews */}
+                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
+                          <Eye className="w-6 h-6 text-cyan-400 mb-2"/>
+                          <p className="text-xs font-bold uppercase text-slate-400">Viram a Página</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.pageViews.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-cyan-400/80 mt-1 bg-cyan-400/10 px-2 py-0.5 rounded-full">{kpis.clicks > 0 ? ((kpis.pageViews / kpis.clicks)*100).toFixed(1) : 0}% dos cliques</p>
+                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       </div>
+               
+                       {/* IC */}
+                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
+                          <ShoppingCart className="w-6 h-6 text-orange-400 mb-2"/>
+                          <p className="text-xs font-bold uppercase text-slate-400">Checkouts Abertos</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.ic.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-orange-400/80 mt-1 bg-orange-400/10 px-2 py-0.5 rounded-full">{kpis.pageViews > 0 ? ((kpis.ic / kpis.pageViews)*100).toFixed(1) : 0}% das visitas</p>
+                          <div className="hidden sm:block absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/10"><ChevronRight className="w-6 h-6"/></div>
+                       </div>
+               
+                       {/* Purchases */}
+                       <div className="flex-1 w-full flex flex-col items-center text-center bg-[#14151a] border border-white/5 rounded-xl p-4 relative">
+                          <DollarSign className="w-6 h-6 text-green-400 mb-2"/>
+                          <p className="text-xs font-bold uppercase text-slate-400">Compras Pagas</p>
+                          <p className="text-2xl font-headline font-bold text-slate-200 mt-1">{kpis.purchases.toLocaleString('pt-BR')}</p>
+                          <p className="text-[10px] font-bold text-green-400/80 mt-1 bg-green-400/10 px-2 py-0.5 rounded-full">{kpis.ic > 0 ? ((kpis.purchases / kpis.ic)*100).toFixed(1) : 0}% de conv. do IC</p>
+                       </div>
+               
+                     </div>
+                   </Card>
+                 </div>
+               )}
             </TabsContent>
 
             {/* ABA: META ADS */}
@@ -1444,6 +1552,50 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
           <DialogFooter>
             <Button variant="ghost" onClick={() => setConfirmModal(null)} disabled={updating}>Cancelar</Button>
             <Button className="bg-primary text-white font-bold" onClick={confirmToggleStatus} disabled={updating}>Confirmar Ação</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Layout Config Modal */}
+      <Dialog open={layoutModal} onOpenChange={setLayoutModal}>
+        <DialogContent className="bg-[#14151a] border-white/10 text-white max-w-md">
+          <DialogHeader>
+             <DialogTitle>Personalizar Dashboard</DialogTitle>
+             <DialogDescription>Marque as métricas que deseja exibir na tela principal do produto.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-4 max-h-[60vh] overflow-y-auto">
+             {[
+               {id: 'revenue', label: 'Faturamento Bruto'},
+               {id: 'pending', label: 'Faturamento Pendente'},
+               {id: 'spend', label: 'Gasto Ads'},
+               {id: 'costs', label: 'Custos & Taxas'},
+               {id: 'profit', label: 'Lucro Líquido'},
+               {id: 'roi', label: 'ROI'},
+               {id: 'roas', label: 'ROAS'},
+               {id: 'cpa', label: 'CPA'},
+               {id: 'cpc', label: 'CPC'},
+               {id: 'cpm', label: 'CPM'},
+               {id: 'ctr', label: 'CTR'},
+               {id: 'arpu', label: 'Ticket Médio (ARPU)'},
+               {id: 'last_sale', label: 'Última Venda / Origem'},
+               {id: 'funnel', label: 'Funil Visual'}
+             ].map(item => (
+               <label key={item.id} className="flex items-center space-x-2 bg-[#1a1c23] p-3 rounded border border-white/5 cursor-pointer hover:bg-white/5">
+                 <Checkbox 
+                   checked={visibleCards.includes(item.id)} 
+                   onCheckedChange={(checked) => {
+                     let newVis = [...visibleCards];
+                     if (checked) newVis.push(item.id);
+                     else newVis = newVis.filter(v => v !== item.id);
+                     setVisibleCards(newVis);
+                     localStorage.setItem(`dashboard_layout_${id}`, JSON.stringify(newVis));
+                   }} 
+                 />
+                 <span className="text-sm select-none">{item.label}</span>
+               </label>
+             ))}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setLayoutModal(false)} className="w-full">Pronto</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
