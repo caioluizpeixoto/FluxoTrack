@@ -348,19 +348,41 @@ export default function ProductDetail() {
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
     const item = liveMetrics[level].find((m: any) => m[idKey] === idVal);
-    if (!item) return { spend: 0, purchases: 0, revenue: 0, roas: 0, cpa: 0, status: 'UNKNOWN', name: 'N/A' };
+    if (!item) return { spend: 0, purchases: 0, revenue: 0, roas: 0, cpa: 0, clicks: 0, impressions: 0, ctr: 0, cpc: 0, cpv: 0, cpi: 0, ic: 0, roi: 0, status: 'UNKNOWN', name: 'N/A', daily_budget: 0, lifetime_budget: 0 };
     
     const spend = Number(item.spend || 0);
-    let purchases = 0, revenue = 0;
+    const clicks = Number(item.clicks || 0);
+    const impressions = Number(item.impressions || 0);
+    const ctr = Number(item.ctr || 0);
+    const cpc = Number(item.cpc || 0);
+
+    let purchases = 0, revenue = 0, videoViews = 0, checkoutInits = 0;
     if (item.actions) {
       const pAction = item.actions.find((a: any) => a.action_type === 'purchase');
       if (pAction) purchases = Number(pAction.value || 0);
+      const vAction = item.actions.find((a: any) => a.action_type === 'video_view');
+      if (vAction) videoViews = Number(vAction.value || 0);
+      const cAction = item.actions.find((a: any) => a.action_type === 'initiate_checkout');
+      if (cAction) checkoutInits = Number(cAction.value || 0);
     }
     if (item.action_values) {
       const pRev = item.action_values.find((a: any) => a.action_type === 'purchase');
       if (pRev) revenue = Number(pRev.value || 0);
     }
-    return { spend, purchases, revenue, roas: spend > 0 ? revenue / spend : 0, cpa: purchases > 0 ? spend / purchases : 0, status: item.status, name: item.name, daily_budget: Number(item.daily_budget || 0) / 100, lifetime_budget: Number(item.lifetime_budget || 0) / 100 };
+
+    const roas = spend > 0 ? revenue / spend : 0;
+    const cpa = purchases > 0 ? spend / purchases : 0;
+    const cpv = videoViews > 0 ? spend / videoViews : 0;
+    const cpi = checkoutInits > 0 ? spend / checkoutInits : 0;
+    const ic = clicks > 0 ? (purchases / clicks) * 100 : 0;
+    const roi = spend > 0 ? ((revenue - spend) / spend) * 100 : 0;
+
+    return { 
+      spend, purchases, revenue, roas, cpa, clicks, impressions, ctr, cpc, cpv, cpi, ic, roi,
+      status: item.status, name: item.name, 
+      daily_budget: Number(item.daily_budget || 0) / 100, 
+      lifetime_budget: Number(item.lifetime_budget || 0) / 100 
+    };
   };
 
   // Status and Budget Modals
@@ -663,13 +685,23 @@ export default function ProductDetail() {
                 <table className="w-full text-sm text-left whitespace-nowrap">
                   <thead className="bg-[#14151a] text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-md">
                     <tr>
-                      <th className="px-4 py-3 w-10"></th>
-                      <th className="px-4 py-3 w-10">Status</th>
-                      <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3 text-center">Orçamento</th>
-                      <th className="px-4 py-3 text-right">Gasto</th>
-                      <th className="px-4 py-3 text-right">CPA</th>
-                      <th className="px-4 py-3 text-right">ROAS</th>
+                      <th className="px-3 py-3 w-10"></th>
+                      <th className="px-3 py-3 w-10">Status</th>
+                      <th className="px-3 py-3 min-w-[180px]">Nome</th>
+                      <th className="px-3 py-3 text-center min-w-[120px]">Orçamento</th>
+                      <th className="px-3 py-3 text-right">Gasto</th>
+                      <th className="px-3 py-3 text-right">Vendas</th>
+                      <th className="px-3 py-3 text-right">Faturamento</th>
+                      <th className="px-3 py-3 text-right">ROI</th>
+                      <th className="px-3 py-3 text-right">ROAS</th>
+                      <th className="px-3 py-3 text-right">CPA</th>
+                      <th className="px-3 py-3 text-right">CPC</th>
+                      <th className="px-3 py-3 text-right">CTR</th>
+                      <th className="px-3 py-3 text-right">IC</th>
+                      <th className="px-3 py-3 text-right">Cliques</th>
+                      <th className="px-3 py-3 text-right">Impressões</th>
+                      <th className="px-3 py-3 text-right">CPV</th>
+                      <th className="px-3 py-3 text-right">CPI</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -678,21 +710,31 @@ export default function ProductDetail() {
                       const isSelected = selectedCampaignIds.includes(c.campaign_id);
                       return (
                         <tr key={c.campaign_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
-                          <td className="px-4 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                          <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
                              if (checked) setSelectedCampaignIds(prev => [...prev, c.campaign_id]);
                              else setSelectedCampaignIds(prev => prev.filter(id => id !== c.campaign_id));
                           }}/></td>
-                          <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
-                          <td className="px-4 py-2 font-medium">{c.campaign_name}</td>
-                          <td className="px-4 py-2 text-center font-mono text-slate-300">
+                          <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
+                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
+                          <td className="px-3 py-2 text-center font-mono text-slate-300">
                              <div className="flex items-center justify-center gap-2">
                                <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
                         </tr>
                       );
                     })}
@@ -701,21 +743,31 @@ export default function ProductDetail() {
                       const isSelected = selectedAdsetIds.includes(a.adset_id);
                       return (
                         <tr key={a.adset_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
-                          <td className="px-4 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                          <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
                              if (checked) setSelectedAdsetIds(prev => [...prev, a.adset_id]);
                              else setSelectedAdsetIds(prev => prev.filter(id => id !== a.adset_id));
                           }}/></td>
-                          <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
-                          <td className="px-4 py-2 font-medium">{a.adset_name}</td>
-                          <td className="px-4 py-2 text-center font-mono text-slate-300">
+                          <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
+                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.adset_name}</td>
+                          <td className="px-3 py-2 text-center font-mono text-slate-300">
                              <div className="flex items-center justify-center gap-2">
                                <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
                         </tr>
                       );
                     })}
@@ -726,13 +778,23 @@ export default function ProductDetail() {
                       const m = getMetric('ads', 'ad_id', a.ad_id);
                       return (
                         <tr key={a.ad_id} className="hover:bg-white/5">
-                          <td className="px-4 py-2"></td>
-                          <td className="px-4 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
-                          <td className="px-4 py-2 font-medium">{a.ad_name}</td>
-                          <td className="px-4 py-2 text-center font-mono text-slate-300">-</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.spend)}</td>
-                          <td className="px-4 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-4 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2"></td>
+                          <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
+                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.ad_name}</td>
+                          <td className="px-3 py-2 text-center font-mono text-slate-300">-</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 0 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(1)}%</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
                         </tr>
                       );
                     })}
