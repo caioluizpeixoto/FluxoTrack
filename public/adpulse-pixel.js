@@ -37,10 +37,14 @@
   const scripts = document.getElementsByTagName('script');
   let currentScript = null;
   let productId = '';
+  let customIcText = '';
+  let customIcUrl = '';
   for (let i = 0; i < scripts.length; i++) {
     if (scripts[i].src && scripts[i].src.indexOf('adpulse-pixel.js') > -1) {
       currentScript = scripts[i];
       productId = currentScript.getAttribute('data-product-id') || '';
+      customIcText = (currentScript.getAttribute('data-ic-text') || '').toLowerCase();
+      customIcUrl = (currentScript.getAttribute('data-ic-url') || '').toLowerCase();
       break;
     }
   }
@@ -96,17 +100,25 @@
       const className = (target.className || '').toLowerCase();
 
       // Check if it looks like a checkout button
-      const isCheckout = 
-        text.includes('comprar') || 
-        text.includes('quero') || 
-        text.includes('checkout') || 
-        text.includes('assinar') || 
-        href.includes('pay.') || 
-        href.includes('checkout') || 
-        href.includes('hotmart.com') || 
-        href.includes('kiwify.com') ||
-        href.includes('perfectpay.com') ||
-        href.includes('wiapy.com');
+      let isCheckout = false;
+      
+      if (customIcText && text.includes(customIcText)) isCheckout = true;
+      if (customIcUrl && href.includes(customIcUrl)) isCheckout = true;
+
+      if (!customIcText && !customIcUrl) {
+        // Fallback defaults se o usuário não configurou
+        isCheckout = 
+          text.includes('comprar') || 
+          text.includes('quero') || 
+          text.includes('checkout') || 
+          text.includes('assinar') || 
+          href.includes('pay.') || 
+          href.includes('checkout') || 
+          href.includes('hotmart.com') || 
+          href.includes('kiwify.com') ||
+          href.includes('perfectpay.com') ||
+          href.includes('wiapy.com');
+      }
 
       if (isCheckout) {
         sendEvent('InitiateCheckout', { 
