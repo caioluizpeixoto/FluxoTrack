@@ -383,13 +383,28 @@ export default function ProductDetail() {
     });
 
     let productsSoldToday = 0;
+    const productsSalesMap: Record<string, number> = {};
+
     events.filter(e => e.event_type === 'purchase' && e.status === 'approved').forEach(e => {
        const d = new Date(e.created_at);
        const now = new Date();
        if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
           productsSoldToday += 1;
+          
+          let pName = product?.name || 'Produto Principal';
+          if (e.raw_payload?.product?.title) {
+             pName = e.raw_payload.product.title;
+          } else if (e.raw_payload?.checkout?.title) {
+             pName = e.raw_payload.checkout.title;
+          }
+          
+          productsSalesMap[pName] = (productsSalesMap[pName] || 0) + 1;
        }
     });
+
+    const productsSoldList = Object.entries(productsSalesMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a,b) => b.count - a.count);
     
     // Título do produto
     let lastSaleProduct = product?.name || 'Nenhum';
@@ -423,7 +438,7 @@ export default function ProductDetail() {
     return { 
       spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, 
       prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr, arpu, 
-      lastSaleProduct, productsSoldToday, clicks, impressions, ic, pageViews 
+      lastSaleProduct, productsSoldToday, productsSoldList, clicks, impressions, ic, pageViews 
     };
   }, [liveMetrics, product, taxes, expenses, events, datePreset]);
 
@@ -875,14 +890,36 @@ export default function ProductDetail() {
                  {visibleCards.includes('cpm') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>}
                  {visibleCards.includes('ctr') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
                  {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
-                 {visibleCards.includes('last_sale') && (
-                   <Card className="flex-1 min-w-[180px] bg-[#1a1c23] border-white/5 p-3 flex flex-col justify-center text-center">
-                     <p className="text-xs text-slate-400 mb-1">Produtos Vendidos (Hoje)</p>
-                     <p className="text-sm font-bold text-slate-200 truncate" title={kpis.lastSaleProduct}>{kpis.lastSaleProduct}</p>
-                     <p className="text-xs text-muted-foreground uppercase tracking-wider mt-1 truncate">{kpis.productsSoldToday} venda{kpis.productsSoldToday !== 1 ? 's' : ''}</p>
-                   </Card>
-                 )}
                </div>
+
+               {/* Vendas por Produto (Hoje) */}
+               {visibleCards.includes('last_sale') && (
+                 <Card className="w-full bg-[#1a1c23] border-white/5 p-4 mb-6">
+                   <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                     <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Produto (Hoje)</h3>
+                     <span className="text-xs text-muted-foreground">{kpis.productsSoldList.length} produto{kpis.productsSoldList.length !== 1 ? 's' : ''}</span>
+                   </div>
+                   <div className="space-y-2">
+                     <div className="flex justify-between text-[10px] uppercase text-slate-500 font-bold px-2">
+                       <span>Produto</span>
+                       <span>Vendas</span>
+                     </div>
+                     {kpis.productsSoldList.map((p: any, i: number) => (
+                       <div key={i} className="flex justify-between items-center bg-[#0f1115] p-2 rounded border border-white/5 text-sm">
+                         <span className="font-medium text-slate-200 truncate pr-4">{p.name}</span>
+                         <span className="font-bold">{p.count}</span>
+                       </div>
+                     ))}
+                     {kpis.productsSoldList.length === 0 && (
+                       <div className="text-center py-4 text-sm text-slate-500">Nenhuma venda aprovada hoje.</div>
+                     )}
+                     <div className="flex justify-between items-center p-2 text-sm font-bold border-t border-white/5 mt-2 text-slate-300">
+                       <span>Total</span>
+                       <span>{kpis.productsSoldToday}</span>
+                     </div>
+                   </div>
+                 </Card>
+               )}
 
                {/* Funil de Vendas */}
                {visibleCards.includes('funnel') && (
