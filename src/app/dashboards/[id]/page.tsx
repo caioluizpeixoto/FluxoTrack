@@ -331,15 +331,9 @@ export default function DashboardDetails() {
               <label className="text-sm font-medium">Nome do Produto</label>
               <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Curso de Vendas" className="bg-[#0f1115] border-white/10" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Preço de Venda (R$)</label>
-                <Input type="number" step="0.01" value={price} onChange={e => setPrice(e.target.value)} placeholder="97.00" className="bg-[#0f1115] border-white/10" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Custo do Produto (R$)</label>
-                <Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" className="bg-[#0f1115] border-white/10" />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Custo do Produto (R$)</label>
+              <Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" className="bg-[#0f1115] border-white/10" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Conta de Anúncios Principal</label>
