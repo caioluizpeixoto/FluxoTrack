@@ -60,6 +60,14 @@ export default function ProductDetail() {
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdsetIds, setSelectedAdsetIds] = useState<string[]>([]);
 
+  // Vendas Tab State
+  const [salesSearch, setSalesSearch] = useState("");
+  const [salesDateFilter, setSalesDateFilter] = useState("hoje");
+  const [salesDateStart, setSalesDateStart] = useState("");
+  const [salesDateEnd, setSalesDateEnd] = useState("");
+  const [salesPage, setSalesPage] = useState(1);
+  const [selectedSaleForModal, setSelectedSaleForModal] = useState<any>(null);
+
   // Layout State
   const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'meta_balance', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
   const [visibleCards, setVisibleCards] = useState<string[]>(defaultLayout);
@@ -355,35 +363,36 @@ export default function ProductDetail() {
     let realRevenue = 0, realPurchases = 0;
     let pendingPurchases = 0, pendingRevenue = 0;
     
-    events.filter(e => e.event_type === 'purchase' && isEventInDateRange(e.created_at)).forEach(e => {
-       if (e.status === 'approved') {
+    events.filter(e => e.event_type === 'purchase').forEach(e => {
+       const isToday = () => {
+         const d = new Date(e.created_at);
+         const now = new Date();
+         return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+       };
+
+       if (isEventInDateRange(e.created_at) && e.status === 'approved') {
          realRevenue += Number(e.event_value || 0);
          realPurchases += 1;
-       } else if (e.status === 'pending' || e.status === 'generated') {
+       } 
+       
+       // Sempre pega pendentes apenas de hoje, independente do datePreset global
+       if (isToday() && (e.status === 'pending' || e.status === 'generated')) {
          pendingRevenue += Number(e.event_value || 0);
          pendingPurchases += 1;
        }
     });
 
-    const lastSale = events.find(e => e.status === 'approved' && e.event_type === 'purchase');
-    let lastSaleProduct = 'Nenhum';
-    let lastSaleSource = 'Desconhecido';
+    let productsSoldToday = 0;
+    events.filter(e => e.event_type === 'purchase' && e.status === 'approved').forEach(e => {
+       const d = new Date(e.created_at);
+       const now = new Date();
+       if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+          productsSoldToday += 1;
+       }
+    });
     
-    if (lastSale && lastSale.raw_payload) {
-      const payload = lastSale.raw_payload;
-      if (payload.product?.title || payload.product?.name) {
-         lastSaleProduct = payload.product.title || payload.product.name;
-      } else if (payload.checkout?.title) {
-         lastSaleProduct = payload.checkout.title;
-      }
-      if (payload.tracking) {
-         const source = payload.tracking.utm_source || 'Orgânico';
-         const medium = payload.tracking.utm_medium || '';
-         lastSaleSource = medium ? `${source} / ${medium}` : source;
-      } else {
-         lastSaleSource = 'Orgânico / Direto';
-      }
-    }
+    // Título do produto
+    let lastSaleProduct = product?.name || 'Nenhum';
 
     if (realPurchases === 0 && liveMetrics.campaigns.length > 0) {
       liveMetrics.campaigns.forEach(c => {
@@ -414,7 +423,7 @@ export default function ProductDetail() {
     return { 
       spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, 
       prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr, arpu, 
-      lastSaleProduct, lastSaleSource, clicks, impressions, ic, pageViews 
+      lastSaleProduct, productsSoldToday, clicks, impressions, ic, pageViews 
     };
   }, [liveMetrics, product, taxes, expenses, events, datePreset]);
 
@@ -500,6 +509,54 @@ export default function ProductDetail() {
       lifetime_budget: Number(item.lifetime_budget || 0) / 100 
     };
   };
+
+  // Vendas Filtering & Pagination
+  const filteredSales = useMemo(() => {
+    let result = events;
+    
+    // Filter by Date
+    if (salesDateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      result = result.filter(e => {
+        const d = new Date(e.created_at);
+        if (salesDateFilter === 'hoje') {
+          return d >= today;
+        } else if (salesDateFilter === '30dias') {
+          const last30 = new Date(today);
+          last30.setDate(last30.getDate() - 30);
+          return d >= last30;
+        } else if (salesDateFilter === 'custom') {
+          if (salesDateStart && salesDateEnd) {
+            const start = new Date(salesDateStart + 'T00:00:00');
+            const end = new Date(salesDateEnd + 'T23:59:59');
+            return d >= start && d <= end;
+          }
+        }
+        return true;
+      });
+    }
+
+    // Filter by Search
+    if (salesSearch.trim()) {
+      const q = salesSearch.toLowerCase();
+      result = result.filter(e => 
+        (e.customer_name || '').toLowerCase().includes(q) || 
+        (e.customer_email || '').toLowerCase().includes(q)
+      );
+    }
+    
+    return result;
+  }, [events, salesDateFilter, salesDateStart, salesDateEnd, salesSearch]);
+
+  const salesItemsPerPage = 10;
+  const paginatedSales = useMemo(() => {
+    const start = (salesPage - 1) * salesItemsPerPage;
+    return filteredSales.slice(start, start + salesItemsPerPage);
+  }, [filteredSales, salesPage]);
+
+  const totalSalesPages = Math.ceil(filteredSales.length / salesItemsPerPage);
 
   // Status and Budget Modals
   const confirmToggleStatus = async () => {
@@ -820,9 +877,9 @@ export default function ProductDetail() {
                  {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
                  {visibleCards.includes('last_sale') && (
                    <Card className="flex-1 min-w-[180px] bg-[#1a1c23] border-white/5 p-3 flex flex-col justify-center text-center">
-                     <p className="text-xs text-slate-400 mb-1">Última Venda</p>
+                     <p className="text-xs text-slate-400 mb-1">Produtos Vendidos (Hoje)</p>
                      <p className="text-sm font-bold text-slate-200 truncate" title={kpis.lastSaleProduct}>{kpis.lastSaleProduct}</p>
-                     <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-1 truncate" title={kpis.lastSaleSource}>Via: {kpis.lastSaleSource}</p>
+                     <p className="text-xs text-muted-foreground uppercase tracking-wider mt-1 truncate">{kpis.productsSoldToday} venda{kpis.productsSoldToday !== 1 ? 's' : ''}</p>
                    </Card>
                  )}
                </div>
@@ -1040,15 +1097,47 @@ export default function ProductDetail() {
                    <p className="text-sm text-slate-400">Histórico de compras aprovadas e pendentes (PIX e Boleto).</p>
                  </div>
 
+                 <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                   <div className="flex-1 relative">
+                     <Input 
+                       placeholder="Buscar por nome ou email..." 
+                       value={salesSearch} 
+                       onChange={e => { setSalesSearch(e.target.value); setSalesPage(1); }}
+                       className="w-full bg-[#1a1c23] border-white/10 pl-10"
+                     />
+                     <MousePointerClick className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                   </div>
+                   <div className="flex items-center gap-2">
+                     <Select value={salesDateFilter} onValueChange={val => { setSalesDateFilter(val); setSalesPage(1); }}>
+                       <SelectTrigger className="w-[160px] bg-[#1a1c23] border-white/10">
+                         <SelectValue placeholder="Período" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         <SelectItem value="all">Todo o período</SelectItem>
+                         <SelectItem value="hoje">Hoje</SelectItem>
+                         <SelectItem value="30dias">Últimos 30 dias</SelectItem>
+                         <SelectItem value="custom">Personalizado</SelectItem>
+                       </SelectContent>
+                     </Select>
+                     
+                     {salesDateFilter === 'custom' && (
+                       <div className="flex gap-2">
+                         <Input type="date" value={salesDateStart} onChange={e => { setSalesDateStart(e.target.value); setSalesPage(1); }} className="bg-[#1a1c23] border-white/10" />
+                         <Input type="date" value={salesDateEnd} onChange={e => { setSalesDateEnd(e.target.value); setSalesPage(1); }} className="bg-[#1a1c23] border-white/10" />
+                       </div>
+                     )}
+                   </div>
+                 </div>
+
                  <div className="border border-white/10 rounded-xl bg-[#1a1c23] overflow-hidden">
                     <h3 className="font-bold text-sm p-4 border-b border-white/5 flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-primary" /> Vendas Recebidas
-                      <span className="ml-auto text-xs text-muted-foreground font-normal">{events.length} venda{events.length !== 1 ? 's' : ''}</span>
+                      <span className="ml-auto text-xs text-muted-foreground font-normal">{filteredSales.length} venda{filteredSales.length !== 1 ? 's' : ''}</span>
                     </h3>
-                    {events.length === 0 ? (
+                    {filteredSales.length === 0 ? (
                       <div className="py-12 text-center">
                         <DollarSign className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-50" />
-                        <p className="text-sm text-muted-foreground">Nenhuma venda recebida ainda.</p>
+                        <p className="text-sm text-muted-foreground">Nenhuma venda encontrada para os filtros aplicados.</p>
                       </div>
                     ) : (
                       <div className="overflow-x-auto overflow-y-auto max-h-[600px] relative">
@@ -1065,7 +1154,7 @@ export default function ProductDetail() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-white/5">
-                            {events.map(e => {
+                            {paginatedSales.map(e => {
                               const rawMethod = String(e.raw_payload?.payment?.payment_method || e.raw_payload?.payment?.paymentMethod || e.raw_payload?.payment?.method || e.raw_payload?.payment_method_type || e.raw_payload?.payment_method || e.raw_payload?.payment?.type || e.raw_payload?.checkout?.payment_method || e.raw_payload?.event || e.event_type || 'Desconhecido').toLowerCase();
                               let methodIcon = null;
                               let methodName = 'Desconhecido';
@@ -1090,7 +1179,11 @@ export default function ProductDetail() {
                               return (
                                 <tr key={e.id} className="hover:bg-white/5">
                                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(e.created_at).toLocaleString('pt-BR')}</td>
-                                  <td className="px-4 py-3 font-medium text-slate-200 max-w-[150px] sm:max-w-[200px] truncate" title={e.customer_name || ''}>{e.customer_name || '—'}</td>
+                                  <td className="px-4 py-3 font-medium text-slate-200 max-w-[150px] sm:max-w-[200px] truncate" title={e.customer_name || ''}>
+                                    <button onClick={() => setSelectedSaleForModal(e)} className="hover:underline hover:text-primary text-left truncate w-full">
+                                      {e.customer_name || '—'}
+                                    </button>
+                                  </td>
                                   <td className="px-4 py-3 text-xs text-slate-400 max-w-[150px] sm:max-w-[200px] truncate" title={e.customer_email || ''}>{e.customer_email || '—'}</td>
                                   <td className="px-4 py-3 text-xs text-slate-400">{phone}</td>
                                   <td className="px-4 py-3">
@@ -1114,6 +1207,30 @@ export default function ProductDetail() {
                             })}
                           </tbody>
                         </table>
+                      </div>
+                    )}
+                    
+                    {totalSalesPages > 1 && (
+                      <div className="flex items-center justify-between p-4 border-t border-white/5">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          disabled={salesPage === 1}
+                          onClick={() => setSalesPage(prev => Math.max(1, prev - 1))}
+                          className="bg-transparent border-white/10"
+                        >
+                          Anterior
+                        </Button>
+                        <span className="text-xs text-muted-foreground">Página {salesPage} de {totalSalesPages}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          disabled={salesPage === totalSalesPages}
+                          onClick={() => setSalesPage(prev => Math.min(totalSalesPages, prev + 1))}
+                          className="bg-transparent border-white/10"
+                        >
+                          Próxima
+                        </Button>
                       </div>
                     )}
                  </div>
@@ -1666,6 +1783,75 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Sale Details Modal */}
+      <Dialog open={!!selectedSaleForModal} onOpenChange={(open) => !open && setSelectedSaleForModal(null)}>
+        <DialogContent className="bg-[#14151a] border-white/10 text-white max-w-lg">
+          <DialogHeader>
+             <DialogTitle>Detalhes da Compra</DialogTitle>
+             <DialogDescription>
+               Itens adquiridos por <strong className="text-white">{selectedSaleForModal?.customer_name}</strong>
+             </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+             {selectedSaleForModal?.raw_payload?.product?.title && (
+               <div className="bg-[#1a1c23] p-4 rounded-lg border border-white/5">
+                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Produto Principal</p>
+                 <p className="font-medium">{selectedSaleForModal.raw_payload.product.title}</p>
+                 {selectedSaleForModal.raw_payload.plan?.title && (
+                   <p className="text-sm text-slate-400 mt-1">Plano: {selectedSaleForModal.raw_payload.plan.title}</p>
+                 )}
+               </div>
+             )}
+             
+             {selectedSaleForModal?.raw_payload?.checkout?.title && !selectedSaleForModal?.raw_payload?.product?.title && (
+               <div className="bg-[#1a1c23] p-4 rounded-lg border border-white/5">
+                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Produto Principal</p>
+                 <p className="font-medium">{selectedSaleForModal.raw_payload.checkout.title}</p>
+               </div>
+             )}
+
+             {selectedSaleForModal?.raw_payload?.products && selectedSaleForModal.raw_payload.products.length > 0 && (
+                <div className="bg-[#1a1c23] p-4 rounded-lg border border-white/5">
+                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Produtos no Checkout</p>
+                 <ul className="space-y-2">
+                   {selectedSaleForModal.raw_payload.products.map((p: any, i: number) => (
+                     <li key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                       <span>{p.title || p.name}</span>
+                       {p.price !== undefined && <span className="font-mono text-green-400">{formatCurrency(p.price)}</span>}
+                     </li>
+                   ))}
+                 </ul>
+               </div>
+             )}
+
+             {selectedSaleForModal?.raw_payload?.checkout?.orderbump && (
+               <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                 <p className="text-xs text-primary uppercase tracking-wider mb-2 font-bold flex items-center gap-2">
+                   <Plus className="w-3 h-3"/> Order Bump Adquirido
+                 </p>
+                 <p className="font-medium text-sm">{selectedSaleForModal.raw_payload.checkout.orderbump.title || 'Oferta Adicional'}</p>
+                 {selectedSaleForModal.raw_payload.checkout.orderbump.price !== undefined && (
+                   <p className="text-xs text-green-400 mt-1 font-mono">{formatCurrency(selectedSaleForModal.raw_payload.checkout.orderbump.price)}</p>
+                 )}
+               </div>
+             )}
+             
+             {/* Fallback caso não tenha produtos listados */}
+             {!selectedSaleForModal?.raw_payload?.product?.title && 
+              !selectedSaleForModal?.raw_payload?.checkout?.title && 
+              (!selectedSaleForModal?.raw_payload?.products || selectedSaleForModal.raw_payload.products.length === 0) && (
+               <div className="bg-[#1a1c23] p-4 rounded-lg border border-white/5 text-center text-slate-400 text-sm">
+                 Nenhum detalhe de produto especificado no payload desta compra.
+               </div>
+             )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setSelectedSaleForModal(null)} className="w-full">Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Layout Config Modal */}
       <Dialog open={layoutModal} onOpenChange={setLayoutModal}>
         <DialogContent className="bg-[#14151a] border-white/10 text-white max-w-md">
