@@ -57,8 +57,9 @@ export function NotificationListener() {
 
             // 2. Envia notificação push via OneSignal (funciona em mobile/PWA mesmo com app fechado)
             if (notificationsEnabled) {
-              const title = isApproved ? "💰 Venda Aprovada!" : "⏳ Venda Pendente!";
-              const message = `R$ ${Number(newEvent.event_value || 0).toFixed(2)} | ${newEvent.customer_name || newEvent.customer_email || "Cliente"}`;
+              const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(newEvent.event_value || 0));
+              const title = isApproved ? `💰 Venda Aprovada: ${formattedPrice}` : `⏳ Venda Pendente: ${formattedPrice}`;
+              const message = `Cliente: ${newEvent.customer_name || newEvent.customer_email || "Não informado"}`;
 
               fetch("/api/notify", {
                 method: "POST",
@@ -71,9 +72,10 @@ export function NotificationListener() {
 
 
             // 3. Exibe Toast em tela dentro do App
+            const toastPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(newEvent.event_value || 0));
             toast({
-              title: isApproved ? "💰 Venda Aprovada!" : "⏳ Venda Pendente!",
-              description: `Recebemos um evento de R$ ${Number(newEvent.event_value || 0).toFixed(2)}`,
+              title: isApproved ? `💰 Venda Aprovada: ${toastPrice}` : `⏳ Venda Pendente: ${toastPrice}`,
+              description: `Cliente: ${newEvent.customer_name || newEvent.customer_email || "Não informado"}`,
             });
           }
         }
