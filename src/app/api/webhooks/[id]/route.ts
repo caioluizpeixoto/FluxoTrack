@@ -188,6 +188,7 @@ export async function POST(
     } catch (e) {
       console.error('Erro no envio do OneSignal:', e);
     }
+    }
 
     return NextResponse.json({ success: true, message: 'Conversão registrada' });
   } catch (error) {
