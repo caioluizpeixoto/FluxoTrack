@@ -189,6 +189,38 @@ export async function POST(
       }
     }
 
+    // ----------------------------------------------------------------------
+    // Disparo de Notificação Push OneSignal (Background)
+    // ----------------------------------------------------------------------
+    if (finalType === 'purchase') {
+      try {
+        const onesignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+        const onesignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
+        if (onesignalAppId && onesignalApiKey) {
+          const title = status === 'approved' ? 'Venda Aprovada! 💰' : 'Venda Pendente! ⏳';
+          const msg = `Nova venda no produto ${product.name} no valor de ${currency} ${eventValue.toFixed(2)}`;
+          await fetch('https://onesignal.com/api/v1/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${onesignalApiKey}`
+            },
+            body: JSON.stringify({
+              app_id: onesignalAppId,
+              include_aliases: {
+                external_id: [product.user_id]
+              },
+              target_channel: 'push',
+              headings: { en: title, pt: title },
+              contents: { en: msg, pt: msg }
+            })
+          });
+        }
+      } catch (e) {
+        console.error('Erro no envio do OneSignal:', e);
+      }
+    }
+
     return NextResponse.json({ success: true, message: 'Event logged successfully' }, { status: 200 });
 
   } catch (error: any) {

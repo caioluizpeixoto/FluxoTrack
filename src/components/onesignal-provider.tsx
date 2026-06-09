@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import OneSignal from "react-onesignal";
 
+import { useUser } from "@/firebase";
+
 let initialized = false;
 
 export function OneSignalProvider() {
@@ -30,6 +32,15 @@ export function OneSignalProvider() {
         console.error("[OneSignal] Erro ao inicializar:", err);
       });
   }, []);
+
+  const { user } = useUser();
+  useEffect(() => {
+    if (initialized && user?.uid) {
+       OneSignal.login(user.uid).catch(console.error);
+    } else if (initialized && !user) {
+       OneSignal.logout().catch(console.error);
+    }
+  }, [user]);
 
   return null;
 }
