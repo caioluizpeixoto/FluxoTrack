@@ -43,6 +43,17 @@ export async function POST(req: NextRequest) {
     if (level === 'account' || level === 'all') {
       try {
         const details = await getAccountDetails(accountId, token);
+        
+        let prepaid_balance = null;
+        if (details.funding_source_details?.display_string) {
+          // Extracts amounts like "R$49,99" or "R$ 49,99" or "US$ 10.50"
+          const match = details.funding_source_details.display_string.match(/[\d.,]+/);
+          if (match) {
+            // Converts "49,99" to 49.99
+            prepaid_balance = parseFloat(match[0].replace(/\./g, '').replace(',', '.'));
+          }
+        }
+        details.prepaid_balance = prepaid_balance;
         accountData = details;
         
         // Opcional: já atualizar o supabase_admin com esse balance.

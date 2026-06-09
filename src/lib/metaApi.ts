@@ -247,7 +247,7 @@ export async function getCampaignInsights(
 export async function getAccountDetails(accountId: string, accessToken: string) {
   // Limpa o prefixo act_ se já vier com ele, ou garante que tenha
   const id = accountId.startsWith('act_') ? accountId : `act_${accountId}`;
-  const response = await fetchMetaApi(`${id}?fields=id,name,currency,account_status,balance,amount_spent,spend_cap,timezone_name`, accessToken);
+  const response = await fetchMetaApi(`${id}?fields=id,name,currency,account_status,balance,amount_spent,spend_cap,timezone_name,funding_source_details`, accessToken);
   return response;
 }
 

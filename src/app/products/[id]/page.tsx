@@ -224,7 +224,11 @@ export default function ProductDetail() {
           mergedAdsets = [...mergedAdsets, ...(data.insights.adsets || [])];
           mergedAds = [...mergedAds, ...(data.insights.ads || [])];
           if (data.accountData) {
-             totalBalance += (Number(data.accountData.balance || 0) / 100);
+             let accBalance = Number(data.accountData.balance || 0) / 100;
+             if (data.accountData.prepaid_balance !== undefined && data.accountData.prepaid_balance !== null) {
+                accBalance = data.accountData.prepaid_balance;
+             }
+             totalBalance += accBalance;
              totalSpent += (Number(data.accountData.amount_spent || 0) / 100);
           }
           if (data.accountError) {
