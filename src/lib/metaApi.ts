@@ -122,9 +122,14 @@ export function buildFacebookOAuthUrl(state?: string): string {
 export async function exchangeCodeForToken(
   code: string
 ): Promise<{ access_token: string; token_type: string; expires_in?: number }> {
-  const appId = process.env.FACEBOOK_APP_ID!;
-  const appSecret = process.env.FACEBOOK_APP_SECRET!;
+  const appId = process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
   const redirectUri = process.env.FACEBOOK_REDIRECT_URI ?? 'http://localhost:9002/auth/facebook/callback';
+
+  if (!appId || !appSecret) {
+    console.error('[Meta API] FACEBOOK_APP_ID ou FACEBOOK_APP_SECRET ausente no arquivo .env');
+    throw new Error('Configuração de credenciais do Facebook ausente no servidor. Verifique o arquivo .env.');
+  }
 
   const url = new URL(`${GRAPH_BASE}/oauth/access_token`);
   url.searchParams.set('client_id', appId);
@@ -134,7 +139,10 @@ export async function exchangeCodeForToken(
 
   const res = await fetch(url.toString());
   const data = await res.json();
-  if (data.error) throw new MetaApiError(data.error);
+  if (data.error) {
+    console.error('[Meta API] Erro ao trocar code por token:', data.error);
+    throw new MetaApiError(data.error);
+  }
   return data;
 }
 
@@ -144,8 +152,13 @@ export async function exchangeCodeForToken(
 export async function exchangeForLongLivedToken(
   shortLivedToken: string
 ): Promise<{ access_token: string; token_type: string; expires_in?: number }> {
-  const appId = process.env.FACEBOOK_APP_ID!;
-  const appSecret = process.env.FACEBOOK_APP_SECRET!;
+  const appId = process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.FACEBOOK_APP_SECRET;
+
+  if (!appId || !appSecret) {
+    console.error('[Meta API] FACEBOOK_APP_ID ou FACEBOOK_APP_SECRET ausente no arquivo .env');
+    throw new Error('Configuração de credenciais do Facebook ausente no servidor. Verifique o arquivo .env.');
+  }
 
   const url = new URL(`${GRAPH_BASE}/oauth/access_token`);
   url.searchParams.set('grant_type', 'fb_exchange_token');
@@ -155,7 +168,10 @@ export async function exchangeForLongLivedToken(
 
   const res = await fetch(url.toString());
   const data = await res.json();
-  if (data.error) throw new MetaApiError(data.error);
+  if (data.error) {
+    console.error('[Meta API] Erro ao obter long-lived token:', data.error);
+    throw new MetaApiError(data.error);
+  }
   return data;
 }
 
