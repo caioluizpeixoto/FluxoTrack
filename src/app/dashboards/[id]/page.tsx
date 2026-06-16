@@ -42,12 +42,18 @@ export default function DashboardDetails() {
 
   useEffect(() => {
     if (user && id) {
-      loadData();
+      loadData(true);
+      
+      // Real-time refresh a cada 30 segundos
+      const interval = setInterval(() => {
+        loadData(false);
+      }, 30000);
+      return () => clearInterval(interval);
     }
   }, [user, id]);
 
-  async function loadData() {
-    setLoading(true);
+  async function loadData(showLoading = true) {
+    if (showLoading) setLoading(true);
     try {
       const [dashRes, prodRes, accRes] = await Promise.all([
         supabase.from('dashboards').select('*').eq('id', id).single(),
@@ -91,8 +97,10 @@ export default function DashboardDetails() {
       const internalSales = events?.length || 0;
       const internalRevenue = events?.reduce((acc, e) => acc + Number(e.event_value || 0), 0) || 0;
 
-      // 2. Fetch Facebook Spend
+      // 2. Fetch Facebook Spend e Sales
       let spend = 0;
+      let metaRevenue = 0;
+      let metaSalesCount = 0;
       let accountIds: string[] = [];
       let campaignIds: string[] | undefined = undefined;
 
@@ -122,21 +130,35 @@ export default function DashboardDetails() {
             if (campaignIds) {
                camps = camps.filter((c: any) => campaignIds!.includes(c.campaign_id));
             }
-            spend += camps.reduce((acc: number, c: any) => acc + Number(c.spend || 0), 0);
+            camps.forEach((c: any) => {
+               spend += Number(c.spend || 0);
+               if (c.action_values) {
+                  const purchase = c.action_values.find((a:any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+                  if (purchase) metaRevenue += Number(purchase.value || 0);
+               }
+               if (c.actions) {
+                  const purchaseAction = c.actions.find((a:any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
+                  if (purchaseAction) metaSalesCount += Number(purchaseAction.value || 0);
+               }
+            });
           }
         }
       }
 
+      // Combina as métricas internas com as do Meta
+      const finalSales = Math.max(internalSales, metaSalesCount);
+      const finalRevenue = Math.max(internalRevenue, metaRevenue);
+
       // Calculate profit and ROI
-      const cost = internalSales * (prod.product_cost || 0);
-      const profit = internalRevenue - spend - cost;
+      const cost = finalSales * (prod.product_cost || 0);
+      const profit = finalRevenue - spend - cost;
       const roi = spend > 0 ? profit / spend : 0;
 
       setMetrics(prev => ({
         ...prev,
         [prod.id]: {
           spend,
-          sales: internalSales,
+          sales: finalSales,
           profit,
           roi,
           loaded: true

@@ -140,7 +140,7 @@ export function DashboardSidebar() {
               <div className="p-6 border-b border-white/5">
                 <LinkNext href="/" className="flex items-center gap-2 text-primary w-fit" onClick={() => setOpen(false)}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="https://i.ibb.co/Hf0r0WQs/Chat-GPT-Image-15-de-jun-de-2026-22-54-41.png" alt="FluxoFy Logo" className="w-8 h-8 object-contain" />
+                  <img src="https://i.ibb.co/BVb9Ltpc/Chat-GPT-Image-15-de-jun-de-2026-23-15-33.png" alt="FluxoFy Logo" className="w-8 h-8 object-contain" />
                   <span className="text-xl font-bold font-headline tracking-tighter">FluxoFy</span>
                 </LinkNext>
               </div>
