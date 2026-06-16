@@ -350,8 +350,10 @@ export default function ProductDetail() {
     let spend = 0, clicks = 0, impressions = 0, ic = 0, pageViews = 0;
     liveMetrics.campaigns.forEach(c => {
       spend += Number(c.spend || 0);
-      clicks += Number(c.clicks || 0);
       impressions += Number(c.impressions || 0);
+      
+      const linkClickAction = c.actions?.find((a:any) => a.action_type === 'link_click');
+      clicks += Number(linkClickAction?.value || 0);
       const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout');
       if (icAction) ic += Number(icAction.value || 0);
       const pvAction = c.actions?.find((a:any) => a.action_type === 'landing_page_view' || a.action_type === 'outbound_clicks');
@@ -447,7 +449,8 @@ export default function ProductDetail() {
     if (!item) return { spend: 0, purchases: 0, revenue: 0, roas: 0, cpa: 0, clicks: 0, impressions: 0, ctr: 0, cpc: 0, cpv: 0, cpi: 0, ic: 0, roi: 0, status: 'UNKNOWN', name: 'N/A', daily_budget: 0, lifetime_budget: 0 };
     
     const spend = Number(item.spend || 0);
-    const clicks = Number(item.clicks || 0);
+    const linkClickAction = item.actions?.find((a:any) => a.action_type === 'link_click');
+    const clicks = Number(linkClickAction?.value || 0);
     const impressions = Number(item.impressions || 0);
     const ctr = Number(item.ctr || 0);
     const cpc = Number(item.cpc || 0);
