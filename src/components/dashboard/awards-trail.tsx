@@ -58,10 +58,10 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
           
           <DialogHeader className="relative z-10">
-            <DialogTitle className="font-headline text-3xl flex items-center gap-3">
-              <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" /> Trilha de Premiações
+            <DialogTitle className="font-headline text-3xl font-black tracking-tight text-white drop-shadow-sm">
+              Trilha de Premiações
             </DialogTitle>
-            <DialogDescription className="text-slate-400 text-base">
+            <DialogDescription className="text-slate-400 text-base font-medium">
               Acompanhe seu faturamento total e desbloqueie placas exclusivas do FluxoFy.
             </DialogDescription>
           </DialogHeader>
@@ -132,7 +132,7 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
                       {/* Imagem da Placa */}
                       <div className={cn(
                         "w-full h-40 md:h-48 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden transition-all duration-700",
-                        !isUnlocked && "opacity-40 grayscale sepia-[0.3]"
+                        !isUnlocked && "opacity-75"
                       )}>
                         {/* Imagem Oficial da Placa */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -143,9 +143,9 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
                         />
                         
                         {!isUnlocked && (
-                          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center border border-white/10 rounded-xl">
-                            <Lock className="w-10 h-10 text-white/50 mb-2 drop-shadow-lg" />
-                            <span className="text-xs uppercase tracking-widest font-black text-white/70">Bloqueado</span>
+                          <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-xl">
+                            <Lock className="w-3 h-3 text-slate-400" />
+                            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-300">Bloqueado</span>
                           </div>
                         )}
                         

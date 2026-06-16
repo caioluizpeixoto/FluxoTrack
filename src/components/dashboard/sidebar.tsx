@@ -139,7 +139,8 @@ export function DashboardSidebar() {
             <div className="flex h-full flex-col">
               <div className="p-6 border-b border-white/5">
                 <LinkNext href="/" className="flex items-center gap-2 text-primary w-fit" onClick={() => setOpen(false)}>
-                  <Zap className="w-8 h-8 fill-current glow-primary" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="https://i.ibb.co/Hf0r0WQs/Chat-GPT-Image-15-de-jun-de-2026-22-54-41.png" alt="FluxoFy Logo" className="w-8 h-8 object-contain" />
                   <span className="text-xl font-bold font-headline tracking-tighter">FluxoFy</span>
                 </LinkNext>
               </div>
@@ -181,7 +182,7 @@ export function DashboardSidebar() {
                     className="w-full h-8 text-xs font-bold border-yellow-500/30 text-yellow-500 bg-gradient-to-r from-yellow-500/10 to-amber-500/5 hover:from-yellow-500/20 hover:to-amber-500/10 hover:border-yellow-500/50 gap-2 shadow-[0_0_10px_rgba(234,179,8,0.1)] transition-all"
                     onClick={() => setAwardsOpen(true)}
                   >
-                    <Trophy className="w-3 h-3 drop-shadow-md" /> Minhas Placas
+                    <Trophy className="w-3 h-3 drop-shadow-md" /> Minhas Conquistas
                   </Button>
                 </div>
                  <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} isConfigured={isConfigured} />
