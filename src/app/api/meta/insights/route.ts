@@ -40,9 +40,13 @@ export async function POST(req: NextRequest) {
     // Se o level for account, talvez também queira o saldo real.
     let accountData = null;
     let accountError = null;
+    let exchangeRate = 1;
+    let accountCurrency = 'BRL';
+
     if (level === 'account' || level === 'all') {
       try {
         const details = await getAccountDetails(accountId, token);
+        accountCurrency = details.currency || 'BRL';
         
         let prepaid_balance = null;
         if (details.funding_source_details?.display_string) {
@@ -69,6 +73,50 @@ export async function POST(req: NextRequest) {
         accountError = e.message;
       }
     }
+
+    if (accountCurrency && accountCurrency.toUpperCase() !== 'BRL') {
+      try {
+        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${accountCurrency.toUpperCase()}-BRL`);
+        if (xrRes.ok) {
+          const xrData = await xrRes.json();
+          const pair = `${accountCurrency.toUpperCase()}BRL`;
+          if (xrData[pair] && xrData[pair].ask) {
+            exchangeRate = parseFloat(xrData[pair].ask);
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao buscar taxa de cambio", e);
+      }
+    }
+
+    if (accountData && exchangeRate !== 1) {
+      if (accountData.balance) accountData.balance = (Number(accountData.balance) * exchangeRate).toString();
+      if (accountData.amount_spent) accountData.amount_spent = (Number(accountData.amount_spent) * exchangeRate).toString();
+      if (accountData.prepaid_balance) accountData.prepaid_balance = Number(accountData.prepaid_balance) * exchangeRate;
+    }
+
+    const convert = (val: string | number | undefined) => {
+      if (val === undefined || val === null) return val;
+      const num = Number(val);
+      if (isNaN(num)) return val;
+      return (num * exchangeRate).toString();
+    };
+
+    const applyExchangeRate = (arr: any[]) => {
+      if (exchangeRate === 1) return arr;
+      return arr.map(item => {
+        const newItem = { ...item };
+        if (newItem.spend) newItem.spend = convert(newItem.spend);
+        if (newItem.cpc) newItem.cpc = convert(newItem.cpc);
+        if (newItem.cpm) newItem.cpm = convert(newItem.cpm);
+        if (newItem.daily_budget) newItem.daily_budget = convert(newItem.daily_budget);
+        if (newItem.lifetime_budget) newItem.lifetime_budget = convert(newItem.lifetime_budget);
+        if (newItem.action_values) {
+           newItem.action_values = newItem.action_values.map((a: any) => ({ ...a, value: convert(a.value) }));
+        }
+        return newItem;
+      });
+    };
 
     // Busca as métricas pro nível desejado
     let insights = [];
@@ -97,12 +145,13 @@ export async function POST(req: NextRequest) {
         };
 
         insights = { 
-           campaigns: merge(c, cStruct, 'campaign_id', 'id'), 
-           adsets: merge(a, aStruct, 'adset_id', 'id'), 
-           ads: merge(ad, adStruct, 'ad_id', 'id') 
+           campaigns: applyExchangeRate(merge(c, cStruct, 'campaign_id', 'id')), 
+           adsets: applyExchangeRate(merge(a, aStruct, 'adset_id', 'id')), 
+           ads: applyExchangeRate(merge(ad, adStruct, 'ad_id', 'id')) 
         } as any;
       } else {
-        insights = await getInsights(accountId, token, realLevel as any, dateParams);
+        const rawInsights = await getInsights(accountId, token, realLevel as any, dateParams);
+        insights = applyExchangeRate(rawInsights);
       }
     }
 

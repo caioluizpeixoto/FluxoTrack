@@ -43,7 +43,7 @@ export async function POST(
     if (body.payment?.amount !== undefined) {
       rawValue = cleanValue(body.payment.amount);
       if (body.payment.fee !== undefined && body.checkout?.id) {
-         rawValue = rawValue / 100;
+         rawValue = (rawValue - cleanValue(body.payment.fee)) / 100;
       }
     } else if (body.Order?.price_cents !== undefined) {
       rawValue = cleanValue(body.Order.price_cents) / 100;
@@ -64,7 +64,7 @@ export async function POST(
     } else {
       rawValue = cleanValue(body.value || body.amount || body.price || body.full_price || body.comission || body.liquid || 0);
     }
-    const eventValue = rawValue;
+    let eventValue = rawValue;
 
     // Parse Email
     const customerEmail = body.customer?.email || body.Customer?.email || body.buyer?.email || body.email || body.customer_email || '';
@@ -75,7 +75,24 @@ export async function POST(
     // Parse Transaction ID
     const transactionId = body.payment?.id || body.Order?.order_id || body.purchase?.transaction || body.sale_id || body.transaction_id || body.transaction || body.id || '';
 
-    const currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
+    let currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
+
+    if (currency.toUpperCase() !== 'BRL') {
+      try {
+        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${currency.toUpperCase()}-BRL`);
+        if (xrRes.ok) {
+          const xrData = await xrRes.json();
+          const pair = `${currency.toUpperCase()}BRL`;
+          if (xrData[pair] && xrData[pair].ask) {
+            const rate = parseFloat(xrData[pair].ask);
+            eventValue = eventValue * rate;
+            currency = 'BRL';
+          }
+        }
+      } catch (e) {
+        console.error("Erro na conversao de moeda do webhook", e);
+      }
+    }
 
     // Normalize Status by evaluating ALL possible status fields at once
     let status = 'pending';
