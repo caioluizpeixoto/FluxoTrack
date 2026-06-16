@@ -219,7 +219,7 @@ export default function DashboardDetails() {
       <main className="flex-1 w-full p-4 lg:p-12 transition-all">
         <div className="max-w-6xl mx-auto pt-16">
           
-          <div className="mb-6">
+          <div className="mb-6 pl-14 lg:pl-0">
             <LinkNext href="/" className="text-muted-foreground hover:text-white flex items-center gap-2 text-sm w-fit transition-colors">
               <ArrowLeft className="w-4 h-4" /> Voltar aos Dashboards
             </LinkNext>

@@ -17,7 +17,8 @@ import {
   Mail,
   Lock,
   AlertTriangle,
-  Facebook
+  Facebook,
+  Trophy
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser, useFirestore, isFirebaseConfigured } from "@/firebase";
@@ -44,6 +45,8 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { AwardsTrail } from "./awards-trail";
 
 const navItems = [
   { label: "Meus Dashboards", icon: LayoutDashboard, href: "/" },
@@ -57,7 +60,12 @@ export function DashboardSidebar() {
   const auth = useAuth();
   const { user } = useUser();
   const [open, setOpen] = useState(false);
+  const [awardsOpen, setAwardsOpen] = useState(false);
   const isConfigured = isFirebaseConfigured();
+  
+  // Mocked revenue, this should be fetched from db later
+  const currentRevenue = 45000;
+  const progressTo100k = Math.min(100, Math.max(0, (currentRevenue / 100000) * 100));
 
   const handleSignOut = () => {
     if (!auth) return;
@@ -137,12 +145,27 @@ export function DashboardSidebar() {
                 <NavLinks />
               </div>
               <div className="p-4 mt-auto border-t border-white/5 bg-[#14151a]">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-slate-300">Faturamento</span>
+                    <span className="text-[10px] text-slate-500 font-mono">100k</span>
+                  </div>
+                  <Progress value={progressTo100k} className="h-2 mb-2 bg-white/5" />
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-8 text-xs font-bold border-yellow-500/20 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 gap-2"
+                    onClick={() => setAwardsOpen(true)}
+                  >
+                    <Trophy className="w-3 h-3" /> Premiações
+                  </Button>
+                </div>
                  <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} isConfigured={isConfigured} />
               </div>
             </div>
           </SheetContent>
         </Sheet>
       </div>
+      <AwardsTrail open={awardsOpen} onOpenChange={setAwardsOpen} currentRevenue={currentRevenue} />
     </>
   );
 }

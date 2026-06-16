@@ -771,7 +771,7 @@ export default function ProductDetail() {
       <DashboardSidebar />
       <main className="flex-1 w-full p-4 lg:p-8 transition-all md:h-screen md:flex md:flex-col md:overflow-hidden">
         
-        <header className="mb-4 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <header className="mb-4 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pl-14 lg:pl-0 pt-2 lg:pt-0">
           <div className="flex items-center gap-4">
             <LinkNext href={`/dashboards/${product.dashboard_id}`}>
               <Button variant="ghost" size="icon" className="hover:bg-white/10 rounded-full"><ArrowLeft className="w-5 h-5"/></Button>
