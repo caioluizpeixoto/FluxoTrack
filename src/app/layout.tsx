@@ -6,7 +6,7 @@ import { FirebaseErrorListener } from "@/components/firebase-error-listener";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { PWARegistration } from "@/components/pwa-register";
 import { NotificationListener } from "@/components/notification-listener";
-import { OneSignalProvider } from "@/components/onesignal-provider";
+import { NativePushProvider } from "@/components/native-push-provider";
 
 export const metadata: Metadata = {
   title: 'FluxoFy | Advanced Marketing Attribution',
@@ -32,7 +32,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <FirebaseClientProvider>
           <PWARegistration />
-          <OneSignalProvider />
+          <NativePushProvider />
           <NotificationListener />
           {children}
           <MobileNav />

@@ -1,47 +1,44 @@
-self.addEventListener('install', (e) => {
-  self.skipWaiting();
-});
+self.addEventListener('push', function(event) {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      
+      const options = {
+        body: data.body || 'Nova notificação',
+        icon: data.icon || '/icon-192x192.png',
+        badge: '/icon-192x192.png',
+        vibrate: [200, 100, 200, 100, 200, 100, 200],
+        data: {
+          url: data.url || '/'
+        }
+      };
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(clients.claim());
-});
-
-self.addEventListener('fetch', (e) => {
-  // Network-only/no-cache to avoid breaking dynamic nextjs routes
-  return;
-});
-
-// Recebe mensagens do app (NotificationListener) e exibe a notificação via SW
-// Isso é necessário em mobile/PWA onde new Notification() não funciona
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-    const { title, body, icon, tag } = event.data;
-    event.waitUntil(
-      self.registration.showNotification(title, {
-        body: body,
-        icon: icon || '/icon-192.png',
-        badge: icon || '/icon-192.png',
-        tag: tag || 'fluxofy-notification',
-        renotify: true,
-        vibrate: [200, 100, 200],
-      })
-    );
+      event.waitUntil(
+        self.registration.showNotification(data.title || 'FluxoFy', options)
+      );
+    } catch (e) {
+      console.error('Error parsing push data', e);
+      // Fallback
+      event.waitUntil(
+        self.registration.showNotification('FluxoFy', {
+          body: event.data.text(),
+          icon: '/icon-192x192.png'
+        })
+      );
+    }
   }
 });
 
-// Ao clicar na notificação, abre ou foca o app
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow('/');
-      }
-    })
-  );
+  
+  if (event.notification.data && event.notification.data.url) {
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url)
+    );
+  } else {
+    event.waitUntil(
+      clients.openWindow('/')
+    );
+  }
 });
