@@ -50,7 +50,7 @@
     },
     "TrackingEvent": {
       "title": "Tracking Event",
-      "description": "Evento capturado pelo Pixel AdPulse.",
+      "description": "Evento capturado pelo Pixel FluxoFy.",
       "type": "object",
       "properties": {
         "eventType": { "type": "string" },

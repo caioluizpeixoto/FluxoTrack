@@ -111,7 +111,7 @@ export default function SettingsPage() {
                   </CardTitle>
                   {!isConfig && <AlertTriangle className="w-5 h-5 text-yellow-500" />}
                 </div>
-                <CardDescription>O AdPulse é integrado ao Firebase para segurança máxima.</CardDescription>
+                <CardDescription>O FluxoFy é integrado ao Firebase para segurança máxima.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
@@ -191,7 +191,7 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="text-xs text-muted-foreground leading-relaxed">
                 <p>
-                  Diferente do Supabase, o AdPulse utiliza as <b>Firebase Security Rules</b> para garantir que seus dados de faturamento e anúncios nunca sejam acessados por outros usuários.
+                  Diferente do Supabase, o FluxoFy utiliza as <b>Firebase Security Rules</b> para garantir que seus dados de faturamento e anúncios nunca sejam acessados por outros usuários.
                 </p>
                 <div className="mt-4 p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] text-primary/70">
                    allow read, write: if request.auth.uid == userId;

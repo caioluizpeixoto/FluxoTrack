@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import crypto from 'crypto';
 
 /**
- * Endpoint receptor para o Pixel AdPulse.
+ * Endpoint receptor para o Pixel FluxoFy.
  * Processa eventos de PageView, Clicks e UTMs vindos do script JS.
  */
 export async function POST(request: Request) {
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, eventId: Date.now().toString() });
   } catch (error) {
-    console.error('AdPulse Pixel API Error:', error);
+    console.error('FluxoFy Pixel API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

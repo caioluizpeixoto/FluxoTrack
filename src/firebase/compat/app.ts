@@ -4,7 +4,7 @@ export interface FirebaseApp {
 }
 
 const mockApp: FirebaseApp = {
-  name: '[Mock] AdPulse Supabase App',
+  name: '[Mock] FluxoFy Supabase App',
   options: {},
 };
 

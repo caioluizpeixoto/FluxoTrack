@@ -178,7 +178,7 @@ export async function POST(
         const { data: pixelInfo } = await supabaseAdmin.from('product_pixels').select('*').eq('product_id', productId).maybeSingle();
         
         if (pixelInfo && pixelInfo.access_token && pixelInfo.pixel_id) {
-          // Extrair IP para tentar cruzar com o tracking do AdPulse Pixel
+          // Extrair IP para tentar cruzar com o tracking do FluxoFy Pixel
           const clientIp = body.tracking?.ip || body.customer?.ip || body.customerIp || '';
           
           let matchedTracking = null;

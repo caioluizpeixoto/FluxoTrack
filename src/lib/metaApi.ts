@@ -1,5 +1,5 @@
 /**
- * Meta Marketing API Helper — AdPulse
+ * Meta Marketing API Helper — FluxoFy
  * Versão da API: v23.0
  * Toda lógica de chamada à Graph API fica centralizada aqui.
  * NUNCA importe este arquivo em componentes client-side — apenas em API routes.

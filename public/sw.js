@@ -21,7 +21,7 @@ self.addEventListener('message', (event) => {
         body: body,
         icon: icon || '/icon-192.png',
         badge: icon || '/icon-192.png',
-        tag: tag || 'fluxotrack-notification',
+        tag: tag || 'fluxofy-notification',
         renotify: true,
         vibrate: [200, 100, 200],
       })

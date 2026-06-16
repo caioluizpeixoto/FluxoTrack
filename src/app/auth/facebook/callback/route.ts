@@ -86,7 +86,7 @@ export async function GET(request: Request) {
 
     if (!supabaseUserId) {
       return NextResponse.redirect(
-        `${origin}/integrations?error=${encodeURIComponent('Você precisa estar logado no AdPulse para conectar o Facebook.')}`
+        `${origin}/integrations?error=${encodeURIComponent('Você precisa estar logado no FluxoFy para conectar o Facebook.')}`
       );
     }
 

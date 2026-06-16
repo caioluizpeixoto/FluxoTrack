@@ -1,5 +1,5 @@
 -- =====================================================================
--- MIGRAÇÃO META ADS MANAGER — AdPulse
+-- MIGRAÇÃO META ADS MANAGER — FluxoFy
 -- Cria as tabelas para espelhar a estrutura do Facebook Ads (Campanhas, Conjuntos e Anúncios)
 -- =====================================================================
 

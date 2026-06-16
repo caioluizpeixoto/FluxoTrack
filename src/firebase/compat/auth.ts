@@ -29,7 +29,7 @@ export class GoogleAuthProvider {}
 export async function signInWithPopup(auth: Auth, provider: any) {
   const redirectTo = typeof window !== 'undefined'
     ? `${window.location.origin}/auth/callback`
-    : 'https://fluxo-track.vercel.app/auth/callback';
+    : 'https://fluxofy.vercel.app/auth/callback';
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

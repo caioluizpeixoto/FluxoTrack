@@ -1,6 +1,6 @@
 {
-  "name": "AdPulse",
-  "short_name": "AdPulse",
+  "name": "FluxoFy",
+  "short_name": "FluxoFy",
   "description": "Attribution and sales tracking dashboard",
   "start_url": "/",
   "display": "standalone",
@@ -15,7 +15,7 @@
       "purpose": "any maskable"
     },
     {
-      "src": "https://placehold.co/512x512/1877F2/FFF?text=AdPulse",
+      "src": "https://placehold.co/512x512/1877F2/FFF?text=FluxoFy",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

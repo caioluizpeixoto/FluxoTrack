@@ -9,7 +9,7 @@ import { NotificationListener } from "@/components/notification-listener";
 import { OneSignalProvider } from "@/components/onesignal-provider";
 
 export const metadata: Metadata = {
-  title: 'AdPulse | Advanced Marketing Attribution',
+  title: 'FluxoFy | Advanced Marketing Attribution',
   description: 'Personal marketing tracking and attribution dashboard.',
 };
 

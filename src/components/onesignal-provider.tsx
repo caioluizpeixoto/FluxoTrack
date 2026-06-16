@@ -22,7 +22,7 @@ export function OneSignalProvider() {
     }
 
     if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-      console.warn("[OneSignal] Inicialização ignorada no localhost para evitar erros de domínio. (Can only be used on: https://fluxo-track.vercel.app)");
+      console.warn("[OneSignal] Inicialização ignorada no localhost para evitar erros de domínio. (Can only be used on: https://fluxofy.vercel.app)");
       return;
     }
 

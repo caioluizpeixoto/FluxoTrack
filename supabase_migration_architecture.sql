@@ -1,5 +1,5 @@
 -- =====================================================================
--- MIGRAÇÃO DE ARQUITETURA MULTI-DASHBOARD — AdPulse
+-- MIGRAÇÃO DE ARQUITETURA MULTI-DASHBOARD — FluxoFy
 -- =====================================================================
 
 -- 1. Dashboards

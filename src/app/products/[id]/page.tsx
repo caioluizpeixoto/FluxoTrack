@@ -1279,7 +1279,7 @@ export default function ProductDetail() {
                <div className="max-w-3xl mx-auto space-y-6">
                  <div>
                    <h2 className="text-xl font-bold font-headline">Webhook de Vendas</h2>
-                   <p className="text-sm text-slate-400">Cole esta URL na plataforma de checkout (Hotmart, Kiwify, PerfectPay). O AdPulse receberá as vendas automaticamente.</p>
+                   <p className="text-sm text-slate-400">Cole esta URL na plataforma de checkout (Hotmart, Kiwify, PerfectPay). O FluxoFy receberá as vendas automaticamente.</p>
                  </div>
 
                  {/* URL do Webhook */}
@@ -1600,7 +1600,7 @@ export default function ProductDetail() {
                       
                       <div className="relative">
                         <pre className="p-4 bg-[#0f1115] rounded border border-white/5 font-mono text-[10px] text-slate-300 overflow-x-auto whitespace-pre-wrap">
-{`<!-- AdPulse & Meta Pixel Code -->
+{`<!-- FluxoFy & Meta Pixel Code -->
 <script>
 !function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -1616,8 +1616,8 @@ fbq('track', 'PageView');
 <noscript><img height="1" width="1" style="display:none"
 src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
 /></noscript>
-<!-- AdPulse Tracking Integration -->
-<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid || ''}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>
+<!-- FluxoFy Tracking Integration -->
+<script src="${typeof window !== 'undefined' ? window.location.origin : ''}/fluxofy-pixel.js" data-product-id="${id}" data-user-id="${user?.uid || ''}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>
 <!-- End Pixel Code -->`}
                         </pre>
                         <Button 
@@ -1625,7 +1625,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                           size="sm"
                           className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white"
                           onClick={() => {
-                            const code = `<!-- AdPulse & Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- AdPulse Tracking Integration -->\n<script src="${window.location.origin}/adpulse-pixel.js" data-product-id="${id}" data-user-id="${user?.uid}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>\n<!-- End Pixel Code -->`;
+                            const code = `<!-- FluxoFy & Meta Pixel Code -->\n<script>\n!function(f,b,e,v,n,t,s)\n{if(f.fbq)return;n=f.fbq=function(){n.callMethod?\nn.callMethod.apply(n,arguments):n.queue.push(arguments)};\nif(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';\nn.queue=[];t=b.createElement(e);t.async=!0;\nt.src=v;s=b.getElementsByTagName(e)[0];\ns.parentNode.insertBefore(t,s)}(window, document,'script',\n'https://connect.facebook.net/en_US/fbevents.js');\nfbq('init', '${pixel.pixel_id}');\nfbq('track', 'PageView');\n</script>\n<noscript><img height="1" width="1" style="display:none"\nsrc="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"\n/></noscript>\n<!-- FluxoFy Tracking Integration -->\n<script src="${window.location.origin}/fluxofy-pixel.js" data-product-id="${id}" data-user-id="${user?.uid}"${icTriggerText ? ` data-ic-text="${icTriggerText}"` : ''}${icTriggerUrl ? ` data-ic-url="${icTriggerUrl}"` : ''}></script>\n<!-- End Pixel Code -->`;
                             navigator.clipboard.writeText(code);
                             toast({ title: '✓ Código copiado!' });
                           }}
@@ -1640,7 +1640,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                  <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 space-y-2">
                    <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Por que o Token é importante?</h4>
                    <p className="text-xs text-muted-foreground leading-relaxed">
-                     O <strong>Token de Acesso</strong> permite que o AdPulse envie eventos de compra diretamente para a Meta via <strong>Conversions API (CAPI)</strong>, sem depender do pixel no navegador. Isso melhora a atribuição e resolve bloqueios de ad-blockers.
+                     O <strong>Token de Acesso</strong> permite que o FluxoFy envie eventos de compra diretamente para a Meta via <strong>Conversions API (CAPI)</strong>, sem depender do pixel no navegador. Isso melhora a atribuição e resolve bloqueios de ad-blockers.
                    </p>
                  </div>
                </div>

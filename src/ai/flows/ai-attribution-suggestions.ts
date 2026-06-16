@@ -60,7 +60,7 @@ const attributionPrompt = ai.definePrompt({
   name: 'attributionSuggestionsPrompt',
   input: { schema: AttributionSuggestionsInputSchema },
   output: { schema: AttributionSuggestionsOutputSchema },
-  prompt: `You are an expert marketing attribution specialist for AdPulse. Your task is to analyze user behavioral data and marketing campaign information to suggest attribution paths for "orphan" conversions (sales without direct source data).
+  prompt: `You are an expert marketing attribution specialist for FluxoFy. Your task is to analyze user behavioral data and marketing campaign information to suggest attribution paths for "orphan" conversions (sales without direct source data).
 
 STRATEGY:
 1. Look for behavioral events (page_view, click) that occurred shortly before the conversion timestamp ({{{orphanConversion.timestamp}}}).

@@ -96,7 +96,7 @@ export default function LoginPage() {
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/20 ring-1 ring-primary/30">
             <Zap className="h-7 w-7 fill-primary text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-100">AdPulse</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100">FluxoFy</h1>
           <p className="text-sm text-slate-400">
             {isSignUp ? "Crie sua conta gratuita" : "Bem-vindo de volta"}
           </p>

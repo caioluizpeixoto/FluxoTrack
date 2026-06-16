@@ -1,4 +1,4 @@
-# **App Name**: AdPulse
+# **App Name**: FluxoFy
 
 ## Core Features:
 

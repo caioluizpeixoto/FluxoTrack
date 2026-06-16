@@ -85,7 +85,7 @@ export function MobileNav() {
             {/* Logo */}
             <div className="flex items-center gap-2 text-primary mb-4">
               <Zap className="w-6 h-6 fill-current" />
-              <span className="text-lg font-bold font-headline tracking-tighter">AdPulse</span>
+              <span className="text-lg font-bold font-headline tracking-tighter">FluxoFy</span>
             </div>
 
             {/* User info */}

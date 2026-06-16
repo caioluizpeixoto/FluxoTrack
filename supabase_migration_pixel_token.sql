@@ -1,5 +1,5 @@
 -- =====================================================================
--- MIGRAÇÃO PIXEL TOKEN — AdPulse
+-- MIGRAÇÃO PIXEL TOKEN — FluxoFy
 -- Adiciona suporte a access_token e provider na tabela product_pixels
 -- =====================================================================
 

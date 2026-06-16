@@ -1,4 +1,4 @@
-// AdPulse Proprietary Pixel Script
+// FluxoFy Proprietary Pixel Script
 (function() {
   // Helper to get cookies
   function getCookie(name) {
@@ -40,7 +40,7 @@
   let customIcText = '';
   let customIcUrl = '';
   for (let i = 0; i < scripts.length; i++) {
-    if (scripts[i].src && scripts[i].src.indexOf('adpulse-pixel.js') > -1) {
+    if (scripts[i].src && scripts[i].src.indexOf('fluxofy-pixel.js') > -1) {
       currentScript = scripts[i];
       productId = currentScript.getAttribute('data-product-id') || '';
       customIcText = (currentScript.getAttribute('data-ic-text') || '').toLowerCase();
@@ -78,7 +78,7 @@
       body: JSON.stringify(finalPayload),
       keepalive: true
     }).catch(function(err) {
-      console.error('AdPulse Pixel Tracking Error:', err);
+      console.error('FluxoFy Pixel Tracking Error:', err);
     });
   }
 

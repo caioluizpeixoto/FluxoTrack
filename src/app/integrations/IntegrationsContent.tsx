@@ -167,7 +167,7 @@ export default function IntegrationsContent() {
                     <Zap className="w-10 h-10 text-primary mb-4 animate-pulse" />
                     <h3 className="text-xl font-bold mb-2">Vincular Conta de Anúncios</h3>
                     <p className="text-sm text-muted-foreground max-w-sm mb-8 leading-relaxed">
-                      {user ? "Clique abaixo para autorizar o AdPulse a importar suas contas e campanhas." : "Faça login no app primeiro para poder salvar sua conta Meta Ads."}
+                      {user ? "Clique abaixo para autorizar o FluxoFy a importar suas contas e campanhas." : "Faça login no app primeiro para poder salvar sua conta Meta Ads."}
                     </p>
                     <Button 
                       onClick={handleMetaConnect} 
@@ -257,7 +257,7 @@ export default function IntegrationsContent() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-xs text-muted-foreground">
-                  Para o ROAS ser calculado corretamente em tempo real, você também precisa ter o **Pixel AdPulse** instalado na sua página.
+                  Para o ROAS ser calculado corretamente em tempo real, você também precisa ter o **Pixel FluxoFy** instalado na sua página.
                 </p>
                 <Link href="/pixel">
                   <Button variant="link" className="p-0 h-auto text-accent text-xs group">

@@ -114,12 +114,12 @@ export function DashboardSidebar() {
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0 bg-[#0f1115] border-r border-white/5 shadow-2xl">
             <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
-            <SheetDescription className="sr-only">Acesse as ferramentas do AdPulse.</SheetDescription>
+            <SheetDescription className="sr-only">Acesse as ferramentas do FluxoFy.</SheetDescription>
             <div className="flex h-full flex-col">
               <div className="p-6 border-b border-white/5">
                 <LinkNext href="/" className="flex items-center gap-2 text-primary w-fit" onClick={() => setOpen(false)}>
                   <Zap className="w-8 h-8 fill-current glow-primary" />
-                  <span className="text-xl font-bold font-headline tracking-tighter">AdPulse</span>
+                  <span className="text-xl font-bold font-headline tracking-tighter">FluxoFy</span>
                 </LinkNext>
               </div>
               <div className="flex-1 px-4 py-6 overflow-y-auto">
@@ -213,7 +213,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
           </DialogTrigger>
           <DialogContent className="bg-[#121212] border-white/10 text-white sm:max-w-[400px]">
             <DialogHeader>
-              <DialogTitle className="font-headline text-2xl">{isSignUp ? "Criar Conta" : "Entrar no AdPulse"}</DialogTitle>
+              <DialogTitle className="font-headline text-2xl">{isSignUp ? "Criar Conta" : "Entrar no FluxoFy"}</DialogTitle>
               <DialogDescription>{isSignUp ? "Crie sua conta para salvar suas atribuições e pixels." : "Acesse sua conta para gerenciar seu dashboard."}</DialogDescription>
             </DialogHeader>
 

@@ -1,5 +1,5 @@
 -- =====================================================================
--- MIGRAÇÃO META ADS — AdPulse
+-- MIGRAÇÃO META ADS — FluxoFy
 -- Execute no Supabase SQL Editor (Dashboard → SQL Editor → New Query)
 -- =====================================================================
 

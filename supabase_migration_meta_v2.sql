@@ -1,5 +1,5 @@
 -- =====================================================================
--- MIGRAÇÃO META ADS V2 — AdPulse
+-- MIGRAÇÃO META ADS V2 — FluxoFy
 -- Adiciona colunas de saldo nas contas e tabela unificada de Insights
 -- =====================================================================
 
