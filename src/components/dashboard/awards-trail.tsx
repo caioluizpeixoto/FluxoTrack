@@ -52,21 +52,22 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0a0c10] border-white/10 text-white sm:max-w-2xl overflow-hidden p-0 max-h-[90vh] flex flex-col">
-        <div className="p-6 pb-4 border-b border-white/5 bg-[#0f1115] relative overflow-hidden">
+      <DialogContent className="bg-[#0a0c10] border-white/10 text-white sm:max-w-[1000px] w-[95vw] overflow-hidden p-0 max-h-[90vh] flex flex-col">
+        <div className="p-6 pb-4 border-b border-white/5 bg-[#0f1115] relative overflow-hidden shrink-0">
           {/* Fundo com brilho dinâmico */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4"></div>
           
-          <DialogHeader className="relative z-10">
+          <DialogHeader className="relative z-10 text-center sm:text-left">
             <DialogTitle className="font-headline text-3xl font-black tracking-tight text-white drop-shadow-sm">
-              Trilha de Premiações
+              Minhas Conquistas
             </DialogTitle>
-            <DialogDescription className="text-slate-400 text-base font-medium">
-              Acompanhe seu faturamento total e desbloqueie placas exclusivas do FluxoFy.
+            <DialogDescription className="text-slate-400 text-base font-medium mt-1">
+              Acompanhe seu faturamento total e desbloqueie suas placas exclusivas.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="mt-6 p-5 rounded-2xl bg-[#14151a] border border-white/10 relative z-10 shadow-lg shadow-black/50">
+          <div className="mt-6 p-5 rounded-2xl bg-[#14151a]/80 backdrop-blur-sm border border-white/10 relative z-10 shadow-lg max-w-2xl">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-bold text-slate-300 flex items-center gap-2">
                 <ArrowUp className="w-4 h-4 text-primary" /> Rumo a {nextMilestone.label}
@@ -77,7 +78,7 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
             </div>
             
             {/* Barra de Progresso Moderna Customizada */}
-            <div className="relative h-4 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-inner">
+            <div className="relative h-3 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-inner">
               <div 
                 className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 via-primary to-cyan-400 transition-all duration-1000 ease-out relative"
                 style={{ width: `${progressPercentage}%` }}
@@ -100,71 +101,75 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
           </div>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-          <div className="space-y-8 relative before:absolute before:inset-0 before:ml-6 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-primary/50 before:via-white/10 before:to-transparent">
-            {milestones.map((milestone, index) => {
+        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar bg-[#0a0c10]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {milestones.map((milestone) => {
               const isUnlocked = currentRevenue >= milestone.goal;
               const isNext = nextMilestone.id === milestone.id;
               
               return (
-                <div key={milestone.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                  {/* Ícone central / Marcador da linha do tempo */}
-                  <div className={cn(
-                    "flex items-center justify-center w-12 h-12 rounded-full border-4 shadow-xl shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 transition-all duration-500",
-                    isUnlocked ? "bg-[#0a0c10] border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]" : 
-                    isNext ? "bg-[#0a0c10] border-primary shadow-[0_0_20px_rgba(var(--primary),0.6)] scale-110" : "bg-[#0a0c10] border-white/10 opacity-50"
-                  )}>
-                    {isUnlocked ? (
-                      <CheckCircle2 className="w-5 h-5 text-green-500 drop-shadow-[0_0_8px_rgba(34,197,94,1)]" />
-                    ) : isNext ? (
-                      <ArrowUp className="w-5 h-5 text-primary animate-bounce drop-shadow-[0_0_8px_rgba(var(--primary),1)]" />
-                    ) : (
-                      <Lock className="w-4 h-4 text-slate-600" />
+                <div 
+                  key={milestone.id} 
+                  className={cn(
+                    "relative flex flex-col p-1 rounded-3xl bg-gradient-to-b from-white/10 to-transparent transition-all hover:from-white/20 h-full",
+                    isNext && "from-primary/40 via-primary/10 shadow-[0_0_30px_rgba(var(--primary),0.15)] -translate-y-1"
+                  )}
+                >
+                  {isNext && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)] uppercase tracking-wider animate-pulse z-20 whitespace-nowrap">
+                      Próximo Objetivo
+                    </div>
+                  )}
+
+                  <div className="bg-[#12141a] rounded-[22px] p-4 flex-1 flex flex-col w-full relative z-10 overflow-hidden">
+                    {/* Brilho de fundo se estiver desbloqueado */}
+                    {isUnlocked && (
+                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-green-500/10 blur-3xl rounded-full"></div>
                     )}
-                  </div>
-                  
-                  {/* Card do Milestone */}
-                  <div className={cn(
-                    "w-[calc(100%-4rem)] md:w-[calc(50%-3rem)] p-1 rounded-3xl bg-gradient-to-b from-white/10 to-transparent transition-all hover:from-white/20 relative",
-                    isNext && "from-primary/30 via-white/5 shadow-[0_0_30px_rgba(var(--primary),0.15)]"
-                  )}>
-                    <div className="bg-[#12141a] rounded-[22px] p-4 h-full w-full">
-                      {/* Imagem da Placa */}
-                      <div className={cn(
-                        "w-full h-40 md:h-48 rounded-xl mb-4 flex items-center justify-center relative overflow-hidden transition-all duration-700",
-                        !isUnlocked && "opacity-75"
-                      )}>
-                        {/* Imagem Oficial da Placa */}
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={milestone.image} 
-                          alt={`Placa ${milestone.label}`} 
-                          className="w-full h-full object-cover rounded-xl transition-transform duration-700 hover:scale-110"
-                        />
-                        
-                        {!isUnlocked && (
-                          <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-xl">
-                            <Lock className="w-3 h-3 text-slate-400" />
-                            <span className="text-[10px] uppercase tracking-widest font-bold text-slate-300">Bloqueado</span>
-                          </div>
-                        )}
-                        
-                        {isUnlocked && (
-                          <div className="absolute inset-0 ring-1 ring-inset ring-white/20 rounded-xl pointer-events-none"></div>
-                        )}
-                      </div>
+
+                    {/* Imagem da Placa */}
+                    <div className={cn(
+                      "w-full aspect-square rounded-xl mb-5 flex items-center justify-center relative overflow-hidden transition-all duration-700 bg-black/50 border border-white/5",
+                      !isUnlocked && "opacity-80"
+                    )}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={milestone.image} 
+                        alt={`Placa ${milestone.label}`} 
+                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                      />
                       
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className={cn("text-xl md:text-2xl font-bold font-headline", milestone.textColor, isUnlocked && "drop-shadow-sm")}>{milestone.title}</h3>
-                        <span className="text-sm font-black text-slate-900 bg-white/90 px-3 py-1 rounded-full shadow-lg">{milestone.label}</span>
-                      </div>
-                      <p className="text-sm text-slate-400 font-medium">{milestone.description}</p>
-                      
-                      {isNext && (
-                        <div className="absolute -top-3 -right-3 bg-gradient-to-r from-primary to-blue-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(var(--primary),0.5)] uppercase tracking-wider animate-pulse">
-                          Próximo Objetivo
+                      {!isUnlocked && (
+                        <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-1.5 shadow-xl">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-slate-300">Bloqueado</span>
                         </div>
                       )}
+                      
+                      {isUnlocked && (
+                         <div className="absolute top-3 right-3 bg-green-500/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-green-500/30 flex items-center gap-1.5 shadow-xl">
+                          <CheckCircle2 className="w-3 h-3 text-green-400" />
+                          <span className="text-[10px] uppercase tracking-widest font-bold text-green-400">Conquistado</span>
+                        </div>
+                      )}
+                      
+                      {isUnlocked && (
+                        <div className="absolute inset-0 ring-2 ring-inset ring-green-500/30 rounded-xl pointer-events-none"></div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-col flex-1">
+                      <div className="flex items-center justify-between mb-2 gap-2">
+                        <h3 className={cn("text-xl font-bold font-headline leading-tight", milestone.textColor, isUnlocked && "drop-shadow-sm")}>
+                          {milestone.title}
+                        </h3>
+                        <span className="text-xs font-black text-slate-900 bg-white/90 px-3 py-1 rounded-full shadow-lg shrink-0">
+                          {milestone.label}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-400 font-medium leading-relaxed">
+                        {milestone.description}
+                      </p>
                     </div>
                   </div>
                 </div>
