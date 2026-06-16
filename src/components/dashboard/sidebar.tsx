@@ -42,9 +42,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabaseClient";
 import { Progress } from "@/components/ui/progress";
 import { AwardsTrail } from "./awards-trail";
 
@@ -63,9 +64,21 @@ export function DashboardSidebar() {
   const [awardsOpen, setAwardsOpen] = useState(false);
   const isConfigured = isFirebaseConfigured();
   
-  // Mocked revenue, this should be fetched from db later
-  const currentRevenue = 45000;
-  const progressTo100k = Math.min(100, Math.max(0, (currentRevenue / 100000) * 100));
+  const [currentRevenue, setCurrentRevenue] = useState(0);
+
+  useEffect(() => {
+    if (user?.uid) {
+      supabase.from('user_stats').select('total_revenue').eq('user_id', user.uid).maybeSingle().then(({ data }) => {
+        if (data?.total_revenue) {
+          setCurrentRevenue(Number(data.total_revenue));
+        }
+      });
+    }
+  }, [user]);
+
+  const milestones = [100000, 1000000, 5000000];
+  const nextGoal = milestones.find(m => currentRevenue < m) || milestones[milestones.length - 1];
+  const progressPercent = Math.min(100, Math.max(0, (currentRevenue / nextGoal) * 100));
 
   const handleSignOut = () => {
     if (!auth) return;
@@ -146,17 +159,29 @@ export function DashboardSidebar() {
               </div>
               <div className="p-4 mt-auto border-t border-white/5 bg-[#14151a]">
                 <div className="mb-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-slate-300">Faturamento</span>
-                    <span className="text-[10px] text-slate-500 font-mono">100k</span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-slate-300">Faturamento Real</span>
+                    <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
+                      R$ {(nextGoal / 1000).toFixed(0)}k
+                    </span>
                   </div>
-                  <Progress value={progressTo100k} className="h-2 mb-2 bg-white/5" />
+                  
+                  {/* Barra de progresso animada */}
+                  <div className="relative h-2 w-full bg-black/40 rounded-full overflow-hidden mb-3 border border-white/5">
+                    <div 
+                      className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 via-primary to-cyan-400 transition-all duration-1000"
+                      style={{ width: `${progressPercent}%` }}
+                    >
+                      <div className="w-[200%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                    </div>
+                  </div>
+
                   <Button 
                     variant="outline" 
-                    className="w-full h-8 text-xs font-bold border-yellow-500/20 text-yellow-500 bg-yellow-500/10 hover:bg-yellow-500/20 gap-2"
+                    className="w-full h-8 text-xs font-bold border-yellow-500/30 text-yellow-500 bg-gradient-to-r from-yellow-500/10 to-amber-500/5 hover:from-yellow-500/20 hover:to-amber-500/10 hover:border-yellow-500/50 gap-2 shadow-[0_0_10px_rgba(234,179,8,0.1)] transition-all"
                     onClick={() => setAwardsOpen(true)}
                   >
-                    <Trophy className="w-3 h-3" /> Premiações
+                    <Trophy className="w-3 h-3 drop-shadow-md" /> Minhas Placas
                   </Button>
                 </div>
                  <AuthSection user={user} handleGoogleSignIn={handleGoogleSignIn} handleSignOut={handleSignOut} isConfigured={isConfigured} />
