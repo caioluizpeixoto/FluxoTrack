@@ -50,7 +50,7 @@ export default function ProductDetail() {
   // Live Metrics
   const [fetchingLive, setFetchingLive] = useState(false);
   const [liveMetrics, setLiveMetrics] = useState<{ campaigns: any[], adsets: any[], ads: any[] }>({ campaigns: [], adsets: [], ads: [] });
-  const [metaAccountData, setMetaAccountData] = useState<{balance: number, spent: number, error?: string} | null>(null);
+  const [metaAccountData, setMetaAccountData] = useState<{balance: number, spent: number, error?: string, isCard?: boolean} | null>(null);
 
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
@@ -219,6 +219,7 @@ export default function ProductDetail() {
       let totalBalance = 0;
       let totalSpent = 0;
       let accountErrorMsg = '';
+      let hasPrepaid = false;
 
       await Promise.all(accIds.map(async (accId) => {
         const res = await fetch('/api/meta/insights', {
@@ -235,6 +236,7 @@ export default function ProductDetail() {
              let accBalance = Number(data.accountData.balance || 0) / 100;
              if (data.accountData.prepaid_balance !== undefined && data.accountData.prepaid_balance !== null) {
                 accBalance = data.accountData.prepaid_balance;
+                hasPrepaid = true;
              }
              totalBalance += accBalance;
              totalSpent += (Number(data.accountData.amount_spent || 0) / 100);
@@ -245,7 +247,7 @@ export default function ProductDetail() {
         }
       }));
       
-      setMetaAccountData({ balance: totalBalance, spent: totalSpent, error: accountErrorMsg });
+      setMetaAccountData({ balance: totalBalance, spent: totalSpent, error: accountErrorMsg, isCard: !hasPrepaid });
       
       const sortActiveFirst = (a: any, b: any) => {
          if (a.status === 'ACTIVE' && b.status !== 'ACTIVE') return -1;
@@ -869,12 +871,20 @@ export default function ProductDetail() {
                         </p>
                      ) : (
                         <>
-                           <p className="text-2xl font-bold font-headline text-blue-400">
-                             {metaAccountData ? formatCurrency(metaAccountData.balance, product?.currency || 'BRL') : 'R$ 0,00'}
-                           </p>
-                           <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
-                             Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent, product?.currency || 'BRL') : 'R$ 0,00'}
-                           </p>
+                           {metaAccountData?.isCard ? (
+                             <p className="text-2xl font-bold font-headline text-blue-400">
+                               Cartão
+                             </p>
+                           ) : (
+                             <>
+                               <p className="text-2xl font-bold font-headline text-blue-400">
+                                 {metaAccountData ? formatCurrency(metaAccountData.balance, product?.currency || 'BRL') : 'R$ 0,00'}
+                               </p>
+                               <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                                 Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent, product?.currency || 'BRL') : 'R$ 0,00'}
+                               </p>
+                             </>
+                           )}
                         </>
                      )}
                    </Card>

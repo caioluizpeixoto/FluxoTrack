@@ -16,10 +16,15 @@ export async function GET(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
+    const { searchParams } = new URL(request.url);
+    const userIdQuery = searchParams.get('user_id');
+
     // 1. Pega todas as conexões do Meta que possuem tokens válidos
-    const { data: connections, error: connErr } = await supabase
-      .from('meta_connections')
-      .select('user_id, access_token');
+    let query = supabase.from('meta_connections').select('user_id, access_token');
+    if (userIdQuery) {
+      query = query.eq('user_id', userIdQuery);
+    }
+    const { data: connections, error: connErr } = await query;
 
     if (connErr) throw connErr;
     if (!connections || connections.length === 0) {
