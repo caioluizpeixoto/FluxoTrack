@@ -2,13 +2,6 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseClient";
 import webpush from "web-push";
 
-// Configura o web-push com as chaves VAPID
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT || 'mailto:suporte@fluxofy.com',
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
-  process.env.VAPID_PRIVATE_KEY as string
-);
-
 /**
  * Endpoint chamado pelo Supabase Database Webhook
  * quando um novo registro é inserido em product_events.
@@ -76,6 +69,17 @@ export async function POST(request: Request) {
       icon: "https://i.ibb.co/BVb9Ltpc/Chat-GPT-Image-15-de-jun-de-2026-23-15-33.png",
       url: "/dashboards"
     });
+
+    // Configura o web-push com as chaves VAPID
+    if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+      webpush.setVapidDetails(
+        process.env.VAPID_SUBJECT || 'mailto:suporte@fluxofy.com',
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+      );
+    } else {
+      console.error("[Webhook] Chaves VAPID não configuradas. O push não será enviado.");
+    }
 
     // Envia o push para todos os aparelhos registrados deste usuário
     const pushPromises = subs.map(async (sub) => {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
-import { getMetaAdAccounts, getMetaInsights } from '@/lib/metaApi';
+import { getMetaAdAccounts, getInsights } from '@/lib/metaApi';
 
 // Este endpoint precisa ser dinâmico para não cachear
 export const dynamic = 'force-dynamic';
@@ -46,7 +46,7 @@ export async function GET(request: Request) {
 
         // Puxa os insights de cada conta (faturamento total / compras)
         for (const acc of adAccounts) {
-          const insights = await getMetaInsights(access_token, acc.account_id, 'lifetime', 'account');
+          const insights = await getInsights(acc.account_id, access_token, 'account', '&date_preset=lifetime');
           
           if (insights && insights.data && insights.data.length > 0) {
             // O insight retorna array. Pegamos o total da conta.

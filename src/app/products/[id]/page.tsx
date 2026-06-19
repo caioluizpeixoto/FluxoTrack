@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
   Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2,
-  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight
+  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight, Info
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -446,7 +446,7 @@ export default function ProductDetail() {
 
   const getMetric = (level: 'campaigns'|'adsets'|'ads', idKey: string, idVal: string) => {
     const item = liveMetrics[level].find((m: any) => m[idKey] === idVal);
-    if (!item) return { spend: 0, purchases: 0, revenue: 0, roas: 0, cpa: 0, clicks: 0, impressions: 0, ctr: 0, cpc: 0, cpv: 0, cpi: 0, ic: 0, roi: 0, status: 'UNKNOWN', name: 'N/A', daily_budget: 0, lifetime_budget: 0 };
+    if (!item) return { spend: 0, purchases: 0, revenue: 0, roas: 0, cpa: 0, clicks: 0, impressions: 0, ctr: 0, cpc: 0, cpv: 0, cpi: 0, ic: 0, roi: 0, profit: 0, margin: 0, cpm: 0, status: 'UNKNOWN', name: 'N/A', daily_budget: 0, lifetime_budget: 0 };
     
     const spend = Number(item.spend || 0);
     const linkClickAction = item.actions?.find((a:any) => a.action_type === 'link_click');
@@ -517,11 +517,14 @@ export default function ProductDetail() {
     const cpa = purchases > 0 ? spend / purchases : 0;
     const cpv = videoViews > 0 ? spend / videoViews : 0;
     const cpi = checkoutInits > 0 ? spend / checkoutInits : 0;
-    const ic = clicks > 0 ? (purchases / clicks) * 100 : 0;
+    const ic = checkoutInits;
     const roi = spend > 0 ? (revenue - spend) / spend : 0;
+    const profit = revenue - spend;
+    const margin = revenue > 0 ? ((revenue - spend) / revenue) * 100 : 0;
+    const cpm = impressions > 0 ? (spend / impressions) * 1000 : 0;
 
     return { 
-      spend, purchases, revenue, roas, cpa, clicks, impressions, ctr, cpc, cpv, cpi, ic, roi,
+      spend, purchases, revenue, roas, cpa, clicks, impressions, ctr, cpc, cpv, cpi, ic, roi, profit, margin, cpm,
       status: item.status, name: item.name, 
       daily_budget: Number(item.daily_budget || 0) / 100, 
       lifetime_budget: Number(item.lifetime_budget || 0) / 100 
@@ -1015,19 +1018,21 @@ export default function ProductDetail() {
                       <th className="px-3 py-3 w-10">Status</th>
                       <th className="px-3 py-3 min-w-[180px]">Nome</th>
                       <th className="px-3 py-3 text-center min-w-[120px]">Orçamento</th>
-                      <th className="px-3 py-3 text-right">Gasto</th>
                       <th className="px-3 py-3 text-right">Vendas</th>
-                      <th className="px-3 py-3 text-right">Faturamento</th>
-                      <th className="px-3 py-3 text-right">ROI</th>
-                      <th className="px-3 py-3 text-right">ROAS</th>
-                      <th className="px-3 py-3 text-right">CPA</th>
-                      <th className="px-3 py-3 text-right">CPC</th>
-                      <th className="px-3 py-3 text-right">CTR</th>
-                      <th className="px-3 py-3 text-right">IC</th>
-                      <th className="px-3 py-3 text-right">Cliques</th>
+                      <th className="px-3 py-3 text-right" title="Custo Por Aquisição">CPA <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right">Gastos</th>
+                      <th className="px-3 py-3 text-right" title="Valor Bruto de Vendas">Faturamento <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Faturamento - Gastos">Lucro <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Retorno sobre o Investimento em Ads">ROAS <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Margem de Lucro sobre Faturamento">Margem <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Retorno sobre Investimento">ROI <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Finalizações de Compra (IC)">IC <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Custo por IC">CPI <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Custo por Clique">CPC <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Click Through Rate">CTR <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
+                      <th className="px-3 py-3 text-right" title="Custo por Mil Impressões">CPM <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
                       <th className="px-3 py-3 text-right">Impressões</th>
-                      <th className="px-3 py-3 text-right">CPV</th>
-                      <th className="px-3 py-3 text-right">CPI</th>
+                      <th className="px-3 py-3 text-right" title="Cliques no Link">Cliques <Info className="inline w-3 h-3 ml-1 opacity-50"/></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
@@ -1048,19 +1053,21 @@ export default function ProductDetail() {
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                         </tr>
                       );
                     })}
@@ -1081,19 +1088,21 @@ export default function ProductDetail() {
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                         </tr>
                       );
                     })}
@@ -1108,19 +1117,21 @@ export default function ProductDetail() {
                           <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
                           <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.ad_name}</td>
                           <td className="px-3 py-2 text-center font-mono text-slate-300">-</td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                          <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
+                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                          <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                         </tr>
                       );
                     })}
