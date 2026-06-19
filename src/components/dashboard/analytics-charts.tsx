@@ -22,17 +22,18 @@ export function ConversionFunnel({ clicks, pageViews, ic, salesGenerated, salesA
     { label: 'Vendas Apr.', count: salesApproved },
   ];
   
-  const getPercent = (current: number, prev: number) => {
-    if (prev === 0) return "0%";
-    return ((current / prev) * 100).toFixed(1).replace('.0', '') + '%';
+  const getPercent = (current: number, ...prevs: number[]) => {
+    const validPrev = prevs.find(p => p > 0);
+    if (!validPrev) return "0%";
+    return ((current / validPrev) * 100).toFixed(1).replace('.0', '') + '%';
   };
 
   const percents = [
     clicks > 0 ? "100%" : "0%",
     getPercent(pageViews, clicks),
-    getPercent(ic, pageViews),
-    getPercent(salesGenerated, ic),
-    getPercent(salesApproved, salesGenerated),
+    getPercent(ic, pageViews, clicks),
+    getPercent(salesGenerated, ic, pageViews, clicks),
+    getPercent(salesApproved, salesGenerated, ic, pageViews, clicks),
   ];
 
   return (
@@ -119,7 +120,14 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
     let total = 0;
     events.forEach(e => {
        if (e.event_type !== 'purchase' || e.status !== 'approved') return;
-       const d = new Date(e.created_at);
+       
+       let dateStr = e.created_at;
+       if (!dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
+         // Append Z to assume UTC if no timezone is provided by Supabase
+         dateStr += 'Z';
+       }
+       
+       const d = new Date(dateStr);
        const h = d.getHours();
        hours[h].count += 1;
        total += 1;
