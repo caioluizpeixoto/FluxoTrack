@@ -25,13 +25,36 @@ export async function POST(req: NextRequest) {
 
     const token = conn.access_token;
 
-    // 1. Descobrir o orçamento atual
-    const getUrl = `${META_BASE_URL}/${id}?fields=daily_budget,lifetime_budget&access_token=${token}`;
+    // 1. Descobrir o orçamento atual e a moeda da conta
+    const getUrl = `${META_BASE_URL}/${id}?fields=daily_budget,lifetime_budget,account_id&access_token=${token}`;
     const getRes = await fetch(getUrl);
     const getData = await getRes.json();
 
     if (getData.error) {
       return NextResponse.json({ error: getData.error.message }, { status: 400 });
+    }
+
+    let currency = 'BRL';
+    if (getData.account_id) {
+       const accountUrl = `${META_BASE_URL}/act_${getData.account_id}?fields=currency&access_token=${token}`;
+       const accountRes = await fetch(accountUrl);
+       const accountData = await accountRes.json();
+       if (accountData.currency) {
+         currency = accountData.currency.toUpperCase();
+       }
+    }
+
+    let usdToBrlRate = 5.0;
+    if (currency === 'USD') {
+      try {
+        const exchangeRes = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
+        const exchangeData = await exchangeRes.json();
+        if (exchangeData?.USDBRL?.bid) {
+          usdToBrlRate = parseFloat(exchangeData.USDBRL.bid);
+        }
+      } catch (e) {
+        console.error('Erro ao buscar cotação USD-BRL:', e);
+      }
     }
 
     if (!getData.daily_budget && !getData.lifetime_budget) {
@@ -45,46 +68,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Este item usa Orçamento Vitalício. Atualmente o sistema só suporta alterar Orçamento Diário.' }, { status: 400 });
     }
 
-    let newBudget = 0;
-    
+    let newBudgetInMetaCents = 0; // Para enviar à Meta
+    let localBudgetInBrl = 0;     // Para salvar no DB local
+
     if (action === 'fixed') {
-      newBudget = Math.round(value * 100); // Converte para centavos reais
+      // value é BRL
+      localBudgetInBrl = value;
+      if (currency === 'USD') {
+        newBudgetInMetaCents = Math.round((value / usdToBrlRate) * 100);
+      } else {
+        newBudgetInMetaCents = Math.round(value * 100);
+      }
     } else {
-      // Legacy code support just in case
-      const currentBudgetStr = getData.daily_budget; 
-      const currentBudget = Number(currentBudgetStr);
+      const currentBudgetMetaCents = Number(getData.daily_budget);
       const percentValue = value / 100;
       
       if (action === 'percentage_increase') {
-        newBudget = Math.round(currentBudget * (1 + percentValue));
+        newBudgetInMetaCents = Math.round(currentBudgetMetaCents * (1 + percentValue));
       } else if (action === 'percentage_decrease') {
-        newBudget = Math.round(currentBudget * (1 - percentValue));
+        newBudgetInMetaCents = Math.round(currentBudgetMetaCents * (1 - percentValue));
       }
+
+      const metaValueUnit = newBudgetInMetaCents / 100;
+      localBudgetInBrl = currency === 'USD' ? metaValueUnit * usdToBrlRate : metaValueUnit;
     }
 
-    if (newBudget <= 0) {
+    if (newBudgetInMetaCents <= 0) {
       return NextResponse.json({ error: 'Orçamento calculado inválido' }, { status: 400 });
     }
 
     // 2. Aplicar novo orçamento
-    // NOTA: updateCampaign/updateAdSet já multiplicam por 100 internamente,
-    // então passamos o valor em R$ (não em centavos)
-    const valueInBRL = action === 'fixed' ? value : newBudget / 100;
+    const valueForMeta = newBudgetInMetaCents / 100;
     if (type === 'campaign') {
-       await updateCampaign(id, token, { daily_budget: valueInBRL });
+       await updateCampaign(id, token, { daily_budget: valueForMeta });
     } else if (type === 'adset') {
-       await updateAdSet(id, token, { daily_budget: valueInBRL });
+       await updateAdSet(id, token, { daily_budget: valueForMeta });
     }
 
-    // 3. Atualizar localmente
+    // 3. Atualizar localmente em BRL unitário (não em centavos)
     const tableMap: Record<string, string> = { campaign: 'meta_campaigns', adset: 'meta_adsets' };
     const idMap: Record<string, string> = { campaign: 'campaign_id', adset: 'adset_id' };
     
     if (tableMap[type]) {
-      await supabaseAdmin.from(tableMap[type]).update({ daily_budget: newBudget }).eq(idMap[type], id);
+      await supabaseAdmin.from(tableMap[type]).update({ daily_budget: localBudgetInBrl }).eq(idMap[type], id);
     }
 
-    return NextResponse.json({ success: true, new_budget: newBudget });
+    return NextResponse.json({ success: true, new_budget: localBudgetInBrl });
 
   } catch (error: any) {
     console.error('Meta Budget Proxy Error:', error);

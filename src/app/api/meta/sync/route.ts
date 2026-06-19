@@ -7,6 +7,7 @@ import {
   extractAction,
   extractRoas,
   MetaApiError,
+  getAccountDetails,
   type DatePreset,
 } from '@/lib/metaApi';
 import { getSupabaseAdmin } from '@/lib/supabaseClient';
@@ -68,8 +69,23 @@ export async function POST(request: Request) {
     const errors: string[] = [];
 
     // ── 3. Itera cada conta e busca insights ──────────────────────────────────
+    let usdToBrlRate = 5.0;
+    try {
+      const exchangeRes = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
+      const exchangeData = await exchangeRes.json();
+      if (exchangeData?.USDBRL?.bid) {
+        usdToBrlRate = parseFloat(exchangeData.USDBRL.bid);
+      }
+    } catch (e) {
+      console.error('[Sync] Erro ao buscar cotação USD-BRL:', e);
+    }
+
     for (const account of accounts) {
       try {
+        const accDetails = await getAccountDetails(account.account_id, accessToken);
+        const currency = accDetails.currency || 'BRL';
+        const rate = currency === 'USD' ? usdToBrlRate : 1;
+
         const rows = await getCampaignInsights(
           account.account_id,
           accessToken,
@@ -93,18 +109,18 @@ export async function POST(request: Request) {
             campaign_name: row.campaign_name,
             date_start: row.date_start,
             date_stop: row.date_stop,
-            spend: parseFloat(row.spend ?? '0'),
+            spend: parseFloat(row.spend ?? '0') * rate,
             impressions: parseInt(row.impressions ?? '0', 10),
             clicks: parseInt(row.clicks ?? '0', 10),
             ctr: parseFloat(row.ctr ?? '0'),
-            cpc: parseFloat(row.cpc ?? '0'),
-            cpm: parseFloat(row.cpm ?? '0'),
+            cpc: parseFloat(row.cpc ?? '0') * rate,
+            cpm: parseFloat(row.cpm ?? '0') * rate,
             reach: parseInt(row.reach ?? '0', 10),
             frequency: parseFloat(row.frequency ?? '0'),
             purchases: Math.round(purchases),
-            purchase_value: purchaseValue,
+            purchase_value: purchaseValue * rate,
             leads: Math.round(leads),
-            cost_per_lead: costPerLead,
+            cost_per_lead: costPerLead * rate,
             roas,
             raw_data: row as any,
             updated_at: new Date().toISOString(),
@@ -125,8 +141,8 @@ export async function POST(request: Request) {
             campaign_id: c.id,
             name: c.name,
             status: c.status,
-            daily_budget: c.daily_budget ? parseFloat(c.daily_budget)/100 : null,
-            lifetime_budget: c.lifetime_budget ? parseFloat(c.lifetime_budget)/100 : null,
+            daily_budget: c.daily_budget ? (parseFloat(c.daily_budget) / 100) * rate : null,
+            lifetime_budget: c.lifetime_budget ? (parseFloat(c.lifetime_budget) / 100) * rate : null,
             objective: c.objective,
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,ad_account_id,campaign_id' });
@@ -142,8 +158,8 @@ export async function POST(request: Request) {
             adset_id: a.id,
             name: a.name,
             status: a.status,
-            daily_budget: a.daily_budget ? parseFloat(a.daily_budget)/100 : null,
-            lifetime_budget: a.lifetime_budget ? parseFloat(a.lifetime_budget)/100 : null,
+            daily_budget: a.daily_budget ? (parseFloat(a.daily_budget) / 100) * rate : null,
+            lifetime_budget: a.lifetime_budget ? (parseFloat(a.lifetime_budget) / 100) * rate : null,
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,ad_account_id,adset_id' });
         }

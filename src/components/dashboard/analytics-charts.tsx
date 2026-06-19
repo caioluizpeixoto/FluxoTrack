@@ -53,7 +53,34 @@ export function ConversionFunnel({ clicks, pageViews, ic, salesGenerated, salesA
                    <stop offset="100%" stopColor="#b52e72" stopOpacity="0.9" />
                  </linearGradient>
                </defs>
-               <path d="M 0,48 C 200,48 300,10 500,10 L 1000,10 L 1000,90 L 500,90 C 300,90 200,52 0,52 Z" fill="url(#funnelGrad)" />
+               {(() => {
+                 const maxCount = Math.max(...metrics.map(m => m.count), 1);
+                 const points = metrics.map((m, i) => {
+                   const ratio = m.count / maxCount;
+                   const height = Math.max(ratio * 100, 4); // minimum height of 4
+                   return { x: 100 + i * 200, top: 50 - height / 2, bottom: 50 + height / 2 };
+                 });
+
+                 const pathD = `
+                   M 0,${points[0].top}
+                   L ${points[0].x},${points[0].top}
+                   C ${points[0].x + 100},${points[0].top} ${points[1].x - 100},${points[1].top} ${points[1].x},${points[1].top}
+                   C ${points[1].x + 100},${points[1].top} ${points[2].x - 100},${points[2].top} ${points[2].x},${points[2].top}
+                   C ${points[2].x + 100},${points[2].top} ${points[3].x - 100},${points[3].top} ${points[3].x},${points[3].top}
+                   C ${points[3].x + 100},${points[3].top} ${points[4].x - 100},${points[4].top} ${points[4].x},${points[4].top}
+                   L 1000,${points[4].top}
+                   L 1000,${points[4].bottom}
+                   L ${points[4].x},${points[4].bottom}
+                   C ${points[4].x - 100},${points[4].bottom} ${points[3].x + 100},${points[3].bottom} ${points[3].x},${points[3].bottom}
+                   C ${points[3].x - 100},${points[3].bottom} ${points[2].x + 100},${points[2].bottom} ${points[2].x},${points[2].bottom}
+                   C ${points[2].x - 100},${points[2].bottom} ${points[1].x + 100},${points[1].bottom} ${points[1].x},${points[1].bottom}
+                   C ${points[1].x - 100},${points[1].bottom} ${points[0].x + 100},${points[0].bottom} ${points[0].x},${points[0].bottom}
+                   L 0,${points[0].bottom}
+                   Z
+                 `.replace(/\s+/g, ' ').trim();
+
+                 return <path d={pathD} fill="url(#funnelGrad)" />;
+               })()}
                <line x1="0" y1="50" x2="1000" y2="50" stroke="#ffffff15" strokeWidth="1" />
             </svg>
          </div>
