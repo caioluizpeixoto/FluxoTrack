@@ -354,7 +354,7 @@ export default function ProductDetail() {
       
       const linkClickAction = c.actions?.find((a:any) => a.action_type === 'link_click');
       clicks += Number(linkClickAction?.value || 0);
-      const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout');
+      const icAction = c.actions?.find((a:any) => a.action_type === 'initiate_checkout' || a.action_type === 'omni_initiated_checkout');
       if (icAction) ic += Number(icAction.value || 0);
       const pvAction = c.actions?.find((a:any) => a.action_type === 'landing_page_view' || a.action_type === 'outbound_clicks');
       if (pvAction) pageViews += Number(pvAction.value || 0);
@@ -413,9 +413,9 @@ export default function ProductDetail() {
 
     if (realPurchases === 0 && liveMetrics.campaigns.length > 0) {
       liveMetrics.campaigns.forEach(c => {
-        const pAct = c.actions?.find((a:any) => a.action_type === 'purchase');
+        const pAct = c.actions?.find((a:any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
         if (pAct) realPurchases += Number(pAct.value || 0);
-        const rAct = c.action_values?.find((a:any) => a.action_type === 'purchase');
+        const rAct = c.action_values?.find((a:any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
         if (rAct) realRevenue += Number(rAct.value || 0);
       });
     }
@@ -457,15 +457,15 @@ export default function ProductDetail() {
 
     let purchases = 0, revenue = 0, videoViews = 0, checkoutInits = 0;
     if (item.actions) {
-      const pAction = item.actions.find((a: any) => a.action_type === 'purchase');
+      const pAction = item.actions.find((a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
       if (pAction) purchases = Number(pAction.value || 0);
       const vAction = item.actions.find((a: any) => a.action_type === 'video_view');
       if (vAction) videoViews = Number(vAction.value || 0);
-      const cAction = item.actions.find((a: any) => a.action_type === 'initiate_checkout');
+      const cAction = item.actions.find((a: any) => a.action_type === 'initiate_checkout' || a.action_type === 'omni_initiated_checkout');
       if (cAction) checkoutInits = Number(cAction.value || 0);
     }
     if (item.action_values) {
-      const pRev = item.action_values.find((a: any) => a.action_type === 'purchase');
+      const pRev = item.action_values.find((a: any) => a.action_type === 'purchase' || a.action_type === 'omni_purchase');
       if (pRev) revenue = Number(pRev.value || 0);
     }
 
