@@ -43,7 +43,8 @@ export function ConversionFunnel({ clicks, pageViews, ic, salesGenerated, salesA
         <Info className="w-4 h-4 text-slate-400" />
       </div>
       
-      <div className="relative w-full h-[200px] flex px-4 pb-6 mt-2">
+      <div className="overflow-x-auto pb-2">
+        <div className="relative min-w-[550px] lg:w-full h-[200px] flex px-2 sm:px-4 pb-6 mt-2">
          {/* Custom SVG Background for the Funnel Shape */}
          <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none opacity-90 pb-6 pt-10">
             <svg width="100%" height="100%" preserveAspectRatio="none" viewBox="0 0 1000 100">
@@ -89,18 +90,19 @@ export function ConversionFunnel({ clicks, pageViews, ic, salesGenerated, salesA
          {/* Columns */}
          <div className="w-full flex z-10">
            {metrics.map((m, i) => (
-             <div key={i} className="flex-1 flex flex-col justify-between items-center relative">
-               <div className="text-sm font-bold text-slate-300 mt-[-10px]">{m.label}</div>
-               <div className="text-2xl font-black text-white drop-shadow-md my-auto">
+             <div key={i} className="flex-1 flex flex-col justify-between items-center relative px-1">
+               <div className="text-[10px] sm:text-xs md:text-sm font-bold text-slate-300 mt-[-10px] text-center leading-tight min-h-[32px] flex items-center">{m.label}</div>
+               <div className="text-base sm:text-xl md:text-2xl font-black text-white drop-shadow-md my-auto">
                  {percents[i]}
                </div>
-               <div className="text-base font-bold text-slate-200">{m.count.toLocaleString('pt-BR')}</div>
+               <div className="text-[11px] sm:text-sm md:text-base font-bold text-slate-200">{m.count.toLocaleString('pt-BR')}</div>
                {i < metrics.length - 1 && (
                  <div className="absolute right-0 top-0 bottom-0 w-[1px] bg-white/20" />
                )}
              </div>
            ))}
          </div>
+      </div>
       </div>
     </Card>
   );
@@ -120,10 +122,12 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
     let total = 0;
     events.forEach(e => {
        if (e.event_type !== 'purchase' || e.status !== 'approved') return;
-       
        let dateStr = e.created_at;
-       if (!dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-')) {
-         // Append Z to assume UTC if no timezone is provided by Supabase
+       // Se a string não terminar em Z e não tiver um offset (ex: +03:00 ou -03:00 no final)
+       if (!dateStr.endsWith('Z') && !dateStr.match(/[+-]\d{2}:?\d{2}$/) && !dateStr.includes('Z')) {
+         // Transformar 'YYYY-MM-DD HH:mm:ss' para 'YYYY-MM-DDTHH:mm:ssZ' para forçar UTC
+         dateStr = dateStr.replace(' ', 'T');
+         if (!dateStr.includes('T')) dateStr += 'T00:00:00';
          dateStr += 'Z';
        }
        
@@ -145,7 +149,8 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
         <h3 className="font-bold text-slate-100 flex items-center gap-2">Vendas por Horário</h3>
         <Info className="w-4 h-4 text-slate-400" />
       </div>
-      <div className="h-[200px] w-full relative">
+      <div className="overflow-x-auto pb-4 -mb-4">
+        <div className="h-[200px] min-w-[700px] lg:w-full relative">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} margin={{ top: 20, right: 0, left: -25, bottom: 0 }}>
             <XAxis 
@@ -183,6 +188,7 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
                )
             })}
          </div>
+        </div>
       </div>
     </Card>
   );
