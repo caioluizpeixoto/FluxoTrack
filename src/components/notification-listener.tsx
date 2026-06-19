@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useUser } from "@/firebase";
 import { toast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/lib/formatters";
 
 export function NotificationListener() {
   const { user } = useUser();
@@ -57,7 +58,7 @@ export function NotificationListener() {
 
             // 2. Envia notificação push via OneSignal (funciona em mobile/PWA mesmo com app fechado)
             if (notificationsEnabled) {
-              const formattedPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(newEvent.event_value || 0));
+              const formattedPrice = formatCurrency(newEvent.event_value, newEvent.currency);
               const title = isApproved ? `💰 Venda Aprovada: ${formattedPrice}` : `⏳ Venda Pendente: ${formattedPrice}`;
               const message = `Cliente: ${newEvent.customer_name || newEvent.customer_email || "Não informado"}`;
 
@@ -72,7 +73,7 @@ export function NotificationListener() {
 
 
             // 3. Exibe Toast em tela dentro do App
-            const toastPrice = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(newEvent.event_value || 0));
+            const toastPrice = formatCurrency(newEvent.event_value, newEvent.currency);
             toast({
               title: isApproved ? `💰 Venda Aprovada: ${toastPrice}` : `⏳ Venda Pendente: ${toastPrice}`,
               description: `Cliente: ${newEvent.customer_name || newEvent.customer_email || "Não informado"}`,

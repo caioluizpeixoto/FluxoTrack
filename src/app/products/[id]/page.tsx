@@ -224,7 +224,7 @@ export default function ProductDetail() {
         const res = await fetch('/api/meta/insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, accountId: accId, level: 'all', datePreset: preset })
+          body: JSON.stringify({ userId: user.uid, accountId: accId, level: 'all', datePreset: preset, targetCurrency: product?.currency || 'BRL' })
         });
         const data = await res.json();
         if (data.success) {
@@ -833,27 +833,27 @@ export default function ProductDetail() {
                  {visibleCards.includes('revenue') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
-                     <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue)}</p>
+                     <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue, product?.currency || 'BRL')}</p>
                      <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
                    </Card>
                  )}
                  {visibleCards.includes('pending') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
-                     <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue)}</p>
+                     <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue, product?.currency || 'BRL')}</p>
                      <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
                    </Card>
                  )}
                  {visibleCards.includes('spend') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
-                     <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend)}</p>
+                     <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend, product?.currency || 'BRL')}</p>
                    </Card>
                  )}
                  {visibleCards.includes('costs') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
                      <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
-                     <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount)}</p>
+                     <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount, product?.currency || 'BRL')}</p>
                    </Card>
                  )}
                  {visibleCards.includes('meta_balance') && (
@@ -867,10 +867,10 @@ export default function ProductDetail() {
                      ) : (
                         <>
                            <p className="text-2xl font-bold font-headline text-blue-400">
-                             {metaAccountData ? formatCurrency(metaAccountData.balance) : 'R$ 0,00'}
+                             {metaAccountData ? formatCurrency(metaAccountData.balance, product?.currency || 'BRL') : 'R$ 0,00'}
                            </p>
                            <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
-                             Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent) : 'R$ 0,00'}
+                             Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent, product?.currency || 'BRL') : 'R$ 0,00'}
                            </p>
                         </>
                      )}
@@ -879,7 +879,7 @@ export default function ProductDetail() {
                  {visibleCards.includes('profit') && (
                    <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
                      <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
-                     <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit)}</p>
+                     <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit, product?.currency || 'BRL')}</p>
                    </Card>
                  )}
                </div>
@@ -888,11 +888,11 @@ export default function ProductDetail() {
                <div className="flex flex-wrap gap-3 mb-6">
                  {visibleCards.includes('roi') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}</p></Card>}
                  {visibleCards.includes('roas') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
-                 {visibleCards.includes('cpa') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa)}</p></Card>}
-                 {visibleCards.includes('cpc') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc)}</p></Card>}
-                 {visibleCards.includes('cpm') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm)}</p></Card>}
+                 {visibleCards.includes('cpa') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa, product?.currency || 'BRL')}</p></Card>}
+                 {visibleCards.includes('cpc') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc, product?.currency || 'BRL')}</p></Card>}
+                 {visibleCards.includes('cpm') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm, product?.currency || 'BRL')}</p></Card>}
                  {visibleCards.includes('ctr') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
-                 {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu)}</p></Card>}
+                 {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu, product?.currency || 'BRL')}</p></Card>}
                </div>
 
                {/* Vendas por Produto (Hoje) */}
@@ -1044,23 +1044,23 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
                           <td className="px-3 py-2 text-center font-mono text-slate-300">
                              <div className="flex items-center justify-center gap-2">
-                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
+                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                         </tr>
                       );
                     })}
@@ -1077,23 +1077,23 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.adset_name}</td>
                           <td className="px-3 py-2 text-center font-mono text-slate-300">
                              <div className="flex items-center justify-center gap-2">
-                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget)}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget)} (Total)` : '-')}</span>
+                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
                              </div>
                           </td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                         </tr>
                       );
                     })}
@@ -1108,19 +1108,19 @@ export default function ProductDetail() {
                           <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
                           <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.ad_name}</td>
                           <td className="px-3 py-2 text-center font-mono text-slate-300">-</td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend)}</td>
+                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue)}</td>
+                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc)}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.ic.toFixed(2)}%</td>
                           <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
                           <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv) : '-'}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi) : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpv > 0 ? formatCurrency(m.cpv, product?.currency || 'BRL') : '-'}</td>
+                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
                         </tr>
                       );
                     })}
@@ -1241,7 +1241,7 @@ export default function ProductDetail() {
                                       <span>{methodName}</span>
                                     </div>
                                   </td>
-                                  <td className="px-4 py-3 text-right font-bold text-green-400">{formatCurrency(e.event_value)}</td>
+                                  <td className="px-4 py-3 text-right font-bold text-green-400">{formatCurrency(e.event_value, product?.currency || 'BRL')}</td>
                                 </tr>
                               );
                             })}
@@ -1419,7 +1419,7 @@ export default function ProductDetail() {
                       <div key={t.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#1a1c23] rounded-lg">
                         <span>{t.name}</span>
                         <div className="flex items-center gap-4">
-                           <span className="font-bold text-orange-400">{t.percentage ? `${t.percentage}%` : formatCurrency(t.fixed_amount)}</span>
+                           <span className="font-bold text-orange-400">{t.percentage ? `${t.percentage}%` : formatCurrency(t.fixed_amount, product?.currency || 'BRL')}</span>
                            <Button variant="ghost" size="icon" className="text-red-500 h-6 w-6" onClick={() => deleteTax(t.id)}><Trash className="w-3 h-3"/></Button>
                         </div>
                       </div>
@@ -1451,7 +1451,7 @@ export default function ProductDetail() {
                            <span className="text-xs text-muted-foreground">{new Date(e.expense_date).toLocaleDateString()}</span>
                         </div>
                         <div className="flex items-center gap-4">
-                           <span className="font-bold text-red-400">-{formatCurrency(e.amount)}</span>
+                           <span className="font-bold text-red-400">-{formatCurrency(e.amount, product?.currency || 'BRL')}</span>
                            <Button variant="ghost" size="icon" className="text-red-500 h-6 w-6" onClick={() => deleteExpense(e.id)}><Trash className="w-3 h-3"/></Button>
                         </div>
                       </div>
@@ -1858,7 +1858,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                    {selectedSaleForModal.raw_payload.products.map((p: any, i: number) => (
                      <li key={i} className="flex justify-between items-center text-sm border-b border-white/5 pb-2 last:border-0 last:pb-0">
                        <span>{p.title || p.name}</span>
-                       {p.price !== undefined && <span className="font-mono text-green-400">{formatCurrency(p.price)}</span>}
+                       {p.price !== undefined && <span className="font-mono text-green-400">{formatCurrency(p.price, product?.currency || 'BRL')}</span>}
                      </li>
                    ))}
                  </ul>
@@ -1872,7 +1872,7 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                  </p>
                  <p className="font-medium text-sm">{selectedSaleForModal.raw_payload.checkout.orderbump.title || 'Oferta Adicional'}</p>
                  {selectedSaleForModal.raw_payload.checkout.orderbump.price !== undefined && (
-                   <p className="text-xs text-green-400 mt-1 font-mono">{formatCurrency(selectedSaleForModal.raw_payload.checkout.orderbump.price)}</p>
+                   <p className="text-xs text-green-400 mt-1 font-mono">{formatCurrency(selectedSaleForModal.raw_payload.checkout.orderbump.price, product?.currency || 'BRL')}</p>
                  )}
                </div>
              )}

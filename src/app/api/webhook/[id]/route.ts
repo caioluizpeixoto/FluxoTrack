@@ -17,7 +17,7 @@ export async function POST(
     // Verifica se o produto existe
     const { data: product, error: productError } = await supabaseAdmin
       .from('products')
-      .select('id, user_id, name')
+      .select('id, user_id, name, currency')
       .eq('id', productId)
       .maybeSingle();
     if (!product) {
@@ -77,16 +77,18 @@ export async function POST(
 
     let currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
 
-    if (currency.toUpperCase() !== 'BRL') {
+    const targetCurrency = product.currency || 'BRL';
+    
+    if (currency.toUpperCase() !== targetCurrency.toUpperCase()) {
       try {
-        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${currency.toUpperCase()}-BRL`);
+        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${currency.toUpperCase()}-${targetCurrency.toUpperCase()}`);
         if (xrRes.ok) {
           const xrData = await xrRes.json();
-          const pair = `${currency.toUpperCase()}BRL`;
+          const pair = `${currency.toUpperCase()}${targetCurrency.toUpperCase()}`;
           if (xrData[pair] && xrData[pair].ask) {
             const rate = parseFloat(xrData[pair].ask);
             eventValue = eventValue * rate;
-            currency = 'BRL';
+            currency = targetCurrency;
           }
         }
       } catch (e) {

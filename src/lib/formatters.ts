@@ -1,9 +1,11 @@
-export function formatCurrency(value: number | string): string {
+export function formatCurrency(value: number | string, currencyCode: string = 'BRL'): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return 'R$ 0,00';
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+  let locale = 'pt-BR';
+  if (currencyCode === 'USD') locale = 'en-US';
+  if (currencyCode === 'EUR') locale = 'de-DE';
+  if (isNaN(num)) return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode }).format(0);
+  return new Intl.NumberFormat(locale, { style: 'currency', currency: currencyCode }).format(num);
 }
-
 export function formatNumber(value: number | string): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(num)) return '0';

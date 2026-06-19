@@ -5,7 +5,8 @@ import { getInsights, getAccountDetails, getCampaigns, getAdSets, getAds } from 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, accountId, level, datePreset, timeRange } = body;
+    const { userId, accountId, level, datePreset, timeRange, targetCurrency } = body;
+    const finalTargetCurrency = targetCurrency || 'BRL';
 
     if (!userId || !accountId) {
       return NextResponse.json({ error: 'Missing userId or accountId' }, { status: 400 });
@@ -74,12 +75,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (accountCurrency && accountCurrency.toUpperCase() !== 'BRL') {
+    if (accountCurrency && accountCurrency.toUpperCase() !== finalTargetCurrency.toUpperCase()) {
       try {
-        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${accountCurrency.toUpperCase()}-BRL`);
+        const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${accountCurrency.toUpperCase()}-${finalTargetCurrency.toUpperCase()}`);
         if (xrRes.ok) {
           const xrData = await xrRes.json();
-          const pair = `${accountCurrency.toUpperCase()}BRL`;
+          const pair = `${accountCurrency.toUpperCase()}${finalTargetCurrency.toUpperCase()}`;
           if (xrData[pair] && xrData[pair].ask) {
             exchangeRate = parseFloat(xrData[pair].ask);
           }
