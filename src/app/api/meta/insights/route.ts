@@ -38,24 +38,34 @@ export async function POST(req: NextRequest) {
       dateParams = '&date_preset=today';
     }
 
+    // Fetch DB currency as fallback
+    const { data: adAccDb } = await supabaseAdmin
+      .from('meta_ad_accounts')
+      .select('currency')
+      .eq('account_id', accountId.replace('act_', ''))
+      .maybeSingle();
+
     // Se o level for account, talvez também queira o saldo real.
     let accountData = null;
     let accountError = null;
     let exchangeRate = 1;
-    let accountCurrency = 'BRL';
+    let accountCurrency = adAccDb?.currency || 'BRL';
 
     if (level === 'account' || level === 'all') {
       try {
         const details = await getAccountDetails(accountId, token);
-        accountCurrency = details.currency || 'BRL';
+        accountCurrency = details.currency || accountCurrency;
         
         let prepaid_balance = null;
         if (details.funding_source_details?.display_string) {
-          // Extracts amounts like "R$49,99" or "R$ 49,99" or "US$ 10.50"
-          const match = details.funding_source_details.display_string.match(/[\d.,]+/);
-          if (match) {
-            // Converts "49,99" to 49.99
-            prepaid_balance = parseFloat(match[0].replace(/\./g, '').replace(',', '.'));
+          // This string usually contains the credit card like "Mastercard *1234"
+          // Only parse it if it actually looks like a balance string (contains a currency symbol AND no asterisks)
+          const ds = details.funding_source_details.display_string;
+          if (!ds.includes('*') && (ds.includes('R$') || ds.includes('US$') || ds.includes('$'))) {
+             const match = ds.match(/[\d.,]+/);
+             if (match) {
+               prepaid_balance = parseFloat(match[0].replace(/\./g, '').replace(',', '.'));
+             }
           }
         }
         details.prepaid_balance = prepaid_balance;
@@ -77,16 +87,26 @@ export async function POST(req: NextRequest) {
 
     if (accountCurrency && accountCurrency.toUpperCase() !== finalTargetCurrency.toUpperCase()) {
       try {
+        console.log(`[Meta Insights] Fetching exchange rate for ${accountCurrency} -> ${finalTargetCurrency}`);
         const xrRes = await fetch(`https://economia.awesomeapi.com.br/json/last/${accountCurrency.toUpperCase()}-${finalTargetCurrency.toUpperCase()}`);
         if (xrRes.ok) {
           const xrData = await xrRes.json();
           const pair = `${accountCurrency.toUpperCase()}${finalTargetCurrency.toUpperCase()}`;
           if (xrData[pair] && xrData[pair].ask) {
             exchangeRate = parseFloat(xrData[pair].ask);
+            console.log(`[Meta Insights] Exchange rate obtained: ${exchangeRate}`);
           }
+        } else {
+          console.error(`[Meta Insights] Exchange rate API failed: ${xrRes.status} ${xrRes.statusText}`);
+          // Fallback manual rate if API fails (approximate)
+          if (accountCurrency.toUpperCase() === 'USD' && finalTargetCurrency.toUpperCase() === 'BRL') exchangeRate = 5.45;
+          if (accountCurrency.toUpperCase() === 'BRL' && finalTargetCurrency.toUpperCase() === 'USD') exchangeRate = 0.18;
         }
-      } catch (e) {
-        console.error("Erro ao buscar taxa de cambio", e);
+      } catch (e: any) {
+        console.error("[Meta Insights] Erro ao buscar taxa de cambio", e.message);
+        // Fallback manual rate if API fails (approximate)
+        if (accountCurrency.toUpperCase() === 'USD' && finalTargetCurrency.toUpperCase() === 'BRL') exchangeRate = 5.45;
+        if (accountCurrency.toUpperCase() === 'BRL' && finalTargetCurrency.toUpperCase() === 'USD') exchangeRate = 0.18;
       }
     }
 
