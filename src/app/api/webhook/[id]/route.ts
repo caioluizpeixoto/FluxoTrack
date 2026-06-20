@@ -274,9 +274,11 @@ export async function POST(
         const onesignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
         const onesignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
         if (onesignalAppId && onesignalApiKey) {
-          const title = status === 'approved' ? 'Venda Aprovada! 💰' : 'Venda Pendente! ⏳';
+          const title = status === 'approved' 
+            ? `Venda Aprovada: ${currency} ${eventValue.toFixed(2)} 💰` 
+            : `Venda Pendente: ${currency} ${eventValue.toFixed(2)} ⏳`;
           const custName = customerName ? `\nCliente: ${customerName}` : '';
-          const msg = `Nova venda no produto ${product.name} no valor de ${currency} ${eventValue.toFixed(2)}${custName}`;
+          const msg = `Produto: ${product.name}${custName}`;
           await fetch('https://onesignal.com/api/v1/notifications', {
             method: 'POST',
             headers: {

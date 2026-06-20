@@ -22,18 +22,17 @@ export function ConversionFunnel({ clicks, pageViews, ic, salesGenerated, salesA
     { label: 'Vendas Apr.', count: salesApproved },
   ];
   
-  const getPercent = (current: number, ...prevs: number[]) => {
-    const validPrev = prevs.find(p => p > 0);
-    if (!validPrev) return "0%";
-    return ((current / validPrev) * 100).toFixed(1).replace('.0', '') + '%';
+  const getPercent = (current: number, base: number) => {
+    if (base <= 0) return "0%";
+    return ((current / base) * 100).toFixed(1).replace('.0', '') + '%';
   };
 
   const percents = [
     clicks > 0 ? "100%" : "0%",
     getPercent(pageViews, clicks),
-    getPercent(ic, pageViews, clicks),
-    getPercent(salesGenerated, ic, pageViews, clicks),
-    getPercent(salesApproved, salesGenerated, ic, pageViews, clicks),
+    getPercent(ic, clicks > 0 ? clicks : pageViews),
+    getPercent(salesGenerated, clicks > 0 ? clicks : pageViews),
+    getPercent(salesApproved, clicks > 0 ? clicks : pageViews),
   ];
 
   return (
@@ -123,9 +122,7 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
     events.forEach(e => {
        if (e.event_type !== 'purchase' || e.status !== 'approved') return;
        let dateStr = e.created_at;
-       // Se a string não terminar em Z e não tiver um offset (ex: +03:00 ou -03:00 no final)
        if (!dateStr.endsWith('Z') && !dateStr.match(/[+-]\d{2}:?\d{2}$/) && !dateStr.includes('Z')) {
-         // Transformar 'YYYY-MM-DD HH:mm:ss' para 'YYYY-MM-DDTHH:mm:ssZ' para forçar UTC
          dateStr = dateStr.replace(' ', 'T');
          if (!dateStr.includes('T')) dateStr += 'T00:00:00';
          dateStr += 'Z';
@@ -137,58 +134,44 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
        total += 1;
     });
 
-    return hours.map(h => ({
+    return hours.filter(h => h.count > 0).sort((a, b) => b.count - a.count).map(h => ({
       ...h,
-      percent: total > 0 ? ((h.count / total) * 100).toFixed(1) + '%' : ''
+      percent: total > 0 ? ((h.count / total) * 100).toFixed(1) + '%' : '0%'
     }));
   }, [events]);
 
-  return (
-    <Card className="bg-[#2a2f3e] border-none text-white w-full rounded-xl shadow-lg mt-4 p-4 pb-8">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="font-bold text-slate-100 flex items-center gap-2">Vendas por Horário</h3>
-        <Info className="w-4 h-4 text-slate-400" />
-      </div>
-      <div className="overflow-x-auto pb-4 -mb-4">
-        <div className="h-[200px] min-w-[700px] lg:w-full relative">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 20, right: 0, left: -25, bottom: 0 }}>
-            <XAxis 
-              dataKey="hourLabel" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#64748b', fontSize: 10 }}
-              angle={-45}
-              textAnchor="end"
-            />
-            <Tooltip 
-              cursor={{fill: '#ffffff10'}} 
-              contentStyle={{ backgroundColor: '#1e2230', borderColor: '#ffffff10', borderRadius: 8, color: '#fff' }}
-              itemStyle={{ color: '#fff' }}
-              labelStyle={{ color: '#94a3b8' }}
-            />
-            <Bar dataKey="count" fill="#026ae3" radius={[2, 2, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-        {/* Render percentages manually above bars to match the image precisely.
-            Recharts labels can be tricky to position exactly on top without cutting off.
-            We will use Customized label for Bar.
-         */}
-         <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex items-end pb-8">
-            {chartData.map((d, i) => {
-               const maxCount = Math.max(...chartData.map(c => c.count));
-               const heightPct = maxCount > 0 ? (d.count / maxCount) * 100 : 0;
-               return (
-                 <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
-                    <div style={{ bottom: `${heightPct}%` }} className="relative text-[9px] text-slate-400 mb-1">
-                      {d.count > 0 ? d.percent : ''}
-                    </div>
-                    <div style={{ height: `${heightPct}%` }} />
-                 </div>
-               )
-            })}
-         </div>
+  if (chartData.length === 0) {
+    return (
+      <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4">
+        <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+          <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Picos de Venda por Horário</h3>
         </div>
+        <div className="text-center py-4 text-sm text-slate-500">Nenhuma venda aprovada neste período.</div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4">
+      <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+        <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Picos de Venda por Horário</h3>
+      </div>
+      <div className="space-y-3">
+        {chartData.map((d, i) => (
+          <div key={i} className="flex justify-between items-center bg-[#0f1115] p-3 rounded-lg border border-white/5 relative overflow-hidden">
+            <div 
+              className="absolute left-0 top-0 bottom-0 bg-primary/10 border-l-2 border-primary" 
+              style={{ width: `${Math.max(Number(d.percent.replace('%', '')), 2)}%` }}
+            />
+            <div className="relative z-10 flex items-center gap-3">
+              <span className="font-mono font-bold text-slate-300">{d.hourLabel}</span>
+            </div>
+            <div className="relative z-10 flex items-center gap-4 text-sm">
+              <span className="font-bold text-slate-200">{d.count} venda{d.count > 1 ? 's' : ''}</span>
+              <span className="text-xs font-medium text-slate-500 w-12 text-right">{d.percent}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </Card>
   );

@@ -23,6 +23,12 @@ import { formatCurrency } from "@/lib/formatters";
 import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ConversionFunnel, HourlySalesChart } from "@/components/dashboard/analytics-charts";
+import { Responsive as ResponsiveGridLayout, WidthProvider } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+const ResponsiveGridLayoutWithWidth = WidthProvider(ResponsiveGridLayout);
+
 export default function ProductDetail() {
   const { id } = useParams() as { id: string };
   const router = useRouter();
@@ -69,8 +75,87 @@ export default function ProductDetail() {
   const [selectedSaleForModal, setSelectedSaleForModal] = useState<any>(null);
 
   // Layout State
+  const defaultGridLayouts = {
+    lg: [
+      { i: 'revenue', x: 0, y: 0, w: 2, h: 4 },
+      { i: 'pending', x: 2, y: 0, w: 2, h: 4 },
+      { i: 'spend', x: 4, y: 0, w: 2, h: 4 },
+      { i: 'costs', x: 6, y: 0, w: 2, h: 4 },
+      { i: 'meta_balance', x: 8, y: 0, w: 2, h: 4 },
+      { i: 'profit', x: 10, y: 0, w: 2, h: 4 },
+      
+      { i: 'roi', x: 0, y: 4, w: 1, h: 3 },
+      { i: 'roas', x: 1, y: 4, w: 1, h: 3 },
+      { i: 'cpa', x: 2, y: 4, w: 2, h: 3 },
+      { i: 'cpc', x: 4, y: 4, w: 2, h: 3 },
+      { i: 'cpm', x: 6, y: 4, w: 2, h: 3 },
+      { i: 'ctr', x: 8, y: 4, w: 2, h: 3 },
+      { i: 'arpu', x: 10, y: 4, w: 2, h: 3 },
+      
+      { i: 'last_sale', x: 0, y: 7, w: 4, h: 10 },
+      { i: 'funnel', x: 4, y: 7, w: 8, h: 18 },
+    ],
+    md: [
+      { i: 'revenue', x: 0, y: 0, w: 3, h: 4 },
+      { i: 'pending', x: 3, y: 0, w: 3, h: 4 },
+      { i: 'spend', x: 6, y: 0, w: 3, h: 4 },
+      { i: 'costs', x: 0, y: 4, w: 3, h: 4 },
+      { i: 'meta_balance', x: 3, y: 4, w: 3, h: 4 },
+      { i: 'profit', x: 6, y: 4, w: 3, h: 4 },
+      
+      { i: 'roi', x: 0, y: 8, w: 2, h: 3 },
+      { i: 'roas', x: 2, y: 8, w: 2, h: 3 },
+      { i: 'cpa', x: 4, y: 8, w: 2, h: 3 },
+      { i: 'cpc', x: 6, y: 8, w: 3, h: 3 },
+      { i: 'cpm', x: 0, y: 11, w: 3, h: 3 },
+      { i: 'ctr', x: 3, y: 11, w: 3, h: 3 },
+      { i: 'arpu', x: 6, y: 11, w: 3, h: 3 },
+      
+      { i: 'last_sale', x: 0, y: 14, w: 9, h: 10 },
+      { i: 'funnel', x: 0, y: 24, w: 9, h: 18 },
+    ],
+    sm: [
+      { i: 'revenue', x: 0, y: 0, w: 3, h: 4 },
+      { i: 'pending', x: 3, y: 0, w: 3, h: 4 },
+      { i: 'spend', x: 0, y: 4, w: 3, h: 4 },
+      { i: 'costs', x: 3, y: 4, w: 3, h: 4 },
+      { i: 'meta_balance', x: 0, y: 8, w: 3, h: 4 },
+      { i: 'profit', x: 3, y: 8, w: 3, h: 4 },
+      
+      { i: 'roi', x: 0, y: 12, w: 2, h: 3 },
+      { i: 'roas', x: 2, y: 12, w: 2, h: 3 },
+      { i: 'cpa', x: 4, y: 12, w: 2, h: 3 },
+      { i: 'cpc', x: 0, y: 15, w: 2, h: 3 },
+      { i: 'cpm', x: 2, y: 15, w: 2, h: 3 },
+      { i: 'ctr', x: 4, y: 15, w: 2, h: 3 },
+      { i: 'arpu', x: 0, y: 18, w: 6, h: 3 },
+      
+      { i: 'last_sale', x: 0, y: 21, w: 6, h: 10 },
+      { i: 'funnel', x: 0, y: 31, w: 6, h: 18 },
+    ],
+    xs: [
+      { i: 'revenue', x: 0, y: 0, w: 4, h: 4 },
+      { i: 'pending', x: 0, y: 4, w: 4, h: 4 },
+      { i: 'spend', x: 0, y: 8, w: 4, h: 4 },
+      { i: 'costs', x: 0, y: 12, w: 4, h: 4 },
+      { i: 'meta_balance', x: 0, y: 16, w: 4, h: 4 },
+      { i: 'profit', x: 0, y: 20, w: 4, h: 4 },
+      
+      { i: 'roi', x: 0, y: 24, w: 2, h: 3 },
+      { i: 'roas', x: 2, y: 24, w: 2, h: 3 },
+      { i: 'cpa', x: 0, y: 27, w: 2, h: 3 },
+      { i: 'cpc', x: 2, y: 27, w: 2, h: 3 },
+      { i: 'cpm', x: 0, y: 30, w: 2, h: 3 },
+      { i: 'ctr', x: 2, y: 30, w: 2, h: 3 },
+      { i: 'arpu', x: 0, y: 33, w: 4, h: 3 },
+      
+      { i: 'last_sale', x: 0, y: 36, w: 4, h: 10 },
+      { i: 'funnel', x: 0, y: 46, w: 4, h: 18 },
+    ]
+  };
   const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'meta_balance', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
   const [visibleCards, setVisibleCards] = useState<string[]>(defaultLayout);
+  const [layouts, setLayouts] = useState<any>(defaultGridLayouts);
   const [layoutModal, setLayoutModal] = useState(false);
 
   // Modals & Forms
@@ -105,7 +190,17 @@ export default function ProductDetail() {
       setIcTriggerUrl(localStorage.getItem(`ic_url_${id}`) || "");
       
       const savedLayout = localStorage.getItem(`dashboard_layout_${id}`);
-      if (savedLayout) setVisibleCards(JSON.parse(savedLayout));
+      if (savedLayout) {
+        try {
+          const parsed = JSON.parse(savedLayout);
+          if (parsed.layouts) {
+             setLayouts(parsed.layouts);
+             setVisibleCards(parsed.visibleCards || defaultLayout);
+          } else if (Array.isArray(parsed)) {
+             setVisibleCards(parsed);
+          }
+        } catch(e) {}
+      }
 
       if ("Notification" in window) {
         setPermissionStatus(Notification.permission);
@@ -777,6 +872,13 @@ export default function ProductDetail() {
     setRules(rules.filter(r => r.id !== rid));
   };
 
+  const handleLayoutChange = (currentLayout: any, allLayouts: any) => {
+    setLayouts(allLayouts);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(`dashboard_layout_${id}`, JSON.stringify({ layouts: allLayouts, visibleCards }));
+    }
+  };
+
   if (!mounted || !product) return null;
 
   return (
@@ -838,125 +940,144 @@ export default function ProductDetail() {
                  </Button>
                </div>
 
-               {/* Principais Cards Grandes */}
-               <div className="flex flex-wrap gap-4 mb-4">
+               {/* Grid Layout */}
+               <ResponsiveGridLayoutWithWidth
+                 className="layout"
+                 layouts={layouts}
+                 breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+                 cols={{ lg: 12, md: 9, sm: 6, xs: 4, xxs: 2 }}
+                 rowHeight={30}
+                 onLayoutChange={handleLayoutChange}
+                 isDraggable={true}
+                 isResizable={typeof window !== "undefined" && window.innerWidth > 768}
+                 margin={[16, 16]}
+                 containerPadding={[0, 0]}
+               >
                  {visibleCards.includes('revenue') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
-                     <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue, product?.currency || 'BRL')}</p>
-                     <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
-                   </Card>
+                   <div key="revenue">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center cursor-move">
+                       <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Bruto (Real)</p>
+                       <p className="text-2xl font-bold font-headline text-green-400">{formatCurrency(kpis.revenue, product?.currency || 'BRL')}</p>
+                       <p className="text-xs text-muted-foreground mt-1">{kpis.purchases} Vendas</p>
+                     </Card>
+                   </div>
                  )}
                  {visibleCards.includes('pending') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
-                     <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue, product?.currency || 'BRL')}</p>
-                     <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
-                   </Card>
+                   <div key="pending">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center cursor-move">
+                       <p className="text-sm text-slate-400 font-medium mb-1">Faturamento Pendente</p>
+                       <p className="text-2xl font-bold font-headline text-amber-500">{formatCurrency(kpis.pendingRevenue, product?.currency || 'BRL')}</p>
+                       <p className="text-xs text-muted-foreground mt-1">{kpis.pendingPurchases} Compras Pendentes</p>
+                     </Card>
+                   </div>
                  )}
                  {visibleCards.includes('spend') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
-                     <p className="text-2xl font-bold font-headline text-red-400">{formatCurrency(kpis.spend, product?.currency || 'BRL')}</p>
-                   </Card>
+                   <div key="spend">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center cursor-move">
+                       <p className="text-sm text-slate-400 font-medium mb-1">Gasto Ads</p>
+                       <p className="text-2xl font-bold font-headline text-white">{formatCurrency(kpis.spend, product?.currency || 'BRL')}</p>
+                     </Card>
+                   </div>
                  )}
                  {visibleCards.includes('costs') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
-                     <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount, product?.currency || 'BRL')}</p>
-                   </Card>
+                   <div key="costs">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center cursor-move">
+                       <p className="text-sm text-slate-400 font-medium mb-1">Custos & Taxas</p>
+                       <p className="text-2xl font-bold font-headline text-orange-400">{formatCurrency(kpis.prodCost + kpis.taxesAmount + kpis.expensesAmount, product?.currency || 'BRL')}</p>
+                     </Card>
+                   </div>
                  )}
                  {visibleCards.includes('meta_balance') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden">
-                     <p className="text-sm text-slate-400 font-medium mb-1">Saldo na Conta (Meta)</p>
-                     
-                     {metaAccountData?.error ? (
-                        <p className="text-xs text-red-400 mt-1 line-clamp-2" title={metaAccountData.error}>
-                          Permissão Negada ou Conta Inválida: {metaAccountData.error}
-                        </p>
-                     ) : (
-                        <>
-                           {metaAccountData?.isCard ? (
-                             <p className="text-2xl font-bold font-headline text-blue-400">
-                               Cartão
-                             </p>
-                           ) : (
-                             <>
+                   <div key="meta_balance">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 flex flex-col justify-center relative overflow-hidden cursor-move">
+                       <p className="text-sm text-slate-400 font-medium mb-1">Saldo na Conta (Meta)</p>
+                       {metaAccountData?.error ? (
+                          <p className="text-xs text-red-400 mt-1 line-clamp-2" title={metaAccountData.error}>
+                            Permissão Negada ou Conta Inválida: {metaAccountData.error}
+                          </p>
+                       ) : (
+                          <>
+                             {metaAccountData?.isCard ? (
                                <p className="text-2xl font-bold font-headline text-blue-400">
-                                 {metaAccountData ? formatCurrency(metaAccountData.balance, product?.currency || 'BRL') : 'R$ 0,00'}
+                                 Cartão
                                </p>
-                               <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
-                                 Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent, product?.currency || 'BRL') : 'R$ 0,00'}
-                               </p>
-                             </>
-                           )}
-                        </>
-                     )}
-                   </Card>
+                             ) : (
+                               <>
+                                 <p className="text-2xl font-bold font-headline text-blue-400">
+                                   {metaAccountData ? formatCurrency(metaAccountData.balance, product?.currency || 'BRL') : 'R$ 0,00'}
+                                 </p>
+                                 <p className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+                                   Gasto Total: {metaAccountData ? formatCurrency(metaAccountData.spent, product?.currency || 'BRL') : 'R$ 0,00'}
+                                 </p>
+                               </>
+                             )}
+                          </>
+                       )}
+                     </Card>
+                   </div>
                  )}
                  {visibleCards.includes('profit') && (
-                   <Card className="flex-1 min-w-[200px] bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center">
-                     <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
-                     <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit, product?.currency || 'BRL')}</p>
-                   </Card>
+                   <div key="profit">
+                     <Card className="h-full bg-[#1a1c23] border border-primary/20 p-4 flex flex-col justify-center cursor-move">
+                       <p className="text-sm text-primary font-medium mb-1">Lucro Líquido</p>
+                       <p className={`text-3xl font-bold font-headline ${kpis.profit > 0 ? 'text-green-500' : kpis.profit < 0 ? 'text-red-500' : 'text-slate-300'}`}>{formatCurrency(kpis.profit, product?.currency || 'BRL')}</p>
+                     </Card>
+                   </div>
                  )}
-               </div>
 
-               {/* Cards Secundários */}
-               <div className="flex flex-wrap gap-3 mb-6">
-                 {visibleCards.includes('roi') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold">{kpis.roi.toFixed(2)}</p></Card>}
-                 {visibleCards.includes('roas') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold">{kpis.roas.toFixed(2)}x</p></Card>}
-                 {visibleCards.includes('cpa') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold">{formatCurrency(kpis.cpa, product?.currency || 'BRL')}</p></Card>}
-                 {visibleCards.includes('cpc') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold">{formatCurrency(kpis.cpc, product?.currency || 'BRL')}</p></Card>}
-                 {visibleCards.includes('cpm') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold">{formatCurrency(kpis.cpm, product?.currency || 'BRL')}</p></Card>}
-                 {visibleCards.includes('ctr') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold">{kpis.ctr.toFixed(2)}%</p></Card>}
-                 {visibleCards.includes('arpu') && <Card className="flex-1 min-w-[120px] bg-[#1a1c23] border-white/5 p-3 text-center"><p className="text-xs text-slate-400 mb-1">Ticket Médio (ARPU)</p><p className="font-bold text-green-400">{formatCurrency(kpis.arpu, product?.currency || 'BRL')}</p></Card>}
-               </div>
+                 {visibleCards.includes('roi') && <div key="roi"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">ROI</p><p className="font-bold text-lg">{kpis.roi.toFixed(2)}</p></Card></div>}
+                 {visibleCards.includes('roas') && <div key="roas"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">ROAS</p><p className="font-bold text-lg">{kpis.roas.toFixed(2)}x</p></Card></div>}
+                 {visibleCards.includes('cpa') && <div key="cpa"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">CPA</p><p className="font-bold text-lg">{formatCurrency(kpis.cpa, product?.currency || 'BRL')}</p></Card></div>}
+                 {visibleCards.includes('cpc') && <div key="cpc"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">CPC</p><p className="font-bold text-lg">{formatCurrency(kpis.cpc, product?.currency || 'BRL')}</p></Card></div>}
+                 {visibleCards.includes('cpm') && <div key="cpm"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">CPM</p><p className="font-bold text-lg">{formatCurrency(kpis.cpm, product?.currency || 'BRL')}</p></Card></div>}
+                 {visibleCards.includes('ctr') && <div key="ctr"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">CTR</p><p className="font-bold text-lg">{kpis.ctr.toFixed(2)}%</p></Card></div>}
+                 {visibleCards.includes('arpu') && <div key="arpu"><Card className="h-full bg-[#1a1c23] border-white/5 p-3 text-center flex flex-col justify-center cursor-move"><p className="text-xs text-slate-400 mb-1">Ticket Médio</p><p className="font-bold text-green-400 text-lg">{formatCurrency(kpis.arpu, product?.currency || 'BRL')}</p></Card></div>}
 
-               {/* Vendas por Produto (Hoje) */}
-               {visibleCards.includes('last_sale') && (
-                 <Card className="w-full bg-[#1a1c23] border-white/5 p-4 mb-6">
-                   <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                     <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Produto (Hoje)</h3>
-                     <span className="text-xs text-muted-foreground">{kpis.productsSoldList.length} produto{kpis.productsSoldList.length !== 1 ? 's' : ''}</span>
-                   </div>
-                   <div className="space-y-2">
-                     <div className="flex justify-between text-[10px] uppercase text-slate-500 font-bold px-2">
-                       <span>Produto</span>
-                       <span>Vendas</span>
-                     </div>
-                     {kpis.productsSoldList.map((p: any, i: number) => (
-                       <div key={i} className="flex justify-between items-center bg-[#0f1115] p-2 rounded border border-white/5 text-sm">
-                         <span className="font-medium text-slate-200 truncate pr-4">{p.name}</span>
-                         <span className="font-bold">{p.count}</span>
+                 {visibleCards.includes('last_sale') && (
+                   <div key="last_sale">
+                     <Card className="h-full bg-[#1a1c23] border-white/5 p-4 cursor-move overflow-y-auto custom-scrollbar">
+                       <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                         <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Produto (Hoje)</h3>
+                         <span className="text-xs text-muted-foreground">{kpis.productsSoldList.length} produto{kpis.productsSoldList.length !== 1 ? 's' : ''}</span>
                        </div>
-                     ))}
-                     {kpis.productsSoldList.length === 0 && (
-                       <div className="text-center py-4 text-sm text-slate-500">Nenhuma venda aprovada hoje.</div>
-                     )}
-                     <div className="flex justify-between items-center p-2 text-sm font-bold border-t border-white/5 mt-2 text-slate-300">
-                       <span>Total</span>
-                       <span>{kpis.productsSoldToday}</span>
-                     </div>
+                       <div className="space-y-2">
+                         <div className="flex justify-between text-[10px] uppercase text-slate-500 font-bold px-2">
+                           <span>Produto</span>
+                           <span>Vendas</span>
+                         </div>
+                         {kpis.productsSoldList.map((p: any, i: number) => (
+                           <div key={i} className="flex justify-between items-center bg-[#0f1115] p-2 rounded border border-white/5 text-sm">
+                             <span className="font-medium text-slate-200 truncate pr-4">{p.name}</span>
+                             <span className="font-bold">{p.count}</span>
+                           </div>
+                         ))}
+                         {kpis.productsSoldList.length === 0 && (
+                           <div className="text-center py-4 text-sm text-slate-500">Nenhuma venda aprovada hoje.</div>
+                         )}
+                         <div className="flex justify-between items-center p-2 text-sm font-bold border-t border-white/5 mt-2 text-slate-300">
+                           <span>Total</span>
+                           <span>{kpis.productsSoldToday}</span>
+                         </div>
+                       </div>
+                     </Card>
                    </div>
-                 </Card>
-               )}
+                 )}
 
-               {/* Funil de Vendas */}
-               {visibleCards.includes('funnel') && (
-                 <div className="flex flex-col gap-4">
-                    <ConversionFunnel 
-                       clicks={kpis.clicks} 
-                       pageViews={kpis.pageViews} 
-                       ic={kpis.ic} 
-                       salesGenerated={kpis.purchases + kpis.pendingPurchases} 
-                       salesApproved={kpis.purchases} 
-                    />
-                    <HourlySalesChart 
-                       events={events} 
-                    />
-                 </div>
-               )}
+                 {visibleCards.includes('funnel') && (
+                   <div key="funnel" className="flex flex-col gap-4 cursor-move h-full">
+                      <ConversionFunnel 
+                         clicks={kpis.clicks} 
+                         pageViews={kpis.pageViews} 
+                         ic={kpis.ic} 
+                         salesGenerated={kpis.purchases + kpis.pendingPurchases} 
+                         salesApproved={kpis.purchases} 
+                      />
+                      <HourlySalesChart 
+                         events={events.filter(e => isEventInDateRange(e.created_at))} 
+                      />
+                   </div>
+                 )}
+               </ResponsiveGridLayoutWithWidth>
             </TabsContent>
 
             {/* ABA: META ADS */}
@@ -1021,7 +1142,7 @@ export default function ProductDetail() {
                           </td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
@@ -1056,7 +1177,7 @@ export default function ProductDetail() {
                           </td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
@@ -1085,7 +1206,7 @@ export default function ProductDetail() {
                           <td className="px-3 py-2 text-center font-mono text-slate-300">-</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-red-400">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                          <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
                           <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
