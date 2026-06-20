@@ -23,11 +23,12 @@ import { formatCurrency } from "@/lib/formatters";
 import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ConversionFunnel, HourlySalesChart } from "@/components/dashboard/analytics-charts";
-import RGL from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const ResponsiveGridLayoutWithWidth = (RGL as any).WidthProvider((RGL as any).Responsive);
+// @ts-ignore
+import { Responsive as ResponsiveGridLayout, WidthProvider } from "react-grid-layout";
+const ResponsiveGridLayoutWithWidth = WidthProvider(ResponsiveGridLayout);
 
 export default function ProductDetail() {
   const { id } = useParams() as { id: string };
@@ -941,6 +942,7 @@ export default function ProductDetail() {
                </div>
 
                {/* Grid Layout */}
+               {mounted ? (
                <ResponsiveGridLayoutWithWidth
                  className="layout"
                  layouts={layouts}
@@ -1078,6 +1080,11 @@ export default function ProductDetail() {
                    </div>
                  )}
                </ResponsiveGridLayoutWithWidth>
+               ) : (
+                 <div className="flex-1 flex items-center justify-center min-h-[400px]">
+                   <p className="text-slate-500">Carregando painel...</p>
+                 </div>
+               )}
             </TabsContent>
 
             {/* ABA: META ADS */}
