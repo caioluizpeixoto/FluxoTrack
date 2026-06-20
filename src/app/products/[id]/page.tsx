@@ -23,11 +23,11 @@ import { formatCurrency } from "@/lib/formatters";
 import { useParams, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ConversionFunnel, HourlySalesChart } from "@/components/dashboard/analytics-charts";
-import { Responsive as ResponsiveGridLayout, WidthProvider } from "react-grid-layout";
+import RGL from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const ResponsiveGridLayoutWithWidth = WidthProvider(ResponsiveGridLayout);
+const ResponsiveGridLayoutWithWidth = (RGL as any).WidthProvider((RGL as any).Responsive);
 
 export default function ProductDetail() {
   const { id } = useParams() as { id: string };
