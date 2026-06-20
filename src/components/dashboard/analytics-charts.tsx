@@ -118,7 +118,6 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
       count: 0
     }));
 
-    let total = 0;
     events.forEach(e => {
        if (e.event_type !== 'purchase' || e.status !== 'approved') return;
        let dateStr = e.created_at;
@@ -131,18 +130,14 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
        const d = new Date(dateStr);
        const h = d.getHours();
        hours[h].count += 1;
-       total += 1;
     });
 
-    return hours.filter(h => h.count > 0).sort((a, b) => b.count - a.count).map(h => ({
-      ...h,
-      percent: total > 0 ? ((h.count / total) * 100).toFixed(1) + '%' : '0%'
-    }));
+    return hours.filter(h => h.count > 0);
   }, [events]);
 
   if (chartData.length === 0) {
     return (
-      <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4">
+      <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4 h-full">
         <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
           <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Picos de Venda por Horário</h3>
         </div>
@@ -152,26 +147,28 @@ export function HourlySalesChart({ events }: HourlySalesProps) {
   }
 
   return (
-    <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4">
+    <Card className="bg-[#1a1c23] border-white/5 w-full rounded-xl p-4 h-full flex flex-col">
       <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-        <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Picos de Venda por Horário</h3>
+        <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Horário</h3>
       </div>
-      <div className="space-y-3">
-        {chartData.map((d, i) => (
-          <div key={i} className="flex justify-between items-center bg-[#0f1115] p-3 rounded-lg border border-white/5 relative overflow-hidden">
-            <div 
-              className="absolute left-0 top-0 bottom-0 bg-primary/10 border-l-2 border-primary" 
-              style={{ width: `${Math.max(Number(d.percent.replace('%', '')), 2)}%` }}
+      <div className="flex-1 min-h-[200px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <XAxis dataKey="hourLabel" stroke="#475569" fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip 
+              cursor={{fill: '#2a2f3e'}}
+              contentStyle={{ backgroundColor: '#14151a', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px' }}
+              itemStyle={{ color: '#fff' }}
+              formatter={(value) => [value, 'Vendas']}
+              labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
             />
-            <div className="relative z-10 flex items-center gap-3">
-              <span className="font-mono font-bold text-slate-300">{d.hourLabel}</span>
-            </div>
-            <div className="relative z-10 flex items-center gap-4 text-sm">
-              <span className="font-bold text-slate-200">{d.count} venda{d.count > 1 ? 's' : ''}</span>
-              <span className="text-xs font-medium text-slate-500 w-12 text-right">{d.percent}</span>
-            </div>
-          </div>
-        ))}
+            <Bar dataKey="count" fill="#6e3fb5" radius={[4, 4, 0, 0]} name="Vendas">
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill="#6e3fb5" />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </Card>
   );

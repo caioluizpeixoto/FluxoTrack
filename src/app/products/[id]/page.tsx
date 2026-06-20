@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
   Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2,
-  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight, Info
+  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight, Info, Move
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -75,6 +75,7 @@ export default function ProductDetail() {
   const [selectedSaleForModal, setSelectedSaleForModal] = useState<any>(null);
 
   // Layout State
+  const [isEditMode, setIsEditMode] = useState(false);
   const defaultGridLayouts = {
     lg: [
       { i: 'revenue', x: 0, y: 0, w: 2, h: 4 },
@@ -94,6 +95,7 @@ export default function ProductDetail() {
       
       { i: 'last_sale', x: 0, y: 7, w: 4, h: 10 },
       { i: 'funnel', x: 4, y: 7, w: 8, h: 18 },
+      { i: 'hourly_sales', x: 0, y: 17, w: 12, h: 12 },
     ],
     md: [
       { i: 'revenue', x: 0, y: 0, w: 3, h: 4 },
@@ -113,6 +115,7 @@ export default function ProductDetail() {
       
       { i: 'last_sale', x: 0, y: 14, w: 9, h: 10 },
       { i: 'funnel', x: 0, y: 24, w: 9, h: 18 },
+      { i: 'hourly_sales', x: 0, y: 42, w: 9, h: 12 },
     ],
     sm: [
       { i: 'revenue', x: 0, y: 0, w: 3, h: 4 },
@@ -132,6 +135,7 @@ export default function ProductDetail() {
       
       { i: 'last_sale', x: 0, y: 21, w: 6, h: 10 },
       { i: 'funnel', x: 0, y: 31, w: 6, h: 18 },
+      { i: 'hourly_sales', x: 0, y: 49, w: 6, h: 12 },
     ],
     xs: [
       { i: 'revenue', x: 0, y: 0, w: 4, h: 4 },
@@ -151,9 +155,10 @@ export default function ProductDetail() {
       
       { i: 'last_sale', x: 0, y: 36, w: 4, h: 10 },
       { i: 'funnel', x: 0, y: 46, w: 4, h: 18 },
+      { i: 'hourly_sales', x: 0, y: 64, w: 4, h: 12 },
     ]
   };
-  const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'meta_balance', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel'];
+  const defaultLayout = ['revenue', 'pending', 'spend', 'costs', 'profit', 'meta_balance', 'roi', 'roas', 'cpa', 'cpc', 'cpm', 'ctr', 'arpu', 'last_sale', 'funnel', 'hourly_sales'];
   const [visibleCards, setVisibleCards] = useState<string[]>(defaultLayout);
   const [layouts, setLayouts] = useState<any>(defaultGridLayouts);
   const [layoutModal, setLayoutModal] = useState(false);
@@ -935,9 +940,14 @@ export default function ProductDetail() {
             <TabsContent value="overview" className="flex-1 overflow-y-auto p-6 m-0">
                <div className="flex items-center justify-between mb-4">
                  <h2 className="text-lg font-bold text-slate-200">Painel de Métricas</h2>
-                 <Button variant="outline" size="sm" onClick={() => setLayoutModal(true)} className="bg-[#1a1c23] border-white/10 text-slate-300 hover:text-white hover:bg-white/5">
-                   <Pencil className="w-4 h-4 mr-2"/> Customizar Layout
-                 </Button>
+                 <div className="flex gap-2">
+                   <Button variant={isEditMode ? "default" : "outline"} size="sm" onClick={() => setIsEditMode(!isEditMode)} className={isEditMode ? "bg-primary text-white" : "bg-[#1a1c23] border-white/10 text-slate-300 hover:text-white hover:bg-white/5"}>
+                     <Move className="w-4 h-4 mr-2"/> {isEditMode ? 'Fixar Layout' : 'Alterar Layout'}
+                   </Button>
+                   <Button variant="outline" size="sm" onClick={() => setLayoutModal(true)} className="bg-[#1a1c23] border-white/10 text-slate-300 hover:text-white hover:bg-white/5">
+                     <Settings className="w-4 h-4 mr-2"/> Métricas
+                   </Button>
+                 </div>
                </div>
 
                {/* Grid Layout */}
@@ -949,8 +959,8 @@ export default function ProductDetail() {
                  cols={{ lg: 12, md: 9, sm: 6, xs: 4, xxs: 2 }}
                  rowHeight={30}
                  onLayoutChange={handleLayoutChange}
-                 isDraggable={true}
-                 isResizable={typeof window !== "undefined" && window.innerWidth > 768}
+                 isDraggable={isEditMode}
+                 isResizable={isEditMode && typeof window !== "undefined" && window.innerWidth > 768}
                  margin={[16, 16]}
                  containerPadding={[0, 0]}
                >
@@ -1065,7 +1075,7 @@ export default function ProductDetail() {
                  )}
 
                  {visibleCards.includes('funnel') && (
-                   <div key="funnel" className="flex flex-col gap-4 cursor-move h-full">
+                   <div key="funnel" className={`flex flex-col h-full ${isEditMode ? 'cursor-move' : ''}`}>
                       <ConversionFunnel 
                          clicks={kpis.clicks} 
                          pageViews={kpis.pageViews} 
@@ -1073,6 +1083,10 @@ export default function ProductDetail() {
                          salesGenerated={kpis.purchases + kpis.pendingPurchases} 
                          salesApproved={kpis.purchases} 
                       />
+                   </div>
+                 )}
+                 {visibleCards.includes('hourly_sales') && (
+                   <div key="hourly_sales" className={`flex flex-col h-full ${isEditMode ? 'cursor-move' : ''}`}>
                       <HourlySalesChart 
                          events={events.filter(e => isEventInDateRange(e.created_at))} 
                       />
@@ -2019,7 +2033,8 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
                {id: 'ctr', label: 'CTR'},
                {id: 'arpu', label: 'Ticket Médio (ARPU)'},
                {id: 'last_sale', label: 'Última Venda / Origem'},
-               {id: 'funnel', label: 'Funil Visual'}
+               {id: 'funnel', label: 'Funil Visual'},
+               {id: 'hourly_sales', label: 'Vendas por Horário'}
              ].map(item => (
                <label key={item.id} className="flex items-center space-x-2 bg-[#1a1c23] p-3 rounded border border-white/5 cursor-pointer hover:bg-white/5">
                  <Checkbox 
