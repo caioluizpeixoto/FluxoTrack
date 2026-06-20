@@ -26,8 +26,7 @@ import { ConversionFunnel, HourlySalesChart } from "@/components/dashboard/analy
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// @ts-ignore
-import { Responsive as ResponsiveGridLayout, WidthProvider } from "react-grid-layout";
+import { Responsive as ResponsiveGridLayout, WidthProvider } from "react-grid-layout/legacy";
 const ResponsiveGridLayoutWithWidth = WidthProvider(ResponsiveGridLayout);
 
 export default function ProductDetail() {
