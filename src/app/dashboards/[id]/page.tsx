@@ -141,6 +141,12 @@ export default function DashboardDetails() {
                   if (purchaseAction) metaSalesCount += Number(purchaseAction.value || 0);
                }
             });
+          } else if (data.code === 'TOKEN_EXPIRED') {
+            toast({ 
+              variant: 'destructive', 
+              title: 'Conexão Meta Expirada', 
+              description: 'O seu acesso ao Facebook expirou. Vá em Integrações e reconecte sua conta.' 
+            });
           }
         }
       }

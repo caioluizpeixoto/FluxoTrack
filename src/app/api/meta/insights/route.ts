@@ -180,6 +180,17 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error('Meta Insights Proxy Error:', error);
+
+    // Se token expirou, marca a conexão como expirada
+    if (error?.isExpired && error.isExpired()) {
+      const supabaseAdmin = getSupabaseAdmin();
+      await supabaseAdmin.from('meta_connections').update({ status: 'expired' }).eq('user_id', userId);
+      return NextResponse.json(
+        { error: error.userMessage ? error.userMessage() : 'Sessão do Facebook expirou.', code: 'TOKEN_EXPIRED' },
+        { status: 401 }
+      );
+    }
+
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
