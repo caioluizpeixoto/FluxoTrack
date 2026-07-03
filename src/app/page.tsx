@@ -17,7 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Home() {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dashboards, setDashboards] = useState<any[]>([]);
@@ -37,10 +37,10 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       loadDashboards();
-    } else if (user === null) {
+    } else if (user === null && !authLoading) {
       window.location.href = '/login';
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   async function loadDashboards() {
     setLoading(true);
