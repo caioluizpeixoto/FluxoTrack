@@ -1260,7 +1260,7 @@ export default function ProductDetail() {
                             <tr className="bg-white/[0.02]">
                                <td colSpan={19} className="px-3 py-1.5 text-xs text-slate-400 whitespace-normal">
                                  <div className="flex flex-col gap-1.5">
-                                    {bHist.slice(0, 3).map((hist, idx) => (
+                                    {bHist.slice(0, 1).map((hist, idx) => (
                                       <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 items-center opacity-80 border-l-2 border-primary/50 pl-3">
                                          <span><b className="text-slate-200">🔧 Orçamento:</b> <span className="line-through opacity-70">{formatCurrency(hist.old_budget, product?.currency || 'BRL')}</span> <ChevronRight className="inline w-3 h-3 text-primary mx-0.5"/> <span className="text-white font-bold">{formatCurrency(hist.new_budget, product?.currency || 'BRL')}</span></span>
                                          <span><b className="text-slate-200">ROI Antes:</b> {Number(hist.roi_before).toFixed(2)}</span>
@@ -1318,7 +1318,7 @@ export default function ProductDetail() {
                             <tr className="bg-white/[0.02]">
                                <td colSpan={19} className="px-3 py-1.5 text-xs text-slate-400 whitespace-normal">
                                  <div className="flex flex-col gap-1.5">
-                                    {bHist.slice(0, 3).map((hist, idx) => (
+                                    {bHist.slice(0, 1).map((hist, idx) => (
                                       <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 items-center opacity-80 border-l-2 border-primary/50 pl-3">
                                          <span><b className="text-slate-200">🔧 Orçamento:</b> <span className="line-through opacity-70">{formatCurrency(hist.old_budget, product?.currency || 'BRL')}</span> <ChevronRight className="inline w-3 h-3 text-primary mx-0.5"/> <span className="text-white font-bold">{formatCurrency(hist.new_budget, product?.currency || 'BRL')}</span></span>
                                          <span><b className="text-slate-200">ROI Antes:</b> {Number(hist.roi_before).toFixed(2)}</span>
