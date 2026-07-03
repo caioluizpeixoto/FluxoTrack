@@ -230,6 +230,7 @@ export async function POST(
             data: [{
               event_name: 'Purchase',
               event_time: Math.floor(Date.now() / 1000),
+              event_id: transactionId,
               action_source: 'website',
               event_source_url: eventUrl,
               user_data: {
