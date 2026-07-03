@@ -79,6 +79,17 @@ export async function GET(request: Request) {
           usersUpdated++;
         }
 
+        // Se pedimos para um único usuário, retorna os dados dele na resposta
+        if (userIdQuery && userIdQuery === user_id) {
+           const { data: stats } = await supabase.from('user_stats').select('*').eq('user_id', user_id).single();
+           return NextResponse.json({ 
+             success: true, 
+             message: 'Sincronização concluída', 
+             usersUpdated,
+             stats
+           });
+        }
+
       } catch (err: any) {
         console.error(`Erro ao sincronizar usuário ${user_id}:`, err);
         errors.push({ user_id, error: err.message });
