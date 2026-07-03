@@ -104,7 +104,8 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
         .eq('email', email)
         .maybeSingle();
 
-      if ((error || !data) && email !== 'caioluispeixotos@gmail.com') {
+      const isAdmin = email === 'caioluispeixotos@gmail.com' || email === 'caioluizpeixoto@gmail.com';
+      if ((error || !data) && !isAdmin) {
         // Usuário não autorizado, deslogar imediatamente
         await supabase.auth.signOut();
         callback(null);
@@ -115,7 +116,7 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
           email: session.user.email ?? null,
           displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
           emailVerified: !!session.user.email_confirmed_at,
-          role: data.role,
+          role: data?.role || 'Admin',
         });
       }
     } else {
