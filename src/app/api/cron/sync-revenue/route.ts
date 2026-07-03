@@ -51,7 +51,7 @@ export async function GET(request: Request) {
 
         // Puxa os insights de cada conta (faturamento total / compras)
         for (const acc of adAccounts) {
-          const insights = await getInsights(acc.account_id, access_token, 'account', '&date_preset=lifetime');
+          const insights = await getInsights(acc.account_id, access_token, 'account', '&date_preset=maximum');
           
           if (insights && insights.data && insights.data.length > 0) {
             // O insight retorna array. Pegamos o total da conta.
