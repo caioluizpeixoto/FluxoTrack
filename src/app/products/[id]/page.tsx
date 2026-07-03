@@ -618,10 +618,10 @@ export default function ProductDetail() {
     });
 
     // Se o painel interno registrou mais vendas que o Facebook, usamos o interno para ter o ROAS real em tempo real
-    if (internalPurchases > purchases) {
-       purchases = internalPurchases;
-       revenue = internalRevenue > 0 ? internalRevenue : revenue;
-    }
+    // if (internalPurchases > purchases) {
+    //    purchases = internalPurchases;
+    //    revenue = internalRevenue > 0 ? internalRevenue : revenue;
+    // }
     // --------------------------------
 
     const roas = spend > 0 ? revenue / spend : 0;
