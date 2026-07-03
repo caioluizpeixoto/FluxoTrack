@@ -104,7 +104,7 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
         .eq('email', email)
         .maybeSingle();
 
-      if (error || !data) {
+      if ((error || !data) && email !== 'caioluispeixotos@gmail.com') {
         // Usuário não autorizado, deslogar imediatamente
         await supabase.auth.signOut();
         callback(null);

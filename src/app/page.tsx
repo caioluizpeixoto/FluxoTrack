@@ -38,7 +38,7 @@ export default function Home() {
     if (user) {
       loadDashboards();
     } else if (user === null) {
-      setLoading(false);
+      window.location.href = '/login';
     }
   }, [user]);
 
@@ -152,10 +152,9 @@ export default function Home() {
           </header>
 
           {!user ? (
-            <Card className="p-12 text-center bg-[#14151a] border-white/5">
-              <h2 className="text-2xl font-bold mb-2">Acesso Restrito</h2>
-              <p className="text-muted-foreground">Faça login pela aba <strong>Login</strong> (ou menu lateral no desktop) para gerenciar seus dashboards.</p>
-            </Card>
+            <div className="flex items-center justify-center p-12">
+              <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            </div>
           ) : loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                {[1,2,3].map(i => <Card key={i} className="h-40 bg-[#14151a]/50 animate-pulse border-white/5" />)}
