@@ -122,7 +122,7 @@ export default function DashboardDetails() {
           const res = await fetch('/api/meta/insights', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.uid, accountId: accId, level: 'all', datePreset: 'today' })
+            body: JSON.stringify({ userId: user.uid, accountId: accId, level: 'campaign', datePreset: 'today' })
           });
           const data = await res.json();
           if (data.success && data.insights?.campaigns) {
