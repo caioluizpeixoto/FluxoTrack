@@ -11,7 +11,7 @@ export const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
 // Helpers básicos para chamadas
 async function fetchMetaApi(endpoint: string, accessToken: string) {
   const url = `${META_BASE_URL}/${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${accessToken}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data;
@@ -182,7 +182,7 @@ export async function getMetaMe(token: string): Promise<MetaUser> {
   url.searchParams.set('fields', 'id,name,email');
   url.searchParams.set('access_token', token);
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data as MetaUser;
@@ -196,7 +196,7 @@ export async function getMetaBusinesses(token: string): Promise<MetaBusiness[]> 
   url.searchParams.set('access_token', token);
   url.searchParams.set('limit', '50');
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data.data ?? [];
@@ -213,7 +213,7 @@ export async function getMetaAdAccounts(token: string): Promise<MetaAdAccount[]>
   url.searchParams.set('access_token', token);
   url.searchParams.set('limit', '50');
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data.data ?? [];
@@ -230,7 +230,7 @@ export async function getMetaPixels(
   url.searchParams.set('fields', 'id,name,creation_time');
   url.searchParams.set('access_token', token);
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
 
   if (data.error) {
@@ -295,7 +295,7 @@ export async function getCampaigns(accountId: string, token: string) {
   url.searchParams.set('fields', 'id,name,status,daily_budget,lifetime_budget,objective');
   url.searchParams.set('access_token', token);
   url.searchParams.set('limit', '500');
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data.data ?? [];
@@ -307,7 +307,7 @@ export async function getAdSets(accountId: string, token: string) {
   url.searchParams.set('fields', 'id,name,status,campaign_id,daily_budget,lifetime_budget');
   url.searchParams.set('access_token', token);
   url.searchParams.set('limit', '500');
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data.data ?? [];
@@ -319,7 +319,7 @@ export async function getAds(accountId: string, token: string) {
   url.searchParams.set('fields', 'id,name,status,campaign_id,adset_id');
   url.searchParams.set('access_token', token);
   url.searchParams.set('limit', '500');
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { next: { revalidate: 60 } });
   const data = await res.json();
   if (data.error) throw new MetaApiError(data.error);
   return data.data ?? [];
