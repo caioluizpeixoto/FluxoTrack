@@ -73,7 +73,7 @@ export async function GET(request: Request) {
         if (totalLifetimeRevenue >= 0) {
           await supabase.from('user_stats').upsert({
             user_id: user_id,
-            total_revenue: totalLifetimeRevenue,
+            meta_revenue: totalLifetimeRevenue,
             last_sync_at: new Date().toISOString()
           }, { onConflict: 'user_id' });
           usersUpdated++;

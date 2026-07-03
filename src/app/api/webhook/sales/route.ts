@@ -47,6 +47,23 @@ export async function POST(request: Request) {
        return NextResponse.json({ error: "Produto sem dono" }, { status: 400 });
     }
 
+    // Incrementa a webhook_revenue do usuário
+    if (isApproved && record.event_value > 0) {
+      const { data: stats } = await supabaseAdmin
+        .from('user_stats')
+        .select('webhook_revenue')
+        .eq('user_id', productOwnerId)
+        .maybeSingle();
+      
+      const currentRev = Number(stats?.webhook_revenue || 0);
+      const newRev = currentRev + Number(record.event_value);
+      
+      await supabaseAdmin.from('user_stats').upsert({
+        user_id: productOwnerId,
+        webhook_revenue: newRev
+      }, { onConflict: 'user_id' });
+    }
+
     // Formata a mensagem de notificação com o nome do produto
     const title = isApproved ? `Venda Aprovada! - ${productName}` : `Venda Efetuada! - ${productName}`;
     const valueStr = Number(record.event_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

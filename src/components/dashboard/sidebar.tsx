@@ -69,17 +69,17 @@ export function DashboardSidebar() {
   useEffect(() => {
     if (user?.uid) {
       // 1. Puxa do banco (rápido, cache)
-      supabase.from('user_stats').select('total_revenue').eq('user_id', user.uid).maybeSingle().then(({ data }) => {
-        if (data?.total_revenue) {
-          setCurrentRevenue(Number(data.total_revenue));
+      supabase.from('user_stats').select('meta_revenue, webhook_revenue').eq('user_id', user.uid).maybeSingle().then(({ data }) => {
+        if (data) {
+          setCurrentRevenue(Number(data.meta_revenue || 0) + Number(data.webhook_revenue || 0));
         }
       });
       // 2. Dispara a sincronização real no background
       fetch(`/api/cron/sync-revenue?user_id=${user.uid}`).then(() => {
         // 3. Atualiza com o valor novo (caso tenha mudado)
-        supabase.from('user_stats').select('total_revenue').eq('user_id', user.uid).maybeSingle().then(({ data }) => {
-          if (data?.total_revenue) {
-            setCurrentRevenue(Number(data.total_revenue));
+        supabase.from('user_stats').select('meta_revenue, webhook_revenue').eq('user_id', user.uid).maybeSingle().then(({ data }) => {
+          if (data) {
+            setCurrentRevenue(Number(data.meta_revenue || 0) + Number(data.webhook_revenue || 0));
           }
         });
       }).catch(console.error);
