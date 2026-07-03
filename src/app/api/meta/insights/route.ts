@@ -146,14 +146,13 @@ export async function POST(req: NextRequest) {
       // O Meta API não permite level=all. Se a UI precisa de campanhas, conjuntos e anúncios simultâneos, a UI chamará 3x ou faremos 3 chamadas aqui.
       
       if (level === 'all') {
-        const [c, a, ad, cStruct, aStruct, adStruct] = await Promise.all([
-           getInsights(accountId, token, 'campaign', dateParams),
-           getInsights(accountId, token, 'adset', dateParams),
-           getInsights(accountId, token, 'ad', dateParams),
-           getCampaigns(accountId, token),
-           getAdSets(accountId, token),
-           getAds(accountId, token)
-        ]);
+        // Executa sequencialmente para evitar Rate Limit (User request limit reached) do Facebook
+        const cStruct = await getCampaigns(accountId, token);
+        const aStruct = await getAdSets(accountId, token);
+        const adStruct = await getAds(accountId, token);
+        const c = await getInsights(accountId, token, 'campaign', dateParams);
+        const a = await getInsights(accountId, token, 'adset', dateParams);
+        const ad = await getInsights(accountId, token, 'ad', dateParams);
 
         // Merge structure into insights
         const merge = (insArr: any[], structArr: any[], idKeyIns: string, idKeyStruct: string) => {
