@@ -113,7 +113,6 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
           emailVerified: !!session.user.email_confirmed_at,
           role: data?.role || 'Admin',
         });
-      }
     } else {
       callback(null);
     }
