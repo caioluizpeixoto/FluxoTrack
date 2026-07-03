@@ -1260,7 +1260,7 @@ export default function ProductDetail() {
                                </td>
                             </tr>
                           )}
-                        </React.Fragment>
+                        </Fragment>
                       );
                     })}
                     {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)).map(a => {
@@ -1314,7 +1314,7 @@ export default function ProductDetail() {
                                </td>
                             </tr>
                           )}
-                        </React.Fragment>
+                        </Fragment>
                       );
                     })}
                     {metaTab === 'anuncios' && liveMetrics.ads.filter(a => 
