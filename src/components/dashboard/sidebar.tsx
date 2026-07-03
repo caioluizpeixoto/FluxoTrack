@@ -68,8 +68,8 @@ export function DashboardSidebar() {
 
   useEffect(() => {
     if (user?.uid) {
-      // Usa a API de sync (que roda com admin) para buscar o faturamento ignorando bloqueios de RLS do cliente
-      fetch(`/api/cron/sync-revenue?user_id=${user.uid}`).then(res => res.json()).then(data => {
+      // Fetch the revenue from the database using the new secure API
+      fetch(`/api/user/stats?user_id=${user.uid}`).then(res => res.json()).then(data => {
         if (data.stats) {
           setCurrentRevenue(Number(data.stats.meta_revenue || 0) + Number(data.stats.webhook_revenue || 0));
         }
