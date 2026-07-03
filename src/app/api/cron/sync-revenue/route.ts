@@ -53,9 +53,9 @@ export async function GET(request: Request) {
         for (const acc of adAccounts) {
           const insights = await getInsights(acc.account_id, access_token, 'account', '&date_preset=maximum');
           
-          if (insights && insights.data && insights.data.length > 0) {
-            // O insight retorna array. Pegamos o total da conta.
-            for (const item of insights.data) {
+          if (insights && insights.length > 0) {
+            // O insight já retorna o array (response.data)
+            for (const item of insights) {
               if (item.action_values) {
                 // Procurar por action_type == 'purchase' ou 'omni_purchase'
                 const purchaseAction = item.action_values.find((a: any) => 
