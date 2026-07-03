@@ -10,6 +10,7 @@ export interface User {
   email: string | null;
   displayName: string | null;
   emailVerified: boolean;
+  role?: 'Admin' | 'Editor' | 'Viewer' | null;
 }
 
 export const getAuth = (app?: any): Auth => {
@@ -88,31 +89,51 @@ export async function signInWithEmailAndPassword(auth: Auth, email: string, pass
 }
 
 export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => void) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+  const handleSession = async (session: any) => {
     if (session?.user) {
-      callback({
-        uid: session.user.id,
-        email: session.user.email ?? null,
-        displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
-        emailVerified: !!session.user.email_confirmed_at,
-      });
+      const email = session.user.email;
+      if (!email) {
+        callback(null);
+        return;
+      }
+
+      // Buscar autorização
+      const { data, error } = await supabase
+        .from('authorized_users')
+        .select('role')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (error || !data) {
+        // Usuário não autorizado, deslogar imediatamente
+        await supabase.auth.signOut();
+        callback(null);
+      } else {
+        // Usuário autorizado
+        callback({
+          uid: session.user.id,
+          email: session.user.email ?? null,
+          displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
+          emailVerified: !!session.user.email_confirmed_at,
+          role: data.role,
+        });
+      }
     } else {
       callback(null);
     }
+  };
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      callback(null);
+      return;
+    }
+    handleSession(session);
   });
 
   // Dispara o callback inicial com a sessão atual
   supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      callback({
-        uid: session.user.id,
-        email: session.user.email ?? null,
-        displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
-        emailVerified: !!session.user.email_confirmed_at,
-      });
-    } else {
-      callback(null);
-    }
+    handleSession(session);
   });
 
   return () => {

@@ -18,10 +18,10 @@ alter table public.profiles enable row level security;
 
 -- Políticas de Acesso RLS
 create policy "Users can read own profile" on public.profiles
-  for select to authenticated using ((select auth.uid()) = id);
+  for select to authenticated using (((select auth.uid()) = id) AND public.is_authorized());
 
 create policy "Users can update own profile" on public.profiles
-  for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+  for update to authenticated using (((select auth.uid()) = id) AND public.is_authorized()) with check (((select auth.uid()) = id) AND public.is_authorized());
 
 -- Trigger para criar o perfil automaticamente na criação do usuário no Auth
 create or replace function public.handle_new_user()
@@ -67,7 +67,7 @@ alter table public.ad_accounts enable row level security;
 
 -- Políticas RLS
 create policy "Users can perform all actions on own ad accounts" on public.ad_accounts
-  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  for all to authenticated using (((select auth.uid()) = user_id) AND public.is_authorized()) with check (((select auth.uid()) = user_id) AND public.is_authorized());
 
 
 -- =====================================================================
@@ -93,7 +93,7 @@ alter table public.campaigns enable row level security;
 
 -- Políticas RLS
 create policy "Users can perform all actions on own campaigns" on public.campaigns
-  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  for all to authenticated using (((select auth.uid()) = user_id) AND public.is_authorized()) with check (((select auth.uid()) = user_id) AND public.is_authorized());
 
 
 -- =====================================================================
@@ -129,7 +129,7 @@ alter table public.tracking_events enable row level security;
 
 -- Políticas RLS
 create policy "Users can perform all actions on own tracking events" on public.tracking_events
-  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  for all to authenticated using (((select auth.uid()) = user_id) AND public.is_authorized()) with check (((select auth.uid()) = user_id) AND public.is_authorized());
 
 
 -- =====================================================================
@@ -155,7 +155,7 @@ alter table public.conversions enable row level security;
 
 -- Políticas RLS
 create policy "Users can perform all actions on own conversions" on public.conversions
-  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  for all to authenticated using (((select auth.uid()) = user_id) AND public.is_authorized()) with check (((select auth.uid()) = user_id) AND public.is_authorized());
 
 
 -- =====================================================================
@@ -177,4 +177,4 @@ alter table public.webhooks enable row level security;
 
 -- Políticas RLS
 create policy "Users can perform all actions on own webhooks" on public.webhooks
-  for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  for all to authenticated using (((select auth.uid()) = user_id) AND public.is_authorized()) with check (((select auth.uid()) = user_id) AND public.is_authorized());

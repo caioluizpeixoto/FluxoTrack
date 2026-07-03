@@ -8,7 +8,7 @@ const META_BASE_URL = `https://graph.facebook.com/${META_API_VERSION}`;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, type, id, action, value } = body; 
+    const { userId, type, id, action, value, productId, salesBefore, roiBefore } = body; 
     // action: 'percentage_increase', 'percentage_decrease', 'fixed'
     // type: 'campaign', 'adset'
     
@@ -110,7 +110,24 @@ export async function POST(req: NextRequest) {
     const idMap: Record<string, string> = { campaign: 'campaign_id', adset: 'adset_id' };
     
     if (tableMap[type]) {
+      const currentBudgetMetaCents = Number(getData.daily_budget) || 0;
+      const metaValueUnitBefore = currentBudgetMetaCents / 100;
+      const oldBudgetInBrl = currency === 'USD' ? metaValueUnitBefore * usdToBrlRate : metaValueUnitBefore;
+
       await supabaseAdmin.from(tableMap[type]).update({ daily_budget: localBudgetInBrl }).eq(idMap[type], id);
+
+      if (productId) {
+        await supabaseAdmin.from('budget_history').insert({
+          user_id: userId,
+          product_id: productId,
+          entity_type: type,
+          entity_id: id,
+          old_budget: oldBudgetInBrl,
+          new_budget: localBudgetInBrl,
+          sales_before: salesBefore || 0,
+          roi_before: roiBefore || 0
+        });
+      }
     }
 
     return NextResponse.json({ success: true, new_budget: localBudgetInBrl });

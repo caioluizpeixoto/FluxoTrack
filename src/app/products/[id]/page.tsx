@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, Fragment } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
 import { useUser } from "@/firebase";
 import { supabase } from "@/lib/supabaseClient";
@@ -61,6 +61,7 @@ export default function ProductDetail() {
   // Settings State
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
   const [selectedAccId, setSelectedAccId] = useState<string>("");
+  const [budgetHistory, setBudgetHistory] = useState<any[]>([]);
 
   const [metaTab, setMetaTab] = useState("campanhas");
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
@@ -267,7 +268,7 @@ export default function ProductDetail() {
       if (!prod) throw new Error("Produto não encontrado");
       setProduct(prod);
 
-      const [linksRes, taxesRes, expRes, rulesRes, utmRes, pixelRes, accLinkRes, eventsRes] = await Promise.all([
+      const [linksRes, taxesRes, expRes, rulesRes, utmRes, pixelRes, accLinkRes, eventsRes, budgetHistoryRes] = await Promise.all([
         supabase.from('product_campaigns').select('*').eq('product_id', id),
         supabase.from('product_taxes').select('*').eq('product_id', id),
         supabase.from('product_expenses').select('*').eq('product_id', id).order('expense_date', { ascending: false }),
@@ -275,7 +276,8 @@ export default function ProductDetail() {
         supabase.from('product_utms').select('*').eq('product_id', id).maybeSingle(),
         supabase.from('product_pixels').select('*').eq('product_id', id).maybeSingle(),
         supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', id).maybeSingle(),
-        supabase.from('product_events').select('*').eq('product_id', id).order('created_at', { ascending: false })
+        supabase.from('product_events').select('*').eq('product_id', id).order('created_at', { ascending: false }),
+        supabase.from('budget_history').select('*').eq('product_id', id).order('created_at', { ascending: false })
       ]);
 
       setLinkedCampaigns(linksRes.data || []);
@@ -287,6 +289,7 @@ export default function ProductDetail() {
       setPixelToken(pixelRes.data?.access_token || "");
       setProductAdAccount(accLinkRes.data || null);
       setEvents(eventsRes.data || []);
+      setBudgetHistory(budgetHistoryRes.data || []);
 
       if (accLinkRes.data?.ad_account_id) {
         fetchLiveMetrics([accLinkRes.data.ad_account_id], datePreset);
@@ -761,9 +764,10 @@ export default function ProductDetail() {
     const level      = levelMap[snapshot.type];
     const itemKey    = idKeyMap[snapshot.type];
 
-    // Guarda valor antigo para rollback
+    // Guarda valor antigo para rollback e estatísticas antes da mudança
     const currentItem = level ? (liveMetrics[level] as any[])?.find(i => i[itemKey] === snapshot.id) : null;
     const oldBudget   = currentItem?.[budgetKey];
+    const metricsBefore = getMetric(level, itemKey, snapshot.id);
 
     // ── OPTIMISTIC UPDATE ──────────────────────────────────────────────
     // Fecha modal e mostra novo orçamento imediatamente
@@ -785,9 +789,26 @@ export default function ProductDetail() {
         body: JSON.stringify({
           userId: user.uid, type: snapshot.type, id: snapshot.id,
           action: 'fixed', value: newBudget,
+          productId: id, salesBefore: metricsBefore.purchases, roiBefore: metricsBefore.roi
         }),
       });
       const data = await res.json();
+      
+      if (data.success) {
+         // Atualizar também o estado budgetHistory localmente para aparecer na hora
+         const newHistoryRow = {
+           id: Math.random().toString(),
+           product_id: id,
+           entity_type: snapshot.type,
+           entity_id: snapshot.id,
+           old_budget: Number(oldBudget)/100, // aproximado se for em BRL (na vdd a API salva certo, aqui é só pro optimistic UI)
+           new_budget: newBudget,
+           sales_before: metricsBefore.purchases,
+           roi_before: metricsBefore.roi,
+           created_at: new Date().toISOString()
+         };
+         setBudgetHistory(prev => [newHistoryRow, ...prev]);
+      }
       if (!res.ok) {
         // ── ROLLBACK ──
         if (level && currentItem && oldBudget !== undefined) {
@@ -1117,7 +1138,52 @@ export default function ProductDetail() {
                 )}
               </div>
 
-              <div className="flex-1 overflow-auto">
+              {(() => {
+                const renderTotals = (items: any[], type: 'campaigns'|'adsets'|'ads', idKey: string) => {
+                  let tPurchases = 0, tSpend = 0, tRevenue = 0, tIC = 0, tImpressions = 0, tClicks = 0;
+                  
+                  items.forEach(item => {
+                    const m = getMetric(type, idKey, item[idKey]);
+                    tPurchases += m.purchases; tSpend += m.spend; tRevenue += m.revenue;
+                    tIC += m.ic; tImpressions += m.impressions; tClicks += m.clicks;
+                  });
+
+                  const tProfit = tRevenue - tSpend;
+                  const tRoas = tSpend > 0 ? tRevenue / tSpend : 0;
+                  const tMargin = tRevenue > 0 ? (tProfit / tRevenue) * 100 : 0;
+                  const tRoi = tSpend > 0 ? tProfit / tSpend : 0;
+                  const tCpa = tPurchases > 0 ? tSpend / tPurchases : 0;
+                  const tCpi = tIC > 0 ? tSpend / tIC : 0;
+                  const tCpc = tClicks > 0 ? tSpend / tClicks : 0;
+                  const tCtr = tImpressions > 0 ? (tClicks / tImpressions) * 100 : 0;
+                  const tCpm = tImpressions > 0 ? (tSpend / tImpressions) * 1000 : 0;
+
+                  return (
+                    <tfoot className="bg-[#101217] border-t-2 border-white/10 text-slate-200">
+                      <tr>
+                        <td colSpan={4} className="px-3 py-3 text-right uppercase text-[10px] font-black tracking-widest text-slate-400">Total</td>
+                        <td className="px-3 py-3 text-right font-bold">{tPurchases.toFixed(0)}</td>
+                        <td className="px-3 py-3 text-right font-medium">{formatCurrency(tCpa, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-bold text-white">{formatCurrency(tSpend, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-bold text-green-400">{formatCurrency(tRevenue, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-bold" style={{color: tProfit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(tProfit, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-black text-primary">{tRoas.toFixed(2)}x</td>
+                        <td className="px-3 py-3 text-right font-bold">{tMargin.toFixed(2)}%</td>
+                        <td className="px-3 py-3 text-right font-black" style={{color: tRoi >= 1 ? '#4ade80' : '#f87171'}}>{tRoi.toFixed(2)}</td>
+                        <td className="px-3 py-3 text-right font-bold">{tIC.toFixed(0)}</td>
+                        <td className="px-3 py-3 text-right font-medium">{tCpi > 0 ? formatCurrency(tCpi, product?.currency || 'BRL') : '-'}</td>
+                        <td className="px-3 py-3 text-right font-medium">{formatCurrency(tCpc, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-bold">{tCtr.toFixed(2)}%</td>
+                        <td className="px-3 py-3 text-right font-medium">{formatCurrency(tCpm, product?.currency || 'BRL')}</td>
+                        <td className="px-3 py-3 text-right font-medium">{tImpressions.toLocaleString('pt-BR')}</td>
+                        <td className="px-3 py-3 text-right font-medium">{tClicks.toLocaleString('pt-BR')}</td>
+                      </tr>
+                    </tfoot>
+                  );
+                };
+
+                return (
+                  <div className="flex-1 overflow-auto">
                 <table className="w-full text-sm text-left whitespace-nowrap">
                   <thead className="bg-[#14151a] text-xs uppercase text-slate-400 sticky top-0 z-10 shadow-md">
                     <tr>
@@ -1146,71 +1212,109 @@ export default function ProductDetail() {
                     {metaTab === 'campanhas' && liveMetrics.campaigns.map(c => {
                       const m = getMetric('campaigns', 'campaign_id', c.campaign_id);
                       const isSelected = selectedCampaignIds.includes(c.campaign_id);
+                      const bHist = budgetHistory.filter(h => h.entity_type === 'campaign' && h.entity_id === c.campaign_id);
                       return (
-                        <tr key={c.campaign_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
-                          <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
-                             if (checked) setSelectedCampaignIds(prev => [...prev, c.campaign_id]);
-                             else setSelectedCampaignIds(prev => prev.filter(id => id !== c.campaign_id));
-                          }}/></td>
-                          <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
-                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
-                          <td className="px-3 py-2 text-center font-mono text-slate-300">
-                             <div className="flex items-center justify-center gap-2">
-                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
-                               <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
-                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
-                          <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
-                        </tr>
+                        <Fragment key={c.campaign_id}>
+                          <tr className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
+                            <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                               if (checked) setSelectedCampaignIds(prev => [...prev, c.campaign_id]);
+                               else setSelectedCampaignIds(prev => prev.filter(id => id !== c.campaign_id));
+                            }}/></td>
+                            <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
+                            <td className="px-3 py-2 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
+                            <td className="px-3 py-2 text-center font-mono text-slate-300">
+                               <div className="flex items-center justify-center gap-2">
+                                 <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
+                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}><Edit2 className="w-3 h-3"/></Button>
+                               </div>
+                            </td>
+                            <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                            <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
+                            <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                            <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
+                            <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
+                            <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          </tr>
+                          {bHist.length > 0 && (
+                            <tr className="bg-white/[0.02]">
+                               <td colSpan={19} className="px-3 py-1.5 text-xs text-slate-400 whitespace-normal">
+                                 <div className="flex flex-col gap-1.5">
+                                    {bHist.slice(0, 3).map((hist, idx) => (
+                                      <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 items-center opacity-80 border-l-2 border-primary/50 pl-3">
+                                         <span><b className="text-slate-200">🔧 Orçamento:</b> <span className="line-through opacity-70">{formatCurrency(hist.old_budget, product?.currency || 'BRL')}</span> <ChevronRight className="inline w-3 h-3 text-primary mx-0.5"/> <span className="text-white font-bold">{formatCurrency(hist.new_budget, product?.currency || 'BRL')}</span></span>
+                                         <span><b className="text-slate-200">ROI Antes:</b> {Number(hist.roi_before).toFixed(2)}</span>
+                                         <span><b className="text-slate-200">Vendas Antes:</b> {hist.sales_before}</span>
+                                         <span className="text-slate-500 text-[10px] ml-auto">{new Date(hist.created_at).toLocaleString('pt-BR')}</span>
+                                      </div>
+                                    ))}
+                                 </div>
+                               </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                     {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)).map(a => {
                       const m = getMetric('adsets', 'adset_id', a.adset_id);
                       const isSelected = selectedAdsetIds.includes(a.adset_id);
+                      const bHist = budgetHistory.filter(h => h.entity_type === 'adset' && h.entity_id === a.adset_id);
                       return (
-                        <tr key={a.adset_id} className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
-                          <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
-                             if (checked) setSelectedAdsetIds(prev => [...prev, a.adset_id]);
-                             else setSelectedAdsetIds(prev => prev.filter(id => id !== a.adset_id));
-                          }}/></td>
-                          <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
-                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.adset_name}</td>
-                          <td className="px-3 py-2 text-center font-mono text-slate-300">
-                             <div className="flex items-center justify-center gap-2">
-                               <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
-                               <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
-                             </div>
-                          </td>
-                          <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
-                          <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
-                          <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
-                          <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
-                          <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
-                          <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
-                          <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
-                        </tr>
+                        <Fragment key={a.adset_id}>
+                          <tr className={`hover:bg-white/5 ${isSelected ? 'bg-primary/5' : ''}`}>
+                            <td className="px-3 py-2"><Checkbox checked={isSelected} onCheckedChange={(checked) => {
+                               if (checked) setSelectedAdsetIds(prev => [...prev, a.adset_id]);
+                               else setSelectedAdsetIds(prev => prev.filter(id => id !== a.adset_id));
+                            }}/></td>
+                            <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
+                            <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.adset_name}</td>
+                            <td className="px-3 py-2 text-center font-mono text-slate-300">
+                               <div className="flex items-center justify-center gap-2">
+                                 <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
+                                 <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-white hover:bg-white/10" onClick={() => setBudgetModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}><Edit2 className="w-3 h-3"/></Button>
+                               </div>
+                            </td>
+                            <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-white">{formatCurrency(m.spend, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-green-400">{formatCurrency(m.revenue, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right font-bold" style={{color: m.profit >= 0 ? '#4ade80' : '#f87171'}}>{formatCurrency(m.profit, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right text-primary font-bold">{m.roas.toFixed(2)}x</td>
+                            <td className="px-3 py-2 text-right">{m.margin.toFixed(2)}%</td>
+                            <td className="px-3 py-2 text-right font-bold" style={{color: m.roi >= 1 ? '#4ade80' : '#f87171'}}>{m.roi.toFixed(2)}</td>
+                            <td className="px-3 py-2 text-right">{m.ic.toFixed(0)}</td>
+                            <td className="px-3 py-2 text-right">{m.cpi > 0 ? formatCurrency(m.cpi, product?.currency || 'BRL') : '-'}</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpc, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right">{m.ctr.toFixed(2)}%</td>
+                            <td className="px-3 py-2 text-right">{formatCurrency(m.cpm, product?.currency || 'BRL')}</td>
+                            <td className="px-3 py-2 text-right">{m.impressions.toLocaleString('pt-BR')}</td>
+                            <td className="px-3 py-2 text-right">{m.clicks.toLocaleString('pt-BR')}</td>
+                          </tr>
+                          {bHist.length > 0 && (
+                            <tr className="bg-white/[0.02]">
+                               <td colSpan={19} className="px-3 py-1.5 text-xs text-slate-400 whitespace-normal">
+                                 <div className="flex flex-col gap-1.5">
+                                    {bHist.slice(0, 3).map((hist, idx) => (
+                                      <div key={idx} className="flex flex-wrap gap-x-4 gap-y-1 items-center opacity-80 border-l-2 border-primary/50 pl-3">
+                                         <span><b className="text-slate-200">🔧 Orçamento:</b> <span className="line-through opacity-70">{formatCurrency(hist.old_budget, product?.currency || 'BRL')}</span> <ChevronRight className="inline w-3 h-3 text-primary mx-0.5"/> <span className="text-white font-bold">{formatCurrency(hist.new_budget, product?.currency || 'BRL')}</span></span>
+                                         <span><b className="text-slate-200">ROI Antes:</b> {Number(hist.roi_before).toFixed(2)}</span>
+                                         <span><b className="text-slate-200">Vendas Antes:</b> {hist.sales_before}</span>
+                                         <span className="text-slate-500 text-[10px] ml-auto">{new Date(hist.created_at).toLocaleString('pt-BR')}</span>
+                                      </div>
+                                    ))}
+                                 </div>
+                               </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                     {metaTab === 'anuncios' && liveMetrics.ads.filter(a => 
@@ -1243,8 +1347,25 @@ export default function ProductDetail() {
                       );
                     })}
                   </tbody>
+                  {metaTab === 'campanhas' && renderTotals(
+                    liveMetrics.campaigns,
+                    'campaigns', 'campaign_id'
+                  )}
+                  {metaTab === 'conjuntos' && renderTotals(
+                    liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)),
+                    'adsets', 'adset_id'
+                  )}
+                  {metaTab === 'anuncios' && renderTotals(
+                    liveMetrics.ads.filter(a => 
+                       (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && 
+                       (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id))
+                    ),
+                    'ads', 'ad_id'
+                  )}
                 </table>
               </div>
+              );
+            })()}
             </TabsContent>
 
             {/* ABA: VENDAS */}

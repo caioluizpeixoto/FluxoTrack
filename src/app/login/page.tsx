@@ -15,7 +15,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -50,19 +49,9 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { displayName: email.split("@")[0] } },
-        });
-        if (error) throw error;
-        toast({ title: "Conta criada! Verifique seu e-mail." });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.replace("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      router.replace("/");
     } catch (err: any) {
       toast({
         variant: "destructive",
@@ -98,7 +87,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-100">FluxoFy</h1>
           <p className="text-sm text-slate-400">
-            {isSignUp ? "Crie sua conta gratuita" : "Bem-vindo de volta"}
+            Bem-vindo de volta
           </p>
         </div>
 
@@ -160,7 +149,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-11 rounded-xl border-white/10 bg-white/5 focus:border-primary/50"
                 required
-                autoComplete={isSignUp ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 minLength={6}
               />
             </div>
@@ -172,8 +161,6 @@ export default function LoginPage() {
             >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
-              ) : isSignUp ? (
-                <><Mail className="h-4 w-4" /> Criar Conta</>
               ) : (
                 <><LogIn className="h-4 w-4" /> Entrar</>
               )}
@@ -181,17 +168,6 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Toggle sign up/in */}
-        <p className="mt-4 text-center text-sm text-slate-500">
-          {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
-          <button
-            type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="font-semibold text-primary hover:underline"
-          >
-            {isSignUp ? "Entrar" : "Cadastrar-se"}
-          </button>
-        </p>
       </div>
     </div>
   );

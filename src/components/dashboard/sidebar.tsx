@@ -18,7 +18,8 @@ import {
   Lock,
   AlertTriangle,
   Facebook,
-  Trophy
+  Trophy,
+  Users
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth, useUser, useFirestore, isFirebaseConfigured } from "@/firebase";
@@ -26,7 +27,6 @@ import {
   signOut, 
   GoogleAuthProvider, 
   signInWithPopup, 
-  createUserWithEmailAndPassword, 
   signInWithEmailAndPassword 
 } from "@/firebase/compat/auth";
 import { doc, setDoc, serverTimestamp, getDoc } from "@/firebase/compat/firestore";
@@ -131,6 +131,24 @@ export function DashboardSidebar() {
           {item.label}
         </LinkNext>
       ))}
+      {user?.role === 'Admin' && (
+        <LinkNext
+          href="/settings/users"
+          onClick={() => setOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all group",
+            pathname.startsWith('/settings/users')
+              ? "bg-primary/10 text-primary" 
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <Users className={cn(
+            "w-5 h-5",
+            pathname.startsWith('/settings/users') ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          )} />
+          Usuários
+        </LinkNext>
+      )}
     </nav>
   );
 
@@ -211,7 +229,6 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
   const db = useFirestore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -229,14 +246,8 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
     if (!isConfigured || !auth) return;
     setLoading(true);
     try {
-      if (isSignUp) {
-        const result = await createUserWithEmailAndPassword(auth, email, password);
-        await initializeUserProfile(result.user.uid, email, email.split('@')[0]);
-        toast({ title: "Conta criada!" });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Bem-vindo de volta!" });
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Bem-vindo de volta!" });
       setIsDialogOpen(false);
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erro", description: error?.message || "Ocorreu um erro." });
@@ -272,8 +283,8 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
           </DialogTrigger>
           <DialogContent className="bg-[#121212] border-white/10 text-white sm:max-w-[400px]">
             <DialogHeader>
-              <DialogTitle className="font-headline text-2xl">{isSignUp ? "Criar Conta" : "Entrar no FluxoFy"}</DialogTitle>
-              <DialogDescription>{isSignUp ? "Crie sua conta para salvar suas atribuições e pixels." : "Acesse sua conta para gerenciar seu dashboard."}</DialogDescription>
+              <DialogTitle className="font-headline text-2xl">Entrar no FluxoFy</DialogTitle>
+              <DialogDescription>Acesse sua conta para gerenciar seu dashboard.</DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleEmailAuth} className="space-y-4 py-4">
@@ -292,7 +303,7 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
                 </div>
               </div>
               <Button type="submit" className="w-full glow-primary font-bold" disabled={loading}>
-                {loading ? "Processando..." : (isSignUp ? "Cadastrar Agora" : "Entrar")}
+                {loading ? "Processando..." : "Entrar"}
               </Button>
             </form>
 
@@ -311,9 +322,9 @@ function AuthSection({ user, handleGoogleSignIn, handleSignOut, isConfigured }: 
               Google
             </Button>
             <div className="text-center mt-4">
-              <button onClick={() => setIsSignUp(!isSignUp)} className="text-xs text-primary hover:underline transition-all">
-                {isSignUp ? "Já tem uma conta? Entre aqui" : "Não tem conta? Cadastre-se agora"}
-              </button>
+              <span className="text-xs text-muted-foreground transition-all">
+                Acesso restrito a convidados.
+              </span>
             </div>
           </DialogContent>
         </Dialog>

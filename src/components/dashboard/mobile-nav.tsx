@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Plug, MousePointer2, Settings, LogIn, LogOut, User, Zap } from "lucide-react";
+import { LayoutDashboard, Plug, MousePointer2, Settings, LogIn, LogOut, User, Zap, Users } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useUser } from "@/firebase";
 import {
@@ -102,6 +102,17 @@ export function MobileNav() {
                 </span>
               </div>
             </div>
+
+            {user?.role === 'Admin' && (
+              <Button
+                variant="outline"
+                onClick={() => { setProfileOpen(false); router.push("/settings/users"); }}
+                className="w-full justify-start gap-3 h-12 rounded-xl border-white/10"
+              >
+                <Users className="w-5 h-5 text-primary" /> 
+                <span className="text-slate-200">Gerenciar Usuários</span>
+              </Button>
+            )}
 
             {user ? (
               <Button
