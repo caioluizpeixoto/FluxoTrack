@@ -52,37 +52,7 @@ export async function POST(req: NextRequest) {
     let accountCurrency = adAccDb?.currency || 'BRL';
 
     if (level === 'account' || level === 'all') {
-      try {
-        const details = await getAccountDetails(accountId, token);
-        accountCurrency = details.currency || accountCurrency;
-        
-        let prepaid_balance = null;
-        if (details.funding_source_details?.display_string) {
-          // This string usually contains the credit card like "Mastercard *1234"
-          // Only parse it if it actually looks like a balance string (contains a currency symbol AND no asterisks)
-          const ds = details.funding_source_details.display_string;
-          if (!ds.includes('*') && (ds.includes('R$') || ds.includes('US$') || ds.includes('$'))) {
-             const match = ds.match(/[\d.,]+/);
-             if (match) {
-               prepaid_balance = parseFloat(match[0].replace(/\./g, '').replace(',', '.'));
-             }
-          }
-        }
-        details.prepaid_balance = prepaid_balance;
-        accountData = details;
-        
-        // Opcional: já atualizar o supabase_admin com esse balance.
-        await supabaseAdmin.from('meta_ad_accounts').update({
-          balance: details.balance || 0,
-          amount_spent: details.amount_spent || 0,
-          spend_cap: details.spend_cap || 0,
-          account_status: details.account_status?.toString(),
-          currency: details.currency,
-        }).eq('account_id', accountId.replace('act_', ''));
-      } catch (e: any) {
-        console.error("Erro ao buscar detalhes da conta", e);
-        accountError = e.message;
-      }
+      // Logic removed as requested
     }
 
     if (accountCurrency && accountCurrency.toUpperCase() !== finalTargetCurrency.toUpperCase()) {
