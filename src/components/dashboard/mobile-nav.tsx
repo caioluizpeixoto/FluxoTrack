@@ -39,7 +39,7 @@ export function MobileNav() {
     setProfileOpen(false);
   };
 
-
+  if (!user) return null;
 
   return (
     <>
