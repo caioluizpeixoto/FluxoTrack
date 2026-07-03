@@ -66,6 +66,7 @@ export default function ProductDetail() {
   const [metaTab, setMetaTab] = useState("campanhas");
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
   const [selectedAdsetIds, setSelectedAdsetIds] = useState<string[]>([]);
+  const [showOnlyActive, setShowOnlyActive] = useState(false);
 
   // Vendas Tab State
   const [salesSearch, setSalesSearch] = useState("");
@@ -1134,9 +1135,15 @@ export default function ProductDetail() {
                   </Button>
                   <Button variant={metaTab === 'anuncios' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setMetaTab('anuncios')}>Anúncios</Button>
                 </div>
-                {(selectedCampaignIds.length > 0 || selectedAdsetIds.length > 0) && (
-                   <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-white" onClick={() => { setSelectedCampaignIds([]); setSelectedAdsetIds([]); }}>Limpar Filtros</Button>
-                )}
+                <div className="flex gap-2 items-center">
+                  <div className="flex items-center gap-2">
+                    <Switch id="active-only" checked={showOnlyActive} onCheckedChange={setShowOnlyActive} />
+                    <label htmlFor="active-only" className="text-xs font-bold text-slate-300 cursor-pointer select-none">Apenas Ativas</label>
+                  </div>
+                  {(selectedCampaignIds.length > 0 || selectedAdsetIds.length > 0) && (
+                     <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-white" onClick={() => { setSelectedCampaignIds([]); setSelectedAdsetIds([]); }}>Limpar Filtros</Button>
+                  )}
+                </div>
               </div>
 
               {(() => {
@@ -1210,7 +1217,11 @@ export default function ProductDetail() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {metaTab === 'campanhas' && liveMetrics.campaigns.map(c => {
+                    {metaTab === 'campanhas' && liveMetrics.campaigns.filter(c => {
+                       const m = getMetric('campaigns', 'campaign_id', c.campaign_id);
+                       if (showOnlyActive && m.status !== 'ACTIVE') return false;
+                       return true;
+                    }).map(c => {
                       const m = getMetric('campaigns', 'campaign_id', c.campaign_id);
                       const isSelected = selectedCampaignIds.includes(c.campaign_id);
                       const bHist = budgetHistory.filter(h => h.entity_type === 'campaign' && h.entity_id === c.campaign_id);
@@ -1264,7 +1275,11 @@ export default function ProductDetail() {
                         </Fragment>
                       );
                     })}
-                    {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)).map(a => {
+                    {metaTab === 'conjuntos' && liveMetrics.adsets.filter(a => {
+                       const m = getMetric('adsets', 'adset_id', a.adset_id);
+                       if (showOnlyActive && m.status !== 'ACTIVE') return false;
+                       return selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id);
+                    }).map(a => {
                       const m = getMetric('adsets', 'adset_id', a.adset_id);
                       const isSelected = selectedAdsetIds.includes(a.adset_id);
                       const bHist = budgetHistory.filter(h => h.entity_type === 'adset' && h.entity_id === a.adset_id);
@@ -1318,10 +1333,12 @@ export default function ProductDetail() {
                         </Fragment>
                       );
                     })}
-                    {metaTab === 'anuncios' && liveMetrics.ads.filter(a => 
-                       (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && 
-                       (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id))
-                    ).map(a => {
+                    {metaTab === 'anuncios' && liveMetrics.ads.filter(a => {
+                       const m = getMetric('ads', 'ad_id', a.ad_id);
+                       if (showOnlyActive && m.status !== 'ACTIVE') return false;
+                       return (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && 
+                              (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id));
+                    }).map(a => {
                       const m = getMetric('ads', 'ad_id', a.ad_id);
                       return (
                         <tr key={a.ad_id} className="hover:bg-white/5">
@@ -1349,18 +1366,15 @@ export default function ProductDetail() {
                     })}
                   </tbody>
                   {metaTab === 'campanhas' && renderTotals(
-                    liveMetrics.campaigns,
+                    liveMetrics.campaigns.filter(c => !showOnlyActive || getMetric('campaigns', 'campaign_id', c.campaign_id).status === 'ACTIVE'),
                     'campaigns', 'campaign_id'
                   )}
                   {metaTab === 'conjuntos' && renderTotals(
-                    liveMetrics.adsets.filter(a => selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)),
+                    liveMetrics.adsets.filter(a => (!showOnlyActive || getMetric('adsets', 'adset_id', a.adset_id).status === 'ACTIVE') && (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id))),
                     'adsets', 'adset_id'
                   )}
                   {metaTab === 'anuncios' && renderTotals(
-                    liveMetrics.ads.filter(a => 
-                       (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && 
-                       (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id))
-                    ),
+                    liveMetrics.ads.filter(a => (!showOnlyActive || getMetric('ads', 'ad_id', a.ad_id).status === 'ACTIVE') && (selectedCampaignIds.length === 0 || selectedCampaignIds.includes(a.campaign_id)) && (selectedAdsetIds.length === 0 || selectedAdsetIds.includes(a.adset_id))),
                     'ads', 'ad_id'
                   )}
                 </table>

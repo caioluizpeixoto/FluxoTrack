@@ -3,9 +3,11 @@ import { getSupabaseAdmin } from '@/lib/supabaseClient';
 import { getInsights, getAccountDetails, getCampaigns, getAdSets, getAds } from '@/lib/metaApi';
 
 export async function POST(req: NextRequest) {
+  let userId: string | undefined;
   try {
     const body = await req.json();
-    const { userId, accountId, level, datePreset, timeRange, targetCurrency } = body;
+    userId = body.userId;
+    const { accountId, level, datePreset, timeRange, targetCurrency } = body;
     const finalTargetCurrency = targetCurrency || 'BRL';
 
     if (!userId || !accountId) {
@@ -46,8 +48,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     // Se o level for account, talvez também queira o saldo real.
-    let accountData = null;
-    let accountError = null;
+    let accountData: any = null;
+    let accountError: any = null;
     let exchangeRate = 1;
     let accountCurrency = adAccDb?.currency || 'BRL';
 
