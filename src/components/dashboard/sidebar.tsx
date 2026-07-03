@@ -190,8 +190,8 @@ export function DashboardSidebar() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-300">Faturamento Real</span>
-                    <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
-                      R$ {(nextGoal / 1000).toFixed(0)}k
+                    <span className="text-[10px] font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400 whitespace-nowrap">
+                      R$ {(currentRevenue / 1000).toFixed(1)}k / {(nextGoal / 1000).toFixed(0)}k
                     </span>
                   </div>
                   

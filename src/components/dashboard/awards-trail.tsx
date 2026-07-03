@@ -67,7 +67,7 @@ export function AwardsTrail({ open, onOpenChange, currentRevenue }: AwardsTrailP
             </DialogDescription>
           </DialogHeader>
           
-          <div className="mt-6 p-5 rounded-2xl bg-[#14151a]/80 backdrop-blur-sm border border-white/10 relative z-10 shadow-lg max-w-2xl">
+          <div className="mt-6 p-5 rounded-2xl bg-[#14151a]/80 backdrop-blur-sm border border-white/10 relative z-10 shadow-lg max-w-2xl mx-auto w-full">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-bold text-slate-300 flex items-center gap-2">
                 <ArrowUp className="w-4 h-4 text-primary" /> Rumo a {nextMilestone.label}
