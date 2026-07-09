@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, RefreshCw, BarChart3, Settings, Layers, Target, Eye, DollarSign, Activity, 
   Percent, Link as LinkIcon, Webhook, Code2, Zap, FileText, Plus, Trash, Copy, Play, Edit2,
-  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight, Info, Move
+  Bell, Volume2, Pencil, Filter, MousePointerClick, ShoppingCart, ChevronRight, Info, Move, Clock
 } from "lucide-react";
 import LinkNext from "next/link";
 import { toast } from "@/hooks/use-toast";
@@ -172,10 +172,17 @@ export default function ProductDetail() {
   const [confirmModal, setConfirmModal] = useState<any>(null);
   const [updating, setUpdating] = useState(false);
 
+  // Rename & Preview State
+  const [renameModal, setRenameModal] = useState<any>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [previewModal, setPreviewModal] = useState<any>(null);
+
   // Forms State
   const [newTax, setNewTax] = useState({ name: '', percentage: '', fixed: '' });
   const [newExp, setNewExp] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
   const [newRule, setNewRule] = useState({ name: '', metric: 'cpa', operator: '>', value: '', action: 'pause_campaign', actionValue: '' });
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [newSchedule, setNewSchedule] = useState({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '' });
 
   // Notifications State
   const [notifyEnabled, setNotifyEnabled] = useState(true);
@@ -269,7 +276,7 @@ export default function ProductDetail() {
       if (!prod) throw new Error("Produto não encontrado");
       setProduct(prod);
 
-      const [linksRes, taxesRes, expRes, rulesRes, utmRes, pixelRes, accLinkRes, eventsRes, budgetHistoryRes] = await Promise.all([
+      const [linksRes, taxesRes, expRes, rulesRes, utmRes, pixelRes, accLinkRes, eventsRes, budgetHistoryRes, schedulesRes] = await Promise.all([
         supabase.from('product_campaigns').select('*').eq('product_id', id),
         supabase.from('product_taxes').select('*').eq('product_id', id),
         supabase.from('product_expenses').select('*').eq('product_id', id).order('expense_date', { ascending: false }),
@@ -278,7 +285,8 @@ export default function ProductDetail() {
         supabase.from('product_pixels').select('*').eq('product_id', id).maybeSingle(),
         supabase.from('product_ad_accounts').select('ad_account_id').eq('product_id', id).maybeSingle(),
         supabase.from('product_events').select('*').eq('product_id', id).order('created_at', { ascending: false }),
-        supabase.from('budget_history').select('*').eq('product_id', id).order('created_at', { ascending: false })
+        supabase.from('budget_history').select('*').eq('product_id', id).order('created_at', { ascending: false }),
+        supabase.from('budget_schedules').select('*').eq('product_id', id)
       ]);
 
       setLinkedCampaigns(linksRes.data || []);
@@ -291,6 +299,7 @@ export default function ProductDetail() {
       setProductAdAccount(accLinkRes.data || null);
       setEvents(eventsRes.data || []);
       setBudgetHistory(budgetHistoryRes.data || []);
+      setSchedules(schedulesRes.data || []);
 
       if (accLinkRes.data?.ad_account_id) {
         fetchLiveMetrics([accLinkRes.data.ad_account_id], datePreset);
@@ -832,8 +841,102 @@ export default function ProductDetail() {
     }
   };
 
+  const handleRename = async () => {
+    if (!renameModal || !user || !renameValue) return;
+
+    const snapshot = renameModal;
+    const newName = renameValue;
+    const levelMap: Record<string, 'campaigns'|'adsets'|'ads'> = { campaign: 'campaigns', adset: 'adsets', ad: 'ads' };
+    const idKeyMap: Record<string, string> = { campaign: 'campaign_id', adset: 'adset_id', ad: 'ad_id' };
+    const level = levelMap[snapshot.type];
+    const itemKey = idKeyMap[snapshot.type];
+
+    const currentItem = level ? (liveMetrics[level] as any[])?.find(i => i[itemKey] === snapshot.id) : null;
+    const oldName = currentItem?.name;
+
+    // OPTIMISTIC UPDATE
+    setRenameModal(null);
+    if (level && currentItem) {
+      setLiveMetrics(prev => ({
+        ...prev,
+        [level]: (prev[level] as any[]).map(i =>
+          i[itemKey] === snapshot.id ? { ...i, name: newName } : i
+        ),
+      }));
+    }
+
+    try {
+      const res = await fetch('/api/meta/manage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, type: snapshot.type, id: snapshot.id, payload: { name: newName } }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (level && currentItem && oldName) {
+          setLiveMetrics(prev => ({
+            ...prev,
+            [level]: (prev[level] as any[]).map(i =>
+              i[itemKey] === snapshot.id ? { ...i, name: oldName } : i
+            ),
+          }));
+        }
+        throw new Error(data.error || 'Falha ao renomear');
+      }
+      toast({ title: 'Renomeado com sucesso!', description: newName });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Erro ao renomear', description: e.message });
+    }
+  };
+
+  const handlePreview = async (adId: string) => {
+    if (!user) return;
+    setUpdating(true);
+    try {
+      const res = await fetch('/api/meta/ads/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, adId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao buscar prévia');
+      setPreviewModal({ adId, html: data.body });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: e.message });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // CRUD Despesas
+  const addSchedule = async () => {
+    if (!newSchedule.targetId || !newSchedule.time || !newSchedule.value) return;
+    setUpdating(true);
+    try {
+      const { data, error } = await supabase.from('budget_schedules').insert({
+        user_id: user!.uid, product_id: id, 
+        target_level: newSchedule.targetLevel, target_id: newSchedule.targetId,
+        action_time: newSchedule.time, action_type: newSchedule.action, action_value: Number(newSchedule.value)
+      }).select().single();
+      if (error) throw error;
+      setSchedules([...schedules, data]);
+      setNewSchedule({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '' });
+      toast({ title: 'Agendamento criado!' });
+    } catch(e:any) {
+      toast({ variant: 'destructive', title: 'Erro', description: e.message });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const deleteSchedule = async (sId: string) => {
+    setUpdating(true);
+    await supabase.from('budget_schedules').delete().eq('id', sId);
+    setSchedules(schedules.filter(s => s.id !== sId));
+    setUpdating(false);
+  };
+
   const addExpense = async () => {
     if(!newExp.name || !newExp.amount) return;
     setUpdating(true);
@@ -1233,7 +1336,12 @@ export default function ProductDetail() {
                                else setSelectedCampaignIds(prev => prev.filter(id => id !== c.campaign_id));
                             }}/></td>
                             <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'campaign', id:c.campaign_id, name:c.campaign_name})}/></td>
-                            <td className="px-3 py-2 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
+                            <td className="px-3 py-2 font-medium max-w-[200px]">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate">{c.campaign_name}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:text-white shrink-0" onClick={() => { setRenameValue(c.campaign_name); setRenameModal({ type: 'campaign', id: c.campaign_id, name: c.campaign_name }); }}><Pencil className="w-3 h-3"/></Button>
+                              </div>
+                            </td>
                             <td className="px-3 py-2 text-center font-mono text-slate-300">
                                <div className="flex items-center justify-center gap-2">
                                  <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
@@ -1291,7 +1399,12 @@ export default function ProductDetail() {
                                else setSelectedAdsetIds(prev => prev.filter(id => id !== a.adset_id));
                             }}/></td>
                             <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'adset', id:a.adset_id, name:a.adset_name})}/></td>
-                            <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.adset_name}</td>
+                            <td className="px-3 py-2 font-medium max-w-[200px]">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="truncate">{a.adset_name}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-500 hover:text-white shrink-0" onClick={() => { setRenameValue(a.adset_name); setRenameModal({ type: 'adset', id: a.adset_id, name: a.adset_name }); }}><Pencil className="w-3 h-3"/></Button>
+                              </div>
+                            </td>
                             <td className="px-3 py-2 text-center font-mono text-slate-300">
                                <div className="flex items-center justify-center gap-2">
                                  <span>{m.daily_budget > 0 ? `${formatCurrency(m.daily_budget, product?.currency || 'BRL')}/dia` : (m.lifetime_budget > 0 ? `${formatCurrency(m.lifetime_budget, product?.currency || 'BRL')} (Total)` : '-')}</span>
@@ -1344,7 +1457,15 @@ export default function ProductDetail() {
                         <tr key={a.ad_id} className="hover:bg-white/5">
                           <td className="px-3 py-2"></td>
                           <td className="px-3 py-2"><Switch checked={m.status==='ACTIVE'} onCheckedChange={()=>setConfirmModal({isOpen:true, type:'ad', id:a.ad_id, name:a.ad_name})}/></td>
-                          <td className="px-3 py-2 font-medium max-w-[200px] truncate">{a.ad_name}</td>
+                          <td className="px-3 py-2 font-medium max-w-[200px]">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="truncate">{a.ad_name}</span>
+                              <div className="flex shrink-0">
+                                <Button variant="ghost" size="icon" title="Ver Prévia" className="h-6 w-6 text-slate-500 hover:text-white" onClick={() => handlePreview(a.ad_id)}><Eye className="w-3 h-3"/></Button>
+                                <Button variant="ghost" size="icon" title="Renomear" className="h-6 w-6 text-slate-500 hover:text-white" onClick={() => { setRenameValue(a.ad_name); setRenameModal({ type: 'ad', id: a.ad_id, name: a.ad_name }); }}><Pencil className="w-3 h-3"/></Button>
+                              </div>
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-center font-mono text-slate-300">-</td>
                           <td className="px-3 py-2 text-right">{m.purchases.toFixed(0)}</td>
                           <td className="px-3 py-2 text-right">{formatCurrency(m.cpa, product?.currency || 'BRL')}</td>
@@ -1639,7 +1760,7 @@ export default function ProductDetail() {
                    </div>
                  </div>
 
-                 <div className="space-y-2">
+                 <div className="space-y-2 mb-10">
                     {rules.map(r => (
                       <div key={r.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#14151a] rounded-lg">
                         <div>
@@ -1649,6 +1770,59 @@ export default function ProductDetail() {
                         <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteRule(r.id)}><Trash className="w-4 h-4"/></Button>
                       </div>
                     ))}
+                 </div>
+
+                 <div className="pt-6 border-t border-white/10 space-y-6">
+                    <div>
+                      <h2 className="text-xl font-bold font-headline flex items-center gap-2"><Clock className="w-5 h-5 text-primary"/> Agendamentos de Orçamento</h2>
+                      <p className="text-sm text-muted-foreground">Abaixe o orçamento a noite e aumente de dia, na hora definida.</p>
+                    </div>
+
+                    <div className="p-4 border border-white/5 bg-[#1a1c23] rounded-lg space-y-4">
+                      <h3 className="font-bold text-sm">Novo Agendamento</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                        <Select value={newSchedule.targetLevel} onValueChange={v=>setNewSchedule({...newSchedule, targetLevel: v})}>
+                          <SelectTrigger className="bg-[#0f1115] border-white/10 sm:col-span-1"><SelectValue placeholder="Nível"/></SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a]">
+                            <SelectItem value="campaign">Campanha</SelectItem>
+                            <SelectItem value="adset">Conjunto</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Select value={newSchedule.targetId} onValueChange={v=>setNewSchedule({...newSchedule, targetId: v})}>
+                          <SelectTrigger className="bg-[#0f1115] border-white/10 sm:col-span-2"><SelectValue placeholder="Selecione..."/></SelectTrigger>
+                          <SelectContent className="bg-[#1a1a1a]">
+                            {newSchedule.targetLevel === 'campaign' 
+                              ? liveMetrics.campaigns.map(c => <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>)
+                              : liveMetrics.adsets.map(a => <SelectItem key={a.adset_id} value={a.adset_id}>{a.adset_name}</SelectItem>)
+                            }
+                          </SelectContent>
+                        </Select>
+
+                        <Input type="time" value={newSchedule.time} onChange={e=>setNewSchedule({...newSchedule, time: e.target.value})} className="bg-[#0f1115] border-white/10 sm:col-span-1" />
+
+                        <Input type="number" placeholder="Valor (R$)" value={newSchedule.value} onChange={e=>setNewSchedule({...newSchedule, value: e.target.value})} className="bg-[#0f1115] border-white/10 sm:col-span-1" />
+
+                        <Button onClick={addSchedule} disabled={updating || !newSchedule.targetId || !newSchedule.time || !newSchedule.value} className="w-full sm:col-span-1">Salvar</Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                       {schedules.map(s => {
+                          const targetName = s.target_level === 'campaign' 
+                            ? liveMetrics.campaigns.find(c => c.campaign_id === s.target_id)?.campaign_name || s.target_id
+                            : liveMetrics.adsets.find(a => a.adset_id === s.target_id)?.adset_name || s.target_id;
+                          return (
+                            <div key={s.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#14151a] rounded-lg">
+                              <div>
+                                <span className="font-bold block text-sm">{targetName} <span className="text-xs font-normal text-slate-400">({s.target_level === 'campaign' ? 'Campanha' : 'Conjunto'})</span></span>
+                                <span className="text-xs text-primary font-medium">Todos os dias às {s.action_time} ➔ Definir Orçamento para R$ {s.action_value}</span>
+                              </div>
+                              <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteSchedule(s.id)}><Trash className="w-4 h-4"/></Button>
+                            </div>
+                          )
+                       })}
+                    </div>
                  </div>
                </div>
             </TabsContent>
@@ -2142,6 +2316,44 @@ src="https://www.facebook.com/tr?id=${pixel.pixel_id}&ev=PageView&noscript=1"
           </div>
           <DialogFooter>
             <Button onClick={() => setSelectedSaleForModal(null)} className="w-full">Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Modal */}
+      <Dialog open={!!renameModal} onOpenChange={(open) => !open && setRenameModal(null)}>
+        <DialogContent className="bg-[#1e1f26] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle>Renomear</DialogTitle>
+            <DialogDescription>Altere o nome na Meta instantaneamente.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <label className="text-xs font-bold text-slate-400 block mb-2">Novo Nome</label>
+            <Input placeholder="Nome" value={renameValue} onChange={e => setRenameValue(e.target.value)} className="bg-[#0f1115] border-white/10 h-10"/>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRenameModal(null)} disabled={updating}>Cancelar</Button>
+            <Button className="bg-primary text-white font-bold" onClick={handleRename} disabled={updating || !renameValue}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={!!previewModal} onOpenChange={(open) => !open && setPreviewModal(null)}>
+        <DialogContent className="bg-[#1e1f26] border-white/10 text-white max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Prévia do Anúncio</DialogTitle>
+            <DialogDescription>Visualização padrão no Feed (Desktop)</DialogDescription>
+          </DialogHeader>
+          <div className="py-4 flex justify-center bg-white rounded overflow-hidden">
+             {previewModal?.html ? (
+               <div dangerouslySetInnerHTML={{ __html: previewModal.html }} className="w-full scale-90 origin-top" />
+             ) : (
+               <p className="text-slate-500 py-10">Carregando prévia...</p>
+             )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPreviewModal(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
