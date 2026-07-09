@@ -182,7 +182,7 @@ export default function ProductDetail() {
   const [newExp, setNewExp] = useState({ name: '', amount: '', date: new Date().toISOString().split('T')[0] });
   const [newRule, setNewRule] = useState({ name: '', metric: 'cpa', operator: '>', value: '', action: 'pause_campaign', actionValue: '' });
   const [schedules, setSchedules] = useState<any[]>([]);
-  const [newSchedule, setNewSchedule] = useState({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '' });
+  const [newSchedule, setNewSchedule] = useState({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '', restoreTime: '', restoreValue: '' });
 
   // Notifications State
   const [notifyEnabled, setNotifyEnabled] = useState(true);
@@ -917,11 +917,12 @@ export default function ProductDetail() {
       const { data, error } = await supabase.from('budget_schedules').insert({
         user_id: user!.uid, product_id: id, 
         target_level: newSchedule.targetLevel, target_id: newSchedule.targetId,
-        action_time: newSchedule.time, action_type: newSchedule.action, action_value: Number(newSchedule.value)
+        action_time: newSchedule.time, action_type: newSchedule.action, action_value: Number(newSchedule.value),
+        restore_time: newSchedule.restoreTime || null, restore_value: newSchedule.restoreValue ? Number(newSchedule.restoreValue) : null
       }).select().single();
       if (error) throw error;
       setSchedules([...schedules, data]);
-      setNewSchedule({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '' });
+      setNewSchedule({ targetLevel: 'campaign', targetId: '', time: '', action: 'set_fixed', value: '', restoreTime: '', restoreValue: '' });
       toast({ title: 'Agendamento criado!' });
     } catch(e:any) {
       toast({ variant: 'destructive', title: 'Erro', description: e.message });
@@ -1780,30 +1781,54 @@ export default function ProductDetail() {
 
                     <div className="p-4 border border-white/5 bg-[#1a1c23] rounded-lg space-y-4">
                       <h3 className="font-bold text-sm">Novo Agendamento</h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                        <Select value={newSchedule.targetLevel} onValueChange={v=>setNewSchedule({...newSchedule, targetLevel: v})}>
-                          <SelectTrigger className="bg-[#0f1115] border-white/10 sm:col-span-1"><SelectValue placeholder="Nível"/></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a]">
-                            <SelectItem value="campaign">Campanha</SelectItem>
-                            <SelectItem value="adset">Conjunto</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4 items-end">
+                        <div className="flex flex-col gap-1 lg:col-span-1">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold">Nível</span>
+                          <Select value={newSchedule.targetLevel} onValueChange={v=>setNewSchedule({...newSchedule, targetLevel: v})}>
+                            <SelectTrigger className="bg-[#0f1115] border-white/10 w-full"><SelectValue placeholder="Nível"/></SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a]">
+                              <SelectItem value="campaign">Campanha</SelectItem>
+                              <SelectItem value="adset">Conjunto</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Select value={newSchedule.targetId} onValueChange={v=>setNewSchedule({...newSchedule, targetId: v})}>
-                          <SelectTrigger className="bg-[#0f1115] border-white/10 sm:col-span-2"><SelectValue placeholder="Selecione..."/></SelectTrigger>
-                          <SelectContent className="bg-[#1a1a1a]">
-                            {newSchedule.targetLevel === 'campaign' 
-                              ? liveMetrics.campaigns.map(c => <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>)
-                              : liveMetrics.adsets.map(a => <SelectItem key={a.adset_id} value={a.adset_id}>{a.adset_name}</SelectItem>)
-                            }
-                          </SelectContent>
-                        </Select>
+                        <div className="flex flex-col gap-1 lg:col-span-2">
+                          <span className="text-[10px] text-muted-foreground uppercase font-bold">Alvo</span>
+                          <Select value={newSchedule.targetId} onValueChange={v=>setNewSchedule({...newSchedule, targetId: v})}>
+                            <SelectTrigger className="bg-[#0f1115] border-white/10 w-full"><SelectValue placeholder="Selecione..."/></SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a]">
+                              {newSchedule.targetLevel === 'campaign' 
+                                ? liveMetrics.campaigns.map(c => <SelectItem key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</SelectItem>)
+                                : liveMetrics.adsets.map(a => <SelectItem key={a.adset_id} value={a.adset_id}>{a.adset_name}</SelectItem>)
+                              }
+                            </SelectContent>
+                          </Select>
+                        </div>
 
-                        <Input type="time" value={newSchedule.time} onChange={e=>setNewSchedule({...newSchedule, time: e.target.value})} className="bg-[#0f1115] border-white/10 sm:col-span-1" />
+                        <div className="flex flex-col gap-1 lg:col-span-1">
+                           <span className="text-[10px] text-muted-foreground uppercase font-bold">Hora Reduzir</span>
+                           <Input type="time" value={newSchedule.time} onChange={e=>setNewSchedule({...newSchedule, time: e.target.value})} className="bg-[#0f1115] border-white/10 w-full" />
+                        </div>
 
-                        <Input type="number" placeholder="Valor (R$)" value={newSchedule.value} onChange={e=>setNewSchedule({...newSchedule, value: e.target.value})} className="bg-[#0f1115] border-white/10 sm:col-span-1" />
+                        <div className="flex flex-col gap-1 lg:col-span-1">
+                           <span className="text-[10px] text-muted-foreground uppercase font-bold">Valor (R$)</span>
+                           <Input type="number" placeholder="Valor" value={newSchedule.value} onChange={e=>setNewSchedule({...newSchedule, value: e.target.value})} className="bg-[#0f1115] border-white/10 w-full" />
+                        </div>
 
-                        <Button onClick={addSchedule} disabled={updating || !newSchedule.targetId || !newSchedule.time || !newSchedule.value} className="w-full sm:col-span-1">Salvar</Button>
+                        <div className="flex flex-col gap-1 lg:col-span-1">
+                           <span className="text-[10px] text-muted-foreground uppercase font-bold">Hora Aumentar</span>
+                           <Input type="time" value={newSchedule.restoreTime} onChange={e=>setNewSchedule({...newSchedule, restoreTime: e.target.value})} className="bg-[#0f1115] border-white/10 w-full" title="Horário para voltar ao orçamento original (opcional)" />
+                        </div>
+                        
+                        <div className="flex flex-col gap-1 lg:col-span-1">
+                           <span className="text-[10px] text-muted-foreground uppercase font-bold">Valor (R$)</span>
+                           <Input type="number" placeholder="Valor" value={newSchedule.restoreValue} onChange={e=>setNewSchedule({...newSchedule, restoreValue: e.target.value})} className="bg-[#0f1115] border-white/10 w-full" title="Novo valor ao restaurar" />
+                        </div>
+
+                        <div className="flex flex-col lg:col-span-1 justify-end h-full">
+                           <Button onClick={addSchedule} disabled={updating || !newSchedule.targetId || !newSchedule.time || !newSchedule.value} className="w-full">Salvar</Button>
+                        </div>
                       </div>
                     </div>
 
@@ -1816,7 +1841,7 @@ export default function ProductDetail() {
                             <div key={s.id} className="flex justify-between items-center p-3 border border-white/5 bg-[#14151a] rounded-lg">
                               <div>
                                 <span className="font-bold block text-sm">{targetName} <span className="text-xs font-normal text-slate-400">({s.target_level === 'campaign' ? 'Campanha' : 'Conjunto'})</span></span>
-                                <span className="text-xs text-primary font-medium">Todos os dias às {s.action_time} ➔ Definir Orçamento para R$ {s.action_value}</span>
+                                <span className="text-xs text-primary font-medium">Todos os dias às {s.action_time} ➔ Definir Orçamento para R$ {s.action_value} {s.restore_time ? `| Depois, às ${s.restore_time} ➔ R$ ${s.restore_value}` : ''}</span>
                               </div>
                               <Button variant="ghost" size="icon" className="text-red-500" onClick={() => deleteSchedule(s.id)}><Trash className="w-4 h-4"/></Button>
                             </div>

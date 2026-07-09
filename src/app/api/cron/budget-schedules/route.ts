@@ -36,7 +36,10 @@ export async function GET(request: Request) {
     
     // Como definimos `set_fixed` na UI, setar o budget múltiplas vezes para "R$ 50" não altera nada além de gastar cota de API.
     
-    const schedulesToRun = schedules.filter(s => s.action_time.startsWith(currentHourPrefix));
+    const schedulesToRun = schedules.filter(s => 
+      (s.action_time && s.action_time.startsWith(currentHourPrefix)) || 
+      (s.restore_time && s.restore_time.startsWith(currentHourPrefix))
+    );
 
     if (schedulesToRun.length === 0) {
       return NextResponse.json({ success: true, message: `Nenhum agendamento para a hora ${currentHourPrefix}xx` });
@@ -68,8 +71,17 @@ export async function GET(request: Request) {
       const token = userTokens[schedule.user_id];
       if (!token) continue; // Usuário sem token
 
+      const isActionTime = schedule.action_time && schedule.action_time.startsWith(currentHourPrefix);
+      const isRestoreTime = schedule.restore_time && schedule.restore_time.startsWith(currentHourPrefix);
+
+      let valueToApply = null;
+      if (isActionTime) valueToApply = schedule.action_value;
+      if (isRestoreTime) valueToApply = schedule.restore_value;
+
+      if (valueToApply === null || valueToApply === undefined) continue;
+
       if (schedule.action_type === 'set_fixed') {
-         const newBudgetCents = Math.floor(Number(schedule.action_value) * 100);
+         const newBudgetCents = Math.floor(Number(valueToApply) * 100);
          const payload = { daily_budget: newBudgetCents };
 
          let res;

@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS public.budget_schedules (
   -- Valor numérico a ser aplicado. Ex: 50 (R$ 50 para set_fixed, ou 50% para reduce_percent)
   action_value numeric(14,2) NOT NULL,
   
+  -- Horário para restaurar/aumentar o orçamento (opcional)
+  restore_time text,
+  
+  -- Valor para restaurar (opcional)
+  restore_value numeric(14,2),
+  
   is_active boolean DEFAULT true,
   created_at timestamptz DEFAULT timezone('utc', now()) NOT NULL
 );
