@@ -618,10 +618,10 @@ export default function ProductDetail() {
     });
 
     // Se o painel interno registrou mais vendas que o Facebook, usamos o interno para ter o ROAS real em tempo real
-    // if (internalPurchases > purchases) {
-    //    purchases = internalPurchases;
-    //    revenue = internalRevenue > 0 ? internalRevenue : revenue;
-    // }
+    if (internalPurchases > purchases) {
+       purchases = internalPurchases;
+       revenue = internalRevenue > 0 ? internalRevenue : revenue;
+    }
     // --------------------------------
 
     const roas = spend > 0 ? revenue / spend : 0;
@@ -681,6 +681,52 @@ export default function ProductDetail() {
     
     return result;
   }, [events, salesDateFilter, salesDateStart, salesDateEnd, salesSearch]);
+
+  const untrackedSales = useMemo(() => {
+    let untracked: any[] = [];
+    events.filter(e => e.event_type === 'purchase' && e.status === 'approved' && isEventInDateRange(e.created_at)).forEach(e => {
+       const payload = e.raw_payload || {};
+       const tracking = payload.tracking || {};
+       const utmCampaign = tracking.utm_campaign || payload.utm_campaign || '';
+       const utmMedium = tracking.utm_medium || payload.utm_medium || '';
+       const utmContent = tracking.utm_content || payload.utm_content || '';
+       const utmSource = tracking.utm_source || payload.utm_source || '';
+       
+       const extractId = (str: string) => {
+          const match = str.match(/\|(\d{15,})/);
+          return match ? match[1] : str;
+       };
+       
+       const campId = extractId(utmCampaign);
+       const adsetId = extractId(utmMedium);
+       const adId = extractId(utmContent);
+       
+       let matched = false;
+       liveMetrics.campaigns.forEach(c => {
+           if (campId === c.campaign_id || campId === c.name || utmCampaign === c.name || utmMedium === c.name) matched = true;
+       });
+       liveMetrics.adsets.forEach(a => {
+           if (adsetId === a.adset_id || adsetId === a.name || utmMedium === a.name || utmContent === a.name) matched = true;
+       });
+       liveMetrics.ads.forEach(a => {
+           if (adId === a.ad_id || adId === a.name || utmContent === a.name || utmSource === a.name) matched = true;
+       });
+
+       if (!matched) {
+           untracked.push({
+              id: e.id,
+              date: e.created_at,
+              value: e.event_value,
+              utmCampaign,
+              utmMedium,
+              utmContent,
+              utmSource,
+              customer: e.customer_email || e.customer_name || 'Desconhecido'
+           });
+       }
+    });
+    return untracked;
+  }, [events, liveMetrics, datePreset]);
 
   const salesItemsPerPage = 10;
   const paginatedSales = useMemo(() => {
@@ -1237,6 +1283,41 @@ export default function ProductDetail() {
                   </div>
                   {(selectedCampaignIds.length > 0 || selectedAdsetIds.length > 0) && (
                      <Button variant="ghost" size="sm" className="text-xs h-8 text-muted-foreground hover:text-white" onClick={() => { setSelectedCampaignIds([]); setSelectedAdsetIds([]); }}>Limpar Filtros</Button>
+                  )}
+                  {untrackedSales.length > 0 && (
+                     <Dialog>
+                       <DialogTrigger asChild>
+                         <Button variant="outline" size="sm" className="h-8 border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10">
+                           <Info className="w-3 h-3 mr-1" />
+                           {untrackedSales.length} Não Trackeadas
+                         </Button>
+                       </DialogTrigger>
+                       <DialogContent className="max-w-2xl bg-[#1a1c23] border-white/10">
+                         <DialogHeader>
+                           <DialogTitle>Vendas Não Trackeadas</DialogTitle>
+                           <DialogDescription>
+                             Estas vendas não puderam ser atribuídas a nenhuma campanha, conjunto ou anúncio na Meta. Verifique se os UTMs coincidem com os nomes ou IDs no gerenciador.
+                           </DialogDescription>
+                         </DialogHeader>
+                         <div className="max-h-[60vh] overflow-y-auto space-y-2 mt-2 pr-2">
+                           {untrackedSales.map(u => (
+                             <div key={u.id} className="bg-white/5 p-3 rounded-md border border-white/5 text-sm">
+                               <div className="flex justify-between mb-1">
+                                 <span className="font-bold">{u.customer}</span>
+                                 <span className="text-green-400 font-bold">{formatCurrency(u.value, product?.currency || 'BRL')}</span>
+                               </div>
+                               <div className="text-xs text-slate-400 mb-2">{new Date(u.date).toLocaleString('pt-BR')}</div>
+                               <div className="grid grid-cols-2 gap-2 text-xs">
+                                 <div><span className="text-slate-500">utm_source:</span> {u.utmSource || '-'}</div>
+                                 <div><span className="text-slate-500">utm_medium:</span> {u.utmMedium || '-'}</div>
+                                 <div><span className="text-slate-500">utm_campaign:</span> {u.utmCampaign || '-'}</div>
+                                 <div><span className="text-slate-500">utm_content:</span> {u.utmContent || '-'}</div>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </DialogContent>
+                     </Dialog>
                   )}
                 </div>
               </div>
