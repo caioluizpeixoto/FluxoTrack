@@ -486,19 +486,12 @@ export default function ProductDetail() {
     let pendingPurchases = 0, pendingRevenue = 0;
     
     events.filter(e => e.event_type === 'purchase').forEach(e => {
-       const isToday = () => {
-         const d = new Date(e.created_at);
-         const now = new Date();
-         return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
-       };
-
        if (isEventInDateRange(e.created_at) && e.status === 'approved') {
          realRevenue += Number(e.event_value || 0);
          realPurchases += 1;
        } 
        
-       // Sempre pega pendentes apenas de hoje, independente do datePreset global
-       if (isToday() && (e.status === 'pending' || e.status === 'generated')) {
+       if (isEventInDateRange(e.created_at) && (e.status === 'pending' || e.status === 'generated')) {
          pendingRevenue += Number(e.event_value || 0);
          pendingPurchases += 1;
        }
@@ -508,9 +501,7 @@ export default function ProductDetail() {
     const productsSalesMap: Record<string, number> = {};
 
     events.filter(e => e.event_type === 'purchase' && e.status === 'approved').forEach(e => {
-       const d = new Date(e.created_at);
-       const now = new Date();
-       if (d >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+       if (isEventInDateRange(e.created_at)) {
           productsSoldToday += 1;
           
           let pName = product?.name || 'Produto Principal';
@@ -1175,7 +1166,7 @@ export default function ProductDetail() {
                    <div key="last_sale">
                      <Card className="h-full bg-[#1a1c23] border-white/5 p-4 cursor-move overflow-y-auto custom-scrollbar">
                        <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                         <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Produto (Hoje)</h3>
+                         <h3 className="text-xs text-slate-400 font-bold uppercase tracking-wider">Vendas por Produto</h3>
                          <span className="text-xs text-muted-foreground">{kpis.productsSoldList.length} produto{kpis.productsSoldList.length !== 1 ? 's' : ''}</span>
                        </div>
                        <div className="space-y-2">
