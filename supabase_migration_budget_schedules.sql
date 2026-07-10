@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.budget_schedules (
 );
 
 ALTER TABLE public.budget_schedules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "bsched_own" ON public.budget_schedules;
 CREATE POLICY "bsched_own" ON public.budget_schedules FOR ALL TO authenticated USING ((SELECT auth.uid()) = user_id);
 
 -- Recarregar schema cache (se houver PostgREST ativo)
