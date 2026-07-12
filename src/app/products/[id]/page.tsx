@@ -499,6 +499,7 @@ export default function ProductDetail() {
 
     let productsSoldToday = 0;
     const productsSalesMap: Record<string, number> = {};
+    const countrySalesMap: Record<string, number> = {};
 
     events.filter(e => e.event_type === 'purchase' && e.status === 'approved').forEach(e => {
        if (isEventInDateRange(e.created_at)) {
@@ -512,10 +513,30 @@ export default function ProductDetail() {
           }
           
           productsSalesMap[pName] = (productsSalesMap[pName] || 0) + 1;
+
+          // Country mapping
+          let cName = 'Desconhecido';
+          const p = e.raw_payload as any;
+          if (p) {
+            cName = p.purchase?.checkout_country?.name || p.checkout_country?.name || p.customer?.address?.country || p.buyer?.address?.country || p.tracking?.country || 'Brasil';
+            if (cName === 'BR') cName = 'Brasil';
+            if (cName === 'MX') cName = 'Mexico';
+            if (cName === 'US') cName = 'Estados Unidos';
+            if (cName === 'CO') cName = 'Colômbia';
+            if (cName === 'PE') cName = 'Peru';
+            if (cName === 'AR') cName = 'Argentina';
+            if (cName === 'CL') cName = 'Chile';
+            if (cName === 'PT') cName = 'Portugal';
+          }
+          countrySalesMap[cName] = (countrySalesMap[cName] || 0) + 1;
        }
     });
 
     const productsSoldList = Object.entries(productsSalesMap)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a,b) => b.count - a.count);
+
+    const countrySalesList = Object.entries(countrySalesMap)
       .map(([name, count]) => ({ name, count }))
       .sort((a,b) => b.count - a.count);
     
@@ -551,7 +572,7 @@ export default function ProductDetail() {
     return { 
       spend, revenue: realRevenue, purchases: realPurchases, pendingPurchases, pendingRevenue, 
       prodCost, taxesAmount, expensesAmount, profit, roas, roi, cpa, cpc, cpm, ctr, arpu, 
-      lastSaleProduct, productsSoldToday, productsSoldList, clicks, impressions, ic, pageViews 
+      lastSaleProduct, productsSoldToday, productsSoldList, countrySalesList, clicks, impressions, ic, pageViews 
     };
   }, [liveMetrics, product, taxes, expenses, events, datePreset]);
 
@@ -1113,6 +1134,18 @@ export default function ProductDetail() {
                    </Button>
                  </div>
                </div>
+
+               {/* Paises (Aba/Badges no inicio do resumo) */}
+               {kpis.countrySalesList && kpis.countrySalesList.length > 0 && (
+                  <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
+                    {kpis.countrySalesList.map((c: any, i: number) => (
+                      <div key={i} className="flex items-center gap-2 bg-[#1a1c23] border border-white/10 rounded-md px-3 py-1.5 shrink-0 shadow-sm">
+                         <span className="text-xs text-slate-300 uppercase font-bold tracking-wider">{c.name}</span>
+                         <Badge className="bg-primary/20 text-primary hover:bg-primary/30 font-bold border-0">{c.count} {c.count === 1 ? 'venda' : 'vendas'}</Badge>
+                      </div>
+                    ))}
+                  </div>
+               )}
 
                {/* Grid Layout */}
                {mounted ? (

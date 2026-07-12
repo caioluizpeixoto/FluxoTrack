@@ -28,6 +28,19 @@ export async function POST(
     let rawBody = await req.json();
     const body = rawBody.data ? { ...rawBody, ...rawBody.data } : rawBody;
 
+    // Standardize Hotmart UTM Tracking
+    if (body.purchase?.tracking) {
+      body.tracking = body.tracking || {};
+      body.tracking.utm_source = body.purchase.tracking.source || body.purchase.tracking.utm_source || body.tracking.utm_source || '';
+      body.tracking.utm_campaign = body.purchase.tracking.campaign || body.purchase.tracking.utm_campaign || body.tracking.utm_campaign || '';
+      body.tracking.utm_medium = body.purchase.tracking.medium || body.purchase.tracking.utm_medium || body.tracking.utm_medium || '';
+      body.tracking.utm_content = body.purchase.tracking.content || body.purchase.tracking.utm_content || body.tracking.utm_content || '';
+    }
+    if (body.purchase?.sck || body.purchase?.src) {
+      body.tracking = body.tracking || {};
+      if (!body.tracking.utm_source) body.tracking.utm_source = body.purchase.sck || body.purchase.src;
+    }
+
     // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, Wiapy, generic)
     const eventType = body.event || body.event_type || body.type || body.status || body.payment?.status || 'unknown';
     
@@ -39,9 +52,17 @@ export async function POST(
       return parseFloat(clean) || 0;
     };
 
+    let currency = body.currency || body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || 'BRL';
+
     // Parse Value
     let rawValue = 0;
-    if (body.payment?.amount !== undefined) {
+    if (body.commissions && Array.isArray(body.commissions)) {
+      const prodComm = body.commissions.find((c: any) => c.source === 'PRODUCER') || body.commissions[0];
+      if (prodComm) {
+        rawValue = cleanValue(prodComm.value);
+        currency = prodComm.currency_value || currency;
+      }
+    } else if (body.payment?.amount !== undefined) {
       rawValue = cleanValue(body.payment.amount);
       if (body.payment.fee !== undefined && body.checkout?.id) {
          rawValue = (rawValue - cleanValue(body.payment.fee)) / 100;
@@ -76,7 +97,7 @@ export async function POST(
     // Parse Transaction ID
     const transactionId = body.payment?.id || body.Order?.order_id || body.purchase?.transaction || body.sale_id || body.transaction_id || body.transaction || body.id || '';
 
-    let currency = body.currency || body.purchase?.price?.currency_code || 'BRL';
+    // Removed currency assignment from here since it is now before value extraction.
 
     const targetCurrency = product.currency || 'BRL';
     
