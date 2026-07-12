@@ -36,10 +36,12 @@ export async function POST(
       body.tracking.utm_medium = body.purchase.tracking.medium || body.purchase.tracking.utm_medium || body.tracking.utm_medium || '';
       body.tracking.utm_content = body.purchase.tracking.content || body.purchase.tracking.utm_content || body.tracking.utm_content || '';
     }
-    if (body.purchase?.sck || body.purchase?.src) {
-      body.tracking = body.tracking || {};
-      if (!body.tracking.utm_source) body.tracking.utm_source = body.purchase.sck || body.purchase.src;
-    }
+    
+    body.tracking = body.tracking || {};
+    body.tracking.utm_source = body.tracking.utm_source || body.utm_source || body.src || body.sck || body.purchase?.sck || body.purchase?.src || '';
+    body.tracking.utm_campaign = body.tracking.utm_campaign || body.utm_campaign || '';
+    body.tracking.utm_medium = body.tracking.utm_medium || body.utm_medium || '';
+    body.tracking.utm_content = body.tracking.utm_content || body.utm_content || '';
 
     // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, Wiapy, generic)
     const eventType = body.event || body.event_type || body.type || body.status || body.payment?.status || 'unknown';
@@ -52,7 +54,7 @@ export async function POST(
       return parseFloat(clean) || 0;
     };
 
-    let currency = body.currency || body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || 'BRL';
+    let currency = body.currency || body.currency_code || body.Commissions?.currency || body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || body.payment?.currency || 'BRL';
 
     // Parse Value
     let rawValue = 0;
@@ -79,10 +81,10 @@ export async function POST(
       rawValue = cleanValue(body.value_cents) / 100;
     } else if (body.price_cents !== undefined) {
       rawValue = cleanValue(body.price_cents) / 100;
-    } else if (body.Commissions?.charge_amount !== undefined) {
-      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
     } else if (body.Commissions?.my_commission !== undefined) {
       rawValue = cleanValue(body.Commissions.my_commission) / 100;
+    } else if (body.Commissions?.charge_amount !== undefined) {
+      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
     } else {
       rawValue = cleanValue(body.value || body.amount || body.price || body.full_price || body.comission || body.liquid || 0);
     }
@@ -220,7 +222,7 @@ export async function POST(
         
         if (pixelInfo && pixelInfo.access_token && pixelInfo.pixel_id) {
           // Extrair IP para tentar cruzar com o tracking do FluxoFy Pixel
-          const clientIp = body.tracking?.ip || body.customer?.ip || body.customerIp || '';
+          const clientIp = body.tracking?.ip || body.client_ip || body.ip || body.customer?.ip || body.customerIp || '';
           
           let matchedTracking = null;
           if (clientIp) {

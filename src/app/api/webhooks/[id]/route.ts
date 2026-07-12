@@ -37,6 +37,8 @@ export async function POST(
     // 2. Normalizar dados da plataforma (Exemplo simples para Kiwify/Hotmart)
     const platform = webhookConfig.platform;
 
+    let currency = body.currency || body.currency_code || body.Commissions?.currency || body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || body.payment?.currency || 'BRL';
+
     const cleanValue = (val: any): number => {
       if (typeof val === 'number') return val;
       if (!val) return 0;
@@ -62,10 +64,10 @@ export async function POST(
       rawValue = cleanValue(body.value_cents) / 100;
     } else if (body.price_cents !== undefined) {
       rawValue = cleanValue(body.price_cents) / 100;
-    } else if (body.Commissions?.charge_amount !== undefined) {
-      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
     } else if (body.Commissions?.my_commission !== undefined) {
       rawValue = cleanValue(body.Commissions.my_commission) / 100;
+    } else if (body.Commissions?.charge_amount !== undefined) {
+      rawValue = cleanValue(body.Commissions.charge_amount) / 100;
     } else {
       let fallback = cleanValue(body.value || body.amount || body.price || body.full_price || body.comission || body.liquid || 0);
       if (platform === 'kiwify' && fallback > 0 && fallback > 100 && fallback.toString().indexOf('.') === -1) {
@@ -168,7 +170,7 @@ export async function POST(
       if (onesignalAppId && onesignalApiKey) {
         const productName = body.Product?.name || body.product?.name || body.product_name || body.ProductName || body.titulo || body.title || 'Produto não identificado';
         const title = status === 'approved' ? 'Venda Aprovada! 💰' : 'Venda Pendente! ⏳';
-        const msg = `Produto: ${productName}\nValor: R$ ${value.toFixed(2)}`;
+        const msg = `Produto: ${productName}\nValor: ${currency} ${value.toFixed(2)}`;
         await fetch('https://onesignal.com/api/v1/notifications', {
           method: 'POST',
           headers: {

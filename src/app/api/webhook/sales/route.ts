@@ -66,8 +66,9 @@ export async function POST(request: Request) {
 
     // Formata a mensagem de notificação com o nome do produto
     const title = isApproved ? `Venda Aprovada! 💰` : `Venda Pendente! ⏳`;
+    const currencyStr = record.currency || 'R$';
     const valueStr = Number(record.event_value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const message = `${productName}\nValor: R$${valueStr}`;
+    const message = `${productName}\nValor: ${currencyStr === 'BRL' ? 'R$' : currencyStr} ${valueStr}`;
 
     // Busca a assinatura de push do usuário
     const { data: subs } = await supabaseAdmin
