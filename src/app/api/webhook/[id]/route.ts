@@ -25,7 +25,8 @@ export async function POST(
     }
 
     // Get Raw JSON
-    const body = await req.json();
+    let rawBody = await req.json();
+    const body = rawBody.data ? { ...rawBody, ...rawBody.data } : rawBody;
 
     // Agnostic parser (Tries common fields from Kiwify, Hotmart, PerfectPay, Wiapy, generic)
     const eventType = body.event || body.event_type || body.type || body.status || body.payment?.status || 'unknown';
@@ -256,11 +257,16 @@ export async function POST(
           if(!capiEvent.data[0].user_data.fbp) delete capiEvent.data[0].user_data.fbp;
 
           // Disparo para o Facebook
-          await fetch(`https://graph.facebook.com/v19.0/${pixelInfo.pixel_id}/events?access_token=${pixelInfo.access_token}`, {
+          const fbRes = await fetch(`https://graph.facebook.com/v19.0/${pixelInfo.pixel_id}/events?access_token=${pixelInfo.access_token}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(capiEvent)
           });
+          
+          if (!fbRes.ok) {
+            const fbResText = await fbRes.text();
+            console.error('Erro no disparo CAPI do Facebook:', fbResText, 'Payload:', JSON.stringify(capiEvent));
+          }
         }
       } catch(e) {
         console.error('Erro no disparo CAPI do Facebook:', e);
