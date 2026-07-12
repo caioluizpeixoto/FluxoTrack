@@ -1,0 +1,92 @@
+{
+  "payment": {
+    "id": "6a53b94c559dab98ca040d48",
+    "fee": 260,
+    "type": "payment",
+    "amount": 3750,
+    "coupon": null,
+    "status": "paid",
+    "dt_create": "2026-07-12T15:57:00.802Z",
+    "dt_update": "2026-07-12T15:57:01.687Z",
+    "pix_boleto": {
+      "url": "https://api.pagar.me/core/v5/transactions/tran_Q5A0N7ZJc4iZDVnw/qrcode?payment_method=pix",
+      "code": "00020101021226820014br.gov.bcb.pix2560pix.stone.com.br/pix/v2/9964122c-1325-471a-a811-e7f647f04768520400005303986540537.505802BR5913PAGAR.ME S.A.6014RIO DE JANEIRO62290525a062a5e99a1479c399ace0615630406D9"
+    },
+    "installments": null,
+    "payment_method": "pix",
+    "coupon_discount": 0,
+    "credit_card_interest_fee": null,
+    "installment_interest_rate": null
+  },
+  "checkout": {
+    "id": "6a2f488331f403ad8b6b5c6e",
+    "title": "Kit Inglês Lúdico",
+    "amount": 1790,
+    "orderbump": [
+      {
+        "id": "6a368554da80fafc341cbc19",
+        "title": "UNO do Verbo To Be",
+        "amount": 470
+      },
+      {
+        "id": "6a41f44ce296d13347973ff6",
+        "title": "Desafio da Memória em Inglês",
+        "amount": 490
+      }
+    ]
+  },
+  "customer": {
+    "id": "6a53b94c559dab98ca040d3b",
+    "name": "Andreia Grassi",
+    "email": "andreiagrassi.np@gmail.com",
+    "document": "934.276.460-68",
+    "mobile_phone": "(51) 98539-5206"
+  },
+  "products": [
+    {
+      "id": "6a2f47c7e4faf085dd1b8662",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/drive/folders/15aVbFkVx3bRVy0B0YHqDmq31kydeihkF?usp=drive_link",
+          "title": "Kit Inglês Lúdico"
+        }
+      ],
+      "title": "Kit Inglês Lúdico"
+    },
+    {
+      "id": "6a36842eda80fafc341c95e9",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/file/d/1yiPptmdGVrdHwewl6wpGDYG9vKIbfWQx/view?usp=drive_link",
+          "title": "UNO do Verbo To Be"
+        }
+      ],
+      "title": "UNO do Verbo To Be"
+    },
+    {
+      "id": "6a41f3c0e296d13347973b88",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/file/d/1pU7mxoiUsw0npDvusOUq9c57dlxlDAd4/view?usp=sharing",
+          "title": "Memoria"
+        }
+      ],
+      "title": "Jogo memoria "
+    }
+  ],
+  "tracking": {
+    "ip": "2804:2458:2009:ce00:e4bb:470:256f:8995",
+    "fbc": null,
+    "fbp": null,
+    "utm_term": "Instagram_Reels",
+    "useragent": "Mozilla/5.0 (Linux; Android 15; moto g35 5G Build/VUOAS35.116-128-1; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.7871.91 Mobile Safari/537.36 Instagram 437.0.0.33.78 Android (35/15; 400dpi; 1080x2400; motorola; moto g35 5G; manila; ums9620_2h10; pt_BR; 1011909208; IABMV/1)",
+    "utm_medium": "CJ-01|120246875770670677",
+    "utm_source": "FB",
+    "utm_content": "CT01|120246875770680677",
+    "utm_campaign": "[ABO] TESTE  CAMPEAO 💸|120246875770660677"
+  },
+  "subscription": {}
+}

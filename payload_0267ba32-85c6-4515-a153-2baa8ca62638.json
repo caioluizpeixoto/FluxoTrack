@@ -1,0 +1,59 @@
+{
+  "payment": {
+    "id": "6a53c7215e25df8bb6512699",
+    "fee": 180,
+    "type": "payment",
+    "amount": 1990,
+    "coupon": null,
+    "status": "paid",
+    "dt_create": "2026-07-12T16:56:01.278Z",
+    "dt_update": "2026-07-12T16:56:02.964Z",
+    "pix_boleto": {
+      "url": "https://api.pagar.me/core/v5/transactions/tran_OoABjjgFWCMwBPpj/qrcode?payment_method=pix",
+      "code": "00020101021226820014br.gov.bcb.pix2560pix.stone.com.br/pix/v2/6d0bf95d-b7ac-4fd1-87c3-cd4c39212047520400005303986540519.905802BR5913PAGAR.ME S.A.6014RIO DE JANEIRO62290525fc56a1a7a64a049b2e4c74aa3630411FD"
+    },
+    "installments": null,
+    "payment_method": "pix",
+    "coupon_discount": 0,
+    "credit_card_interest_fee": null,
+    "installment_interest_rate": null
+  },
+  "checkout": {
+    "id": "69be7c9af94362332f7e899a",
+    "title": "Caminho da Matemática + 600 Atividades",
+    "amount": 1990,
+    "orderbump": []
+  },
+  "customer": {
+    "id": "68a56c6c3de67c2b14fee6a6",
+    "name": "Eliza Maria Silva de Souza ",
+    "email": "elizajose.soucarmo@gmail.com",
+    "document": "632.506.082-20",
+    "mobile_phone": "(68) 99979-0956"
+  },
+  "products": [
+    {
+      "id": "69be7bb3f94362332f7e5fee",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/drive/folders/1_tsgUbd925vCCNGl-qBfh5klFHRcNkGv?usp=drive_link",
+          "title": "Acesso"
+        }
+      ],
+      "title": "Caminho da Matemática + 600 Atividades"
+    }
+  ],
+  "tracking": {
+    "ip": "2804:14d:5a82:470e:54dd:1687:ba6f:64d",
+    "fbc": "fb.1.1783776154498.PAZXh0bgNhZW0BMABhZGlkAas4S6Nydj1zcnRjBmFwcF9pZA81NjcwNjczNDMzNTI0MjcAAafAUL-Mm6ExIEQakLkSq8nZIVYmOY7rgN92Ctw9skHv1LenGn3FVgUb-XFaoA_aem_T9hHbhlrmz4mZl0DomxCGA",
+    "fbp": "fb.1.1782996119870.717679596259488388",
+    "utm_term": "Instagram_Feed",
+    "useragent": "Mozilla/5.0 (Linux; Android 15; RMX3710 Build/AP3A.240617.008; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.7871.46 Mobile Safari/537.36 Instagram 437.0.0.33.78 Android (35/15; 480dpi; 1080x2400; realme; RMX3710; REE2ADL1; mt6768; pt_BR; 1011909444; IABMV/1)",
+    "utm_medium": "CJ 01 C/PRECO 🎯 cbo|120252623919000120",
+    "utm_source": "FBjLj6a53c6fa8e2a232fdb1e6192",
+    "utm_content": "CT 02🤑|120252623918990120::PAZXh0bgNhZW0BMABhZGlkAas5H9o6jkhzcnRjBmFwcF9pZA81NjcwNjczNDMzNTI0MjcAAack8X3rQrrP-W5KMJOT8VA-Pzir1S9uX4IsdDrLDrfGpC9KQDu004VA87sjug_aem_qbeGDMU3MMvyUzYtfKsFTQ::",
+    "utm_campaign": "🎯TESTE CBO 1-1-3|120252623918980120"
+  },
+  "subscription": {}
+}

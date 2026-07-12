@@ -1,0 +1,190 @@
+{
+  "id": "e2ed10eb-deb3-45af-a1a1-9022c252ec70",
+  "data": {
+    "buyer": {
+      "name": "Daniel Orozco",
+      "email": "daniel90or@hotmail.com",
+      "address": {
+        "city": "",
+        "address": "",
+        "country": "Mexico",
+        "zipcode": "",
+        "complement": "",
+        "country_iso": "MX"
+      },
+      "document": "",
+      "last_name": "Orozco",
+      "first_name": "Daniel",
+      "document_type": ""
+    },
+    "product": {
+      "id": 8110489,
+      "name": "Mundo 3D - Imprime. Vende. Gana.",
+      "ucode": "b16b76d1-560f-447e-a02a-d49bc0e86a88",
+      "warranty_date": "2026-07-19T00:00:00Z",
+      "has_co_production": false,
+      "product_format_id": 1,
+      "is_physical_product": false
+    },
+    "producer": {
+      "name": "64.333.437 CAIO LUIZ PEIXOTO DA SILVA",
+      "document": "64333437000120",
+      "legal_nature": "Pessoa Jurídica"
+    },
+    "purchase": {
+      "offer": {
+        "code": "o53dcjoj",
+        "name": "Mundo 3D Imprime. Vende. Gana. (Premium)",
+        "description": "Mundo 3D reúne más de 150.000 modelos STL organizados para ayudarte a imprimir, vender y hacer crecer tu negocio. Descarga al instante, explora categorías rentables y convierte tu impresora 3D en una fuente de ingresos."
+      },
+      "price": {
+        "value": 202,
+        "currency_value": "MXN"
+      },
+      "status": "APPROVED",
+      "payment": {
+        "type": "CREDIT_CARD",
+        "installments_number": 1
+      },
+      "is_funnel": false,
+      "full_price": {
+        "value": 234.32,
+        "currency_value": "MXN"
+      },
+      "invoice_by": "HOTMART",
+      "order_bump": {
+        "is_order_bump": false
+      },
+      "order_date": 1783867063000,
+      "transaction": "HP2382943167",
+      "approved_date": 1783867065000,
+      "business_model": "A",
+      "checkout_country": {
+        "iso": "MX",
+        "name": "Mexico"
+      },
+      "original_offer_price": {
+        "value": 11.56,
+        "currency_value": "USD"
+      },
+      "subscription_anticipation_purchase": false
+    },
+    "affiliates": [
+      {
+        "name": "",
+        "affiliate_code": ""
+      }
+    ],
+    "commissions": [
+      {
+        "value": 1.19,
+        "source": "MARKETPLACE",
+        "currency_value": "USD"
+      },
+      {
+        "value": 9.77,
+        "source": "PRODUCER",
+        "currency_value": "USD",
+        "currency_conversion": {
+          "conversion_rate": 5.111404,
+          "converted_value": 49.94,
+          "converted_to_currency": "BRL"
+        }
+      }
+    ]
+  },
+  "buyer": {
+    "name": "Daniel Orozco",
+    "email": "daniel90or@hotmail.com",
+    "address": {
+      "city": "",
+      "address": "",
+      "country": "Mexico",
+      "zipcode": "",
+      "complement": "",
+      "country_iso": "MX"
+    },
+    "document": "",
+    "last_name": "Orozco",
+    "first_name": "Daniel",
+    "document_type": ""
+  },
+  "event": "PURCHASE_APPROVED",
+  "product": {
+    "id": 8110489,
+    "name": "Mundo 3D - Imprime. Vende. Gana.",
+    "ucode": "b16b76d1-560f-447e-a02a-d49bc0e86a88",
+    "warranty_date": "2026-07-19T00:00:00Z",
+    "has_co_production": false,
+    "product_format_id": 1,
+    "is_physical_product": false
+  },
+  "version": "2.0.0",
+  "producer": {
+    "name": "64.333.437 CAIO LUIZ PEIXOTO DA SILVA",
+    "document": "64333437000120",
+    "legal_nature": "Pessoa Jurídica"
+  },
+  "purchase": {
+    "offer": {
+      "code": "o53dcjoj",
+      "name": "Mundo 3D Imprime. Vende. Gana. (Premium)",
+      "description": "Mundo 3D reúne más de 150.000 modelos STL organizados para ayudarte a imprimir, vender y hacer crecer tu negocio. Descarga al instante, explora categorías rentables y convierte tu impresora 3D en una fuente de ingresos."
+    },
+    "price": {
+      "value": 202,
+      "currency_value": "MXN"
+    },
+    "status": "APPROVED",
+    "payment": {
+      "type": "CREDIT_CARD",
+      "installments_number": 1
+    },
+    "is_funnel": false,
+    "full_price": {
+      "value": 234.32,
+      "currency_value": "MXN"
+    },
+    "invoice_by": "HOTMART",
+    "order_bump": {
+      "is_order_bump": false
+    },
+    "order_date": 1783867063000,
+    "transaction": "HP2382943167",
+    "approved_date": 1783867065000,
+    "business_model": "A",
+    "checkout_country": {
+      "iso": "MX",
+      "name": "Mexico"
+    },
+    "original_offer_price": {
+      "value": 11.56,
+      "currency_value": "USD"
+    },
+    "subscription_anticipation_purchase": false
+  },
+  "affiliates": [
+    {
+      "name": "",
+      "affiliate_code": ""
+    }
+  ],
+  "commissions": [
+    {
+      "value": 1.19,
+      "source": "MARKETPLACE",
+      "currency_value": "USD"
+    },
+    {
+      "value": 9.77,
+      "source": "PRODUCER",
+      "currency_value": "USD",
+      "currency_conversion": {
+        "conversion_rate": 5.111404,
+        "converted_value": 49.94,
+        "converted_to_currency": "BRL"
+      }
+    }
+  ],
+  "creation_date": 1783867076648
+}

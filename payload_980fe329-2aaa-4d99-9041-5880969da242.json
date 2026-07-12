@@ -1,0 +1,92 @@
+{
+  "payment": {
+    "id": "6a53ad888a6364e8760fd06d",
+    "fee": 260,
+    "type": "payment",
+    "amount": 3750,
+    "coupon": null,
+    "status": "paid",
+    "dt_create": "2026-07-12T15:06:48.634Z",
+    "dt_update": "2026-07-12T15:06:49.349Z",
+    "pix_boleto": {
+      "url": "https://api.pagar.me/core/v5/transactions/tran_MY7lP0gt2lhlojkr/qrcode?payment_method=pix",
+      "code": "00020101021226820014br.gov.bcb.pix2560pix.stone.com.br/pix/v2/6b65fa30-4f71-4b6c-882c-eef248874f1f520400005303986540537.505802BR5913PAGAR.ME S.A.6014RIO DE JANEIRO62290525b49e79ee4a5238001d4d498796304D642"
+    },
+    "installments": null,
+    "payment_method": "pix",
+    "coupon_discount": 0,
+    "credit_card_interest_fee": null,
+    "installment_interest_rate": null
+  },
+  "checkout": {
+    "id": "6a2f488331f403ad8b6b5c6e",
+    "title": "Kit Inglês Lúdico",
+    "amount": 1790,
+    "orderbump": [
+      {
+        "id": "6a368554da80fafc341cbc19",
+        "title": "UNO do Verbo To Be",
+        "amount": 470
+      },
+      {
+        "id": "6a41f44ce296d13347973ff6",
+        "title": "Desafio da Memória em Inglês",
+        "amount": 490
+      }
+    ]
+  },
+  "customer": {
+    "id": "6a53ad888a6364e8760fd060",
+    "name": "Rozalia Modesto de França",
+    "email": "rozaliamodesto@gmail.com",
+    "document": "141.830.992-34",
+    "mobile_phone": "(61) 99118-5917"
+  },
+  "products": [
+    {
+      "id": "6a2f47c7e4faf085dd1b8662",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/drive/folders/15aVbFkVx3bRVy0B0YHqDmq31kydeihkF?usp=drive_link",
+          "title": "Kit Inglês Lúdico"
+        }
+      ],
+      "title": "Kit Inglês Lúdico"
+    },
+    {
+      "id": "6a36842eda80fafc341c95e9",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/file/d/1yiPptmdGVrdHwewl6wpGDYG9vKIbfWQx/view?usp=drive_link",
+          "title": "UNO do Verbo To Be"
+        }
+      ],
+      "title": "UNO do Verbo To Be"
+    },
+    {
+      "id": "6a41f3c0e296d13347973b88",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/file/d/1pU7mxoiUsw0npDvusOUq9c57dlxlDAd4/view?usp=sharing",
+          "title": "Memoria"
+        }
+      ],
+      "title": "Jogo memoria "
+    }
+  ],
+  "tracking": {
+    "ip": "179.127.249.15",
+    "fbc": null,
+    "fbp": null,
+    "utm_term": "Facebook_Mobile_Reels",
+    "useragent": "Mozilla/5.0 (Linux; Android 15; 23117RA68G Build/AP3A.240905.015.A2) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.7871.55 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/568.0.0.46.74;IABMV/1;]",
+    "utm_medium": "CJ-02|120246875794510677",
+    "utm_source": "FB",
+    "utm_content": "CT02|120246875794520677",
+    "utm_campaign": "[ABO] TESTE  CAMPEAO 💸|120246875770660677"
+  },
+  "subscription": {}
+}

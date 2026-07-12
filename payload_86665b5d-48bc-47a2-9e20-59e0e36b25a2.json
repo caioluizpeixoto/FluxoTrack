@@ -1,0 +1,59 @@
+{
+  "payment": {
+    "id": "6a539c00bd3a9c6928ee6686",
+    "fee": 130,
+    "type": "payment",
+    "amount": 990,
+    "coupon": null,
+    "status": "paid",
+    "dt_create": "2026-07-12T13:52:00.356Z",
+    "dt_update": "2026-07-12T13:52:01.083Z",
+    "pix_boleto": {
+      "url": "https://api.pagar.me/core/v5/transactions/tran_amElnQNUx0s09qjR/qrcode?payment_method=pix",
+      "code": "00020101021226820014br.gov.bcb.pix2560pix.stone.com.br/pix/v2/d16c9e72-50c4-4e45-9786-38ba4a7d983652040000530398654049.905802BR5913PAGAR.ME S.A.6014RIO DE JANEIRO62290525cc8f157b57dcb286f3c3162d863047626"
+    },
+    "installments": null,
+    "payment_method": "pix",
+    "coupon_discount": 0,
+    "credit_card_interest_fee": null,
+    "installment_interest_rate": null
+  },
+  "checkout": {
+    "id": "69be7e89f94362332f7ee0a5",
+    "title": "Caminho da Matemática",
+    "amount": 990,
+    "orderbump": []
+  },
+  "customer": {
+    "id": "6a1f6221a8e4c9180455b039",
+    "name": "Marcia Cristina de Almeida Palmeira ",
+    "email": "marcia28cap@gmail.com",
+    "document": "328.174.398-64",
+    "mobile_phone": "(41) 98538-6597"
+  },
+  "products": [
+    {
+      "id": "69be7daaf94362332f7eb570",
+      "type": "Externo",
+      "itens": [
+        {
+          "url": "https://drive.google.com/drive/folders/17il-6Svzf9Q6o0zYB6lCNz6cpYy-TsOp?usp=drive_link",
+          "title": "Acesso"
+        }
+      ],
+      "title": "Caminho da Matemática"
+    }
+  ],
+  "tracking": {
+    "ip": "2804:68c4:95:1200:8ce0:f3ae:c87a:436e",
+    "fbc": null,
+    "fbp": null,
+    "utm_term": "Facebook_Mobile_Feed",
+    "useragent": "Mozilla/5.0 (Linux; Android 15; SM-A146M Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/150.0.7871.94 Mobile Safari/537.36 [FB_IAB/FB4A;FBAV/569.0.0.42.72;IABMV/1;]",
+    "utm_medium": "CJ 01 C/PRECO 🎯 cbo|120252623919000120",
+    "utm_source": "FBjLj6a539bbf3e2bb17f5ec9dfe3",
+    "utm_content": "CT 02🤑|120252623918990120::IwZXh0bgNhZW0BMABhZGlkAas5H9o6jkhzcnRjBmFwcF9pZAwzNTA2ODU1MzE3MjgAAR5iAVLD42RgCOSmLsh6oS2XPtAjbIeCdKWLtWU8DzIzcsAIKAyD1FK-gg4_FQ_aem_jwemSbIMT8how_5F7cG_mg::",
+    "utm_campaign": "🎯TESTE CBO 1-1-3|120252623918980120"
+  },
+  "subscription": {}
+}
