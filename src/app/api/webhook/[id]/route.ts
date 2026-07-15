@@ -54,7 +54,15 @@ export async function POST(
       return parseFloat(clean) || 0;
     };
 
-    let currency = body.currency || body.currency_code || body.Commissions?.currency || body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || body.payment?.currency || 'BRL';
+    let rawCurrency = body.currency || body.currency_code || body.currency_iso || 
+      body.Commissions?.currency || 
+      body.purchase?.price?.currency_value || body.purchase?.price?.currency_code || body.purchase?.price?.currency || 
+      body.payment?.currency || body.transaction?.currency || body.Order?.currency || 
+      body.sale_currency || body.payment_currency ||
+      (body.commissions && Array.isArray(body.commissions) && body.commissions.length > 0 ? (body.commissions.find((c: any) => c.source === 'PRODUCER')?.currency_value || body.commissions[0].currency_value) : null) ||
+      'BRL';
+
+    let currency = String(rawCurrency).trim().toUpperCase();
 
     // Parse Value
     let rawValue = 0;
@@ -62,7 +70,7 @@ export async function POST(
       const prodComm = body.commissions.find((c: any) => c.source === 'PRODUCER') || body.commissions[0];
       if (prodComm) {
         rawValue = cleanValue(prodComm.value);
-        currency = prodComm.currency_value || currency;
+        if (prodComm.currency_value) currency = String(prodComm.currency_value).trim().toUpperCase();
       }
     } else if (body.payment?.amount !== undefined) {
       rawValue = cleanValue(body.payment.amount);

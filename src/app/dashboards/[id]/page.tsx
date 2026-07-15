@@ -33,6 +33,7 @@ export default function DashboardDetails() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [cost, setCost] = useState("");
+  const [currency, setCurrency] = useState("BRL");
   const [accountId, setAccountId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -187,7 +188,8 @@ export default function DashboardDetails() {
         await supabase.from('products').update({ 
           name, 
           price: Number(price) || 0,
-          product_cost: Number(cost) || 0
+          product_cost: Number(cost) || 0,
+          currency: currency
         }).eq('id', editId);
         
         if (accountId) {
@@ -207,6 +209,7 @@ export default function DashboardDetails() {
           name, 
           price: Number(price) || 0,
           product_cost: Number(cost) || 0,
+          currency: currency,
           status: 'active'
         }).select().single();
         
@@ -265,7 +268,7 @@ export default function DashboardDetails() {
                 <p className="text-muted-foreground text-sm">{dashboard?.description || 'Nenhuma descrição.'}</p>
               </div>
               
-              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 w-full sm:w-auto">
+              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setCurrency("BRL"); setIsModalOpen(true); }} className="bg-primary hover:bg-primary/90 text-white font-bold gap-2 w-full sm:w-auto">
                 <Plus className="w-5 h-5" /> Novo Produto
               </Button>
             </header>
@@ -280,7 +283,7 @@ export default function DashboardDetails() {
               <Package className="w-16 h-16 text-slate-700 mb-4" />
               <h2 className="text-2xl font-bold mb-2">Nenhum Produto Criado</h2>
               <p className="text-muted-foreground mb-6">Comece criando seu primeiro produto para visualizar métricas isoladas.</p>
-              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setIsModalOpen(true); }} variant="outline">
+              <Button onClick={() => { setEditId(null); setName(""); setPrice(""); setCost(""); setCurrency("BRL"); setIsModalOpen(true); }} variant="outline">
                 Criar Primeiro Produto
               </Button>
             </Card>
@@ -301,10 +304,10 @@ export default function DashboardDetails() {
                       
                       <div className="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white/5">
                          <div className="text-center">
-                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Gasto Hoje</p>
-                            <p className="text-sm sm:text-base font-bold text-slate-300">
-                               {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].spend) : <span className="animate-pulse">...</span>}
-                            </p>
+                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Gasto Hoje</p>
+                             <p className="text-sm sm:text-base font-bold text-slate-300">
+                                {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].spend, prod.currency || 'BRL') : <span className="animate-pulse">...</span>}
+                             </p>
                          </div>
                          <div className="text-center border-l border-white/5">
                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Vendas Hoje</p>
@@ -313,10 +316,10 @@ export default function DashboardDetails() {
                             </p>
                          </div>
                          <div className="text-center border-l border-white/5">
-                            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Lucro Hoje</p>
-                            <p className={`text-sm sm:text-base font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].profit >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
-                               {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].profit) : <span className="animate-pulse">...</span>}
-                            </p>
+                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">Lucro Hoje</p>
+                             <p className={`text-sm sm:text-base font-bold ${metrics[prod.id]?.loaded ? (metrics[prod.id].profit >= 0 ? 'text-green-400' : 'text-red-400') : 'text-slate-300'}`}>
+                                {metrics[prod.id]?.loaded ? formatCurrency(metrics[prod.id].profit, prod.currency || 'BRL') : <span className="animate-pulse">...</span>}
+                             </p>
                          </div>
                          <div className="text-center border-l border-white/5">
                             <p className="text-[10px] sm:text-xs text-muted-foreground uppercase mb-1">ROI Hoje</p>
@@ -328,11 +331,11 @@ export default function DashboardDetails() {
                     </div>
 
                     <div className="px-6 py-4 bg-[#1a1c23] border-t border-white/5 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground flex items-center gap-2">Clique para ver métricas detalhadas <ArrowLeft className="w-3 h-3 rotate-180"/></span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-white" onClick={(e) => { e.preventDefault(); setEditId(prod.id); setName(prod.name); setPrice(prod.price?.toString()); setCost(prod.product_cost?.toString()); setIsModalOpen(true); }}>
-                           <Settings className="w-4 h-4" />
-                         </Button>
+                       <span className="text-xs text-muted-foreground flex items-center gap-2">Clique para ver métricas detalhadas <ArrowLeft className="w-3 h-3 rotate-180"/></span>
+                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-white" onClick={(e) => { e.preventDefault(); setEditId(prod.id); setName(prod.name); setPrice(prod.price?.toString()); setCost(prod.product_cost?.toString()); setCurrency(prod.currency || 'BRL'); setIsModalOpen(true); }}>
+                            <Settings className="w-4 h-4" />
+                          </Button>
                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10" onClick={(e) => handleDelete(prod.id, e)}>
                            <Trash className="w-4 h-4" />
                          </Button>
@@ -360,8 +363,19 @@ export default function DashboardDetails() {
               <Input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Curso de Vendas" className="bg-[#0f1115] border-white/10" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Custo do Produto (R$)</label>
-              <Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" className="bg-[#0f1115] border-white/10" />
+              <label className="text-sm font-medium">Custo do Produto</label>
+              <div className="flex gap-2">
+                 <select 
+                   className="h-10 rounded-md border border-white/10 bg-[#0f1115] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary w-24"
+                   value={currency}
+                   onChange={(e) => setCurrency(e.target.value)}
+                 >
+                   <option value="BRL">BRL (R$)</option>
+                   <option value="USD">USD ($)</option>
+                   <option value="EUR">EUR (€)</option>
+                 </select>
+                 <Input type="number" step="0.01" value={cost} onChange={e => setCost(e.target.value)} placeholder="0.00" className="bg-[#0f1115] border-white/10 flex-1" />
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Conta de Anúncios Principal</label>
