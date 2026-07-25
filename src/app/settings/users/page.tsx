@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/firebase";
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, UserPlus, Trash2, ShieldAlert, Check, X, Clock, ShieldCheck, RefreshCw } from "lucide-react";
@@ -29,7 +28,6 @@ export default function UsersManagementPage() {
   const [fetching, setFetching] = useState(true);
   
   const [newEmail, setNewEmail] = useState("");
-  const [newRole, setNewRole] = useState<'Admin' | 'Editor' | 'Viewer'>("Viewer");
   const [adding, setAdding] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
 
@@ -74,14 +72,13 @@ export default function UsersManagementPage() {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "invite", email: newEmail, role: newRole }),
+        body: JSON.stringify({ action: "invite", email: newEmail, role: "Viewer" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao pré-aprovar");
       
       toast({ title: "Usuário pré-aprovado com sucesso!" });
       setNewEmail("");
-      setNewRole("Viewer");
       fetchUsers();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro", description: err.message });
@@ -158,23 +155,6 @@ export default function UsersManagementPage() {
     }
   };
 
-  const handleChangeRole = async (id: string, role: string) => {
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "change_role", id, role }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erro ao alterar permissão");
-
-      toast({ title: "Permissão alterada com sucesso." });
-      fetchUsers();
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Erro ao alterar permissão", description: err.message });
-    }
-  };
-
   const pendingUsers = users.filter((u) => u.status === 'pending');
   const approvedUsers = users.filter((u) => u.status === 'approved' || u.email.toLowerCase().trim() === 'caioluispeixotos@gmail.com');
 
@@ -198,10 +178,10 @@ export default function UsersManagementPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-100 flex items-center gap-2">
                 <ShieldCheck className="h-7 w-7 text-primary" />
-                Painel do Administrador
+                Aprovação de Usuários
               </h1>
               <p className="text-slate-400 text-sm">
-                Gerencie solicitações de acesso, aprovações e permissões de usuários.
+                Gerencie solicitações de acesso e libere o uso da plataforma para os usuários.
               </p>
             </div>
             <Button
@@ -287,8 +267,8 @@ export default function UsersManagementPage() {
           {/* Seção 2: Pré-aprovar Novo E-mail */}
           <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-lg">Pré-Aprovar / Convidar Usuário</CardTitle>
-              <CardDescription>Autorize previamente um e-mail antes mesmo dele realizar o primeiro login.</CardDescription>
+              <CardTitle className="text-lg">Pré-Aprovar E-mail</CardTitle>
+              <CardDescription>Autorize previamente um e-mail para que ele tenha acesso imediato assim que se cadastrar.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleAddUser} className="flex flex-col sm:flex-row gap-4 items-end">
@@ -304,19 +284,6 @@ export default function UsersManagementPage() {
                     className="border-white/10 bg-white/5 text-slate-100"
                   />
                 </div>
-                <div className="w-full sm:w-48 space-y-2">
-                  <Label>Nível de Acesso</Label>
-                  <Select value={newRole} onValueChange={(val: any) => setNewRole(val)}>
-                    <SelectTrigger className="border-white/10 bg-white/5 text-slate-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Admin">Admin</SelectItem>
-                      <SelectItem value="Editor">Editor</SelectItem>
-                      <SelectItem value="Viewer">Viewer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <Button type="submit" disabled={adding || !newEmail} className="w-full sm:w-auto font-semibold">
                   {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
                   Pré-Aprovar E-mail
@@ -328,7 +295,7 @@ export default function UsersManagementPage() {
           {/* Seção 3: Usuários Autorizados Ativos */}
           <Card className="border-white/10 bg-white/5 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="text-lg">Usuários Autorizados (Ativos)</CardTitle>
+              <CardTitle className="text-lg">Usuários Aprovados (Ativos)</CardTitle>
             </CardHeader>
             <CardContent>
               {fetching ? (
@@ -346,7 +313,6 @@ export default function UsersManagementPage() {
                     <thead className="text-xs text-slate-400 uppercase bg-white/5 border-b border-white/10">
                       <tr>
                         <th className="px-4 py-3">E-mail</th>
-                        <th className="px-4 py-3">Permissão</th>
                         <th className="px-4 py-3">Status</th>
                         <th className="px-4 py-3">Ações</th>
                       </tr>
@@ -364,22 +330,6 @@ export default function UsersManagementPage() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-4">
-                              <Select 
-                                value={isMainAdmin ? 'Admin' : u.role} 
-                                onValueChange={(val) => handleChangeRole(u.id, val)}
-                                disabled={isMainAdmin}
-                              >
-                                <SelectTrigger className="w-32 h-8 border-white/10 bg-white/5 text-xs text-slate-200">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Admin">Admin</SelectItem>
-                                  <SelectItem value="Editor">Editor</SelectItem>
-                                  <SelectItem value="Viewer">Viewer</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </td>
                             <td className="px-4 py-4 text-xs">
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-semibold">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -394,7 +344,7 @@ export default function UsersManagementPage() {
                                 disabled={isMainAdmin}
                                 className="h-8 px-2"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 mr-1 text-xs" /> Revogar Acesso
                               </Button>
                             </td>
                           </tr>
