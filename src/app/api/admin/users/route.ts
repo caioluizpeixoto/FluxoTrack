@@ -19,13 +19,23 @@ export async function GET(request: Request) {
       .select("*");
 
     if (selectError) {
+      if (selectError.message?.includes("status")) {
+        return NextResponse.json({
+          users: [],
+          needsMigration: true,
+          error: "A coluna 'status' não foi encontrada na tabela 'authorized_users'. Execute o SQL de migração no Supabase.",
+        });
+      }
       console.error("[API Admin Users] Erro ao buscar authorized_users:", selectError);
     }
 
     const authorizedMap = new Map<string, any>();
     (existingAuthorized || []).forEach((u: any) => {
       if (u.email) {
-        authorizedMap.set(u.email.toLowerCase().trim(), u);
+        authorizedMap.set(u.email.toLowerCase().trim(), {
+          ...u,
+          status: u.status || "approved", // fallback se status for nulo
+        });
       }
     });
 
@@ -47,12 +57,22 @@ export async function GET(request: Request) {
     }
 
     if (toInsert.length > 0) {
-      const { error: insertError } = await admin
-        .from("authorized_users")
-        .insert(toInsert);
+      try {
+        const { error: insertError } = await admin
+          .from("authorized_users")
+          .insert(toInsert);
 
-      if (insertError) {
-        console.error("[API Admin Users] Erro ao sincronizar usuários:", insertError);
+        if (insertError) {
+          // Se falhar por falta da coluna status, tenta sem a coluna status
+          if (insertError.message?.includes("status")) {
+            const fallbackToInsert = toInsert.map(({ status, ...rest }) => rest);
+            await admin.from("authorized_users").insert(fallbackToInsert);
+          } else {
+            console.error("[API Admin Users] Erro ao sincronizar usuários:", insertError);
+          }
+        }
+      } catch (e) {
+        console.error("[API Admin Users] Exceção na sincronização:", e);
       }
     }
 
@@ -62,9 +82,23 @@ export async function GET(request: Request) {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (finalError) throw finalError;
+    if (finalError) {
+      if (finalError.message?.includes("status")) {
+        return NextResponse.json({
+          users: [],
+          needsMigration: true,
+          error: "A coluna 'status' precisa ser criada no Supabase. Execute o comando ALTER TABLE no SQL Editor.",
+        });
+      }
+      throw finalError;
+    }
 
-    return NextResponse.json({ users: finalUsers || [] });
+    const formattedUsers = (finalUsers || []).map((u: any) => ({
+      ...u,
+      status: u.status || (u.email?.toLowerCase().trim() === "caioluispeixotos@gmail.com" ? "approved" : "pending"),
+    }));
+
+    return NextResponse.json({ users: formattedUsers });
   } catch (err: any) {
     console.error("[API Admin Users GET] Error:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -86,12 +120,28 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "ID ou E-mail obrigatório" }, { status: 400 });
       }
 
-      let query = admin.from("authorized_users").update({ status: "approved" });
-      if (id) query = query.eq("id", id);
-      else if (email) query = query.ilike("email", email.toLowerCase().trim());
+      try {
+        let query = admin.from("authorized_users").update({ status: "approved" });
+        if (id) query = query.eq("id", id);
+        else if (email) query = query.ilike("email", email.toLowerCase().trim());
 
-      const { error } = await query;
-      if (error) throw error;
+        const { error } = await query;
+        if (error) {
+          if (error.message?.includes("status")) {
+            return NextResponse.json({
+              error: "A coluna 'status' não existe no banco. Execute o SQL de migração no Supabase para ativar essa função.",
+            }, { status: 400 });
+          }
+          throw error;
+        }
+      } catch (err: any) {
+        if (err.message?.includes("status")) {
+          return NextResponse.json({
+            error: "A coluna 'status' não foi encontrada na tabela 'authorized_users'. Execute o SQL de migração no Supabase SQL Editor.",
+          }, { status: 400 });
+        }
+        throw err;
+      }
 
       return NextResponse.json({ success: true, message: "Usuário aprovado com sucesso." });
     }
@@ -116,21 +166,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: "Solicitação removida." });
     }
 
-    if (action === "change_role") {
-      if (!id || !role) {
-        return NextResponse.json({ error: "ID e Role são obrigatórios" }, { status: 400 });
-      }
-
-      const { error } = await admin
-        .from("authorized_users")
-        .update({ role })
-        .eq("id", id);
-
-      if (error) throw error;
-
-      return NextResponse.json({ success: true, message: "Permissão atualizada." });
-    }
-
     if (action === "invite") {
       if (!email) {
         return NextResponse.json({ error: "E-mail é obrigatório" }, { status: 400 });
@@ -139,15 +174,38 @@ export async function POST(request: Request) {
       const cleanEmail = email.toLowerCase().trim();
       const userRole = role || "Viewer";
 
-      const { error } = await admin
-        .from("authorized_users")
-        .upsert([{
-          email: cleanEmail,
-          role: userRole,
-          status: "approved",
-        }], { onConflict: "email" });
+      try {
+        const { error } = await admin
+          .from("authorized_users")
+          .upsert([{
+            email: cleanEmail,
+            role: userRole,
+            status: "approved",
+          }], { onConflict: "email" });
 
-      if (error) throw error;
+        if (error) {
+          if (error.message?.includes("status")) {
+            // Fallback sem a coluna status
+            const { error: fallbackErr } = await admin
+              .from("authorized_users")
+              .upsert([{
+                email: cleanEmail,
+                role: userRole,
+              }], { onConflict: "email" });
+
+            if (fallbackErr) throw fallbackErr;
+          } else {
+            throw error;
+          }
+        }
+      } catch (err: any) {
+        if (err.message?.includes("status")) {
+          return NextResponse.json({
+            error: "A coluna 'status' não existe no banco de dados. Por favor, adicione a coluna 'status' no Supabase SQL Editor.",
+          }, { status: 400 });
+        }
+        throw err;
+      }
 
       return NextResponse.json({ success: true, message: "E-mail pré-aprovado com sucesso." });
     }
