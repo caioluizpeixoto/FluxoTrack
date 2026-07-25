@@ -118,18 +118,15 @@ export default function LoginPage() {
 
         if (cleanEmail === "caioluispeixotos@gmail.com") {
           toast({ title: "Bem-vindo, Administrador!" });
-          router.replace("/");
+          window.location.href = "/";
         } else {
-          // Verificar status
-          const { data: authData } = await supabase
-            .from("authorized_users")
-            .select("status")
-            .ilike("email", cleanEmail)
-            .maybeSingle();
+          // Verificar status via API administrativa
+          const statusRes = await fetch(`/api/user/status?email=${encodeURIComponent(cleanEmail)}`);
+          const statusData = await statusRes.json();
 
-          if (authData?.status === "approved") {
+          if (statusData?.status === "approved") {
             toast({ title: "Login realizado com sucesso!" });
-            router.replace("/");
+            window.location.href = "/";
           } else {
             toast({
               title: "Acesso pendente de aprovação",
@@ -157,12 +154,12 @@ export default function LoginPage() {
             title: "Conta de Administrador registrada!",
             description: "Bem-vindo à plataforma.",
           });
-          router.replace("/");
+          window.location.href = "/";
         } else {
           toast({
             title: "Cadastro efetuado!",
             description:
-              "Sua solicitação foi enviada para o administrador (caioluispeixotos@gmail.com).",
+              "Sua solicitação foi enviada para análise do administrador.",
           });
           router.replace("/pending-approval");
         }

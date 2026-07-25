@@ -73,7 +73,7 @@ export default function PendingApprovalPage() {
           <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium">
             <ShieldAlert className="h-5 w-5 shrink-0 text-amber-400" />
             <span>
-              Solicitação enviada para o administrador: <strong className="text-amber-200">caioluispeixotos@gmail.com</strong>
+              Solicitação enviada para análise e aprovação do administrador.
             </span>
           </div>
 
