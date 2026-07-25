@@ -122,7 +122,7 @@ export function DashboardSidebar() {
           {item.label}
         </LinkNext>
       ))}
-      {user?.role === 'Admin' && (
+      {(user?.role === 'Admin' || user?.email?.toLowerCase().trim() === 'caioluispeixotos@gmail.com') && (
         <LinkNext
           href="/settings/users"
           onClick={() => setOpen(false)}
@@ -137,7 +137,7 @@ export function DashboardSidebar() {
             "w-5 h-5",
             pathname.startsWith('/settings/users') ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
           )} />
-          Usuários
+          Painel Admin / Usuários
         </LinkNext>
       )}
     </nav>

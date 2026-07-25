@@ -11,6 +11,7 @@ export interface User {
   displayName: string | null;
   emailVerified: boolean;
   role?: 'Admin' | 'Editor' | 'Viewer' | null;
+  status?: 'approved' | 'pending' | 'rejected' | null;
 }
 
 export const getAuth = (app?: any): Auth => {
@@ -97,22 +98,43 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
         return;
       }
 
-      // Buscar autorização
+      const cleanEmail = email.toLowerCase().trim();
+      const isAdminEmail = cleanEmail === 'caioluispeixotos@gmail.com';
+
+      // Buscar autorização no banco
       const { data, error } = await supabase
         .from('authorized_users')
-        .select('role')
-        .eq('email', email)
+        .select('role, status')
+        .ilike('email', cleanEmail)
         .maybeSingle();
 
-      // Removemos a trava de segurança temporariamente para garantir o seu acesso:
-      // independentemente de estar na tabela ou não, o login vai prosseguir.
+      let role: 'Admin' | 'Editor' | 'Viewer' = (data?.role as any) || (isAdminEmail ? 'Admin' : 'Viewer');
+      let status: 'approved' | 'pending' | 'rejected' = (data?.status as any) || (isAdminEmail ? 'approved' : 'pending');
+
+      if (isAdminEmail) {
+        role = 'Admin';
+        status = 'approved';
+      }
+
+      // Se o usuário ainda não existir na tabela authorized_users, insere como pending ou admin
+      if (!data) {
+        try {
+          await supabase
+            .from('authorized_users')
+            .insert([{ email: cleanEmail, role, status }]);
+        } catch (e) {
+          // Ignora se o registro já tiver sido inserido via trigger
+        }
+      }
+
       callback({
-          uid: session.user.id,
-          email: session.user.email ?? null,
-          displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
-          emailVerified: !!session.user.email_confirmed_at,
-          role: data?.role || 'Admin',
-        });
+        uid: session.user.id,
+        email: session.user.email ?? null,
+        displayName: (session.user.user_metadata?.displayName || session.user.user_metadata?.name) ?? null,
+        emailVerified: !!session.user.email_confirmed_at,
+        role,
+        status,
+      });
     } else {
       callback(null);
     }

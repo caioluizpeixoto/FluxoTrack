@@ -35,10 +35,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      loadDashboards();
-    } else if (user === null && !authLoading) {
-      window.location.href = '/login';
+    if (!authLoading) {
+      if (!user) {
+        window.location.href = '/login';
+      } else if (user.status === 'pending' && user.email?.toLowerCase().trim() !== 'caioluispeixotos@gmail.com') {
+        window.location.href = '/pending-approval';
+      } else {
+        loadDashboards();
+      }
     }
   }, [user, authLoading]);
 
