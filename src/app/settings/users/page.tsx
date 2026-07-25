@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser } from "@/firebase";
-import { supabase } from "@/lib/supabaseClient";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, UserPlus, Trash2, ShieldAlert, Check, X, Clock, ShieldCheck } from "lucide-react";
+import { Loader2, UserPlus, Trash2, ShieldAlert, Check, X, Clock, ShieldCheck, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -49,13 +48,10 @@ export default function UsersManagementPage() {
   const fetchUsers = useCallback(async () => {
     setFetching(true);
     try {
-      const { data, error } = await supabase
-        .from('authorized_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (error) throw error;
-      setUsers(data || []);
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao carregar usuários");
+      setUsers(data.users || []);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro ao buscar usuários", description: err.message });
     } finally {
@@ -74,19 +70,14 @@ export default function UsersManagementPage() {
     if (!newEmail || adding) return;
     setAdding(true);
     
-    const cleanEmail = newEmail.toLowerCase().trim();
-
     try {
-      const { error } = await supabase
-        .from('authorized_users')
-        .upsert([{
-          email: cleanEmail,
-          role: newRole,
-          status: 'approved',
-          invited_by: user?.email,
-        }], { onConflict: 'email' });
-        
-      if (error) throw error;
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "invite", email: newEmail, role: newRole }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao pré-aprovar");
       
       toast({ title: "Usuário pré-aprovado com sucesso!" });
       setNewEmail("");
@@ -102,12 +93,14 @@ export default function UsersManagementPage() {
   const handleApproveUser = async (id: string, email: string) => {
     setActionId(id);
     try {
-      const { error } = await supabase
-        .from('authorized_users')
-        .update({ status: 'approved' })
-        .eq('id', id);
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", id, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao aprovar");
 
-      if (error) throw error;
       toast({ title: "Cadastro aprovado com sucesso!", description: `O acesso para ${email} foi liberado.` });
       fetchUsers();
     } catch (err: any) {
@@ -121,12 +114,14 @@ export default function UsersManagementPage() {
     if (!confirm(`Deseja rejeitar e remover a solicitação de ${email}?`)) return;
     setActionId(id);
     try {
-      const { error } = await supabase
-        .from('authorized_users')
-        .delete()
-        .eq('id', id);
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", id, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao rejeitar");
 
-      if (error) throw error;
       toast({ title: "Solicitação rejeitada", description: `A solicitação de ${email} foi removida.` });
       fetchUsers();
     } catch (err: any) {
@@ -146,12 +141,14 @@ export default function UsersManagementPage() {
     
     setActionId(id);
     try {
-      const { error } = await supabase
-        .from('authorized_users')
-        .delete()
-        .eq('id', id);
-        
-      if (error) throw error;
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", id, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao revogar");
+
       toast({ title: "Acesso revogado com sucesso." });
       fetchUsers();
     } catch (err: any) {
@@ -163,12 +160,14 @@ export default function UsersManagementPage() {
 
   const handleChangeRole = async (id: string, role: string) => {
     try {
-      const { error } = await supabase
-        .from('authorized_users')
-        .update({ role })
-        .eq('id', id);
-        
-      if (error) throw error;
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "change_role", id, role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao alterar permissão");
+
       toast({ title: "Permissão alterada com sucesso." });
       fetchUsers();
     } catch (err: any) {
@@ -195,14 +194,26 @@ export default function UsersManagementPage() {
       <DashboardSidebar />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-4xl space-y-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-slate-100 flex items-center gap-2">
-              <ShieldCheck className="h-7 w-7 text-primary" />
-              Painel do Administrador
-            </h1>
-            <p className="text-slate-400 text-sm">
-              Gerencie solicitações de acesso, aprove novos cadastros e atribua níveis de permissão.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-slate-100 flex items-center gap-2">
+                <ShieldCheck className="h-7 w-7 text-primary" />
+                Painel do Administrador
+              </h1>
+              <p className="text-slate-400 text-sm">
+                Gerencie solicitações de acesso, aprovações e permissões de usuários.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchUsers}
+              disabled={fetching}
+              className="border-white/10 hover:bg-white/10 text-slate-300 gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
 
           {/* Seção 1: Solicitações de Cadastro Pendentes */}
@@ -214,7 +225,7 @@ export default function UsersManagementPage() {
                   Solicitações de Cadastro Pendentes ({pendingUsers.length})
                 </CardTitle>
                 <CardDescription className="text-amber-200/70 text-xs">
-                  Usuários que se cadastraram e estão aguardando sua autorização para acessar o sistema.
+                  Usuários cadastrados no sistema aguardando sua autorização.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -237,7 +248,7 @@ export default function UsersManagementPage() {
                       <div>
                         <p className="font-semibold text-slate-200 text-sm">{pu.email}</p>
                         <p className="text-[11px] text-slate-400">
-                          Cadastrado em: {new Date(pu.created_at).toLocaleDateString("pt-BR")}
+                          Solicitado em: {new Date(pu.created_at).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 w-full sm:w-auto">

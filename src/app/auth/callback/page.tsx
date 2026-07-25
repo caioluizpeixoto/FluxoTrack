@@ -9,21 +9,30 @@ export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Escuta o estado da sessão e faz o redirect
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push("/");
-      } else {
-        const timeout = setTimeout(() => {
-          router.push("/");
-        }, 2000);
-        return () => clearTimeout(timeout);
+    // Escuta o evento da sessão
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        router.replace("/auth/reset-password");
+      } else if (session) {
+        // Verificar o hash da URL para redirecionamento específico de recuperação
+        if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
+          router.replace("/auth/reset-password");
+        } else {
+          router.replace("/");
+        }
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        router.push("/");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
+        router.replace("/auth/reset-password");
+      } else if (session) {
+        router.replace("/");
+      } else {
+        const timeout = setTimeout(() => {
+          router.replace("/");
+        }, 2000);
+        return () => clearTimeout(timeout);
       }
     });
 

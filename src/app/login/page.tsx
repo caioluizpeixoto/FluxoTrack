@@ -20,6 +20,45 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetSending, setResetSending] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      toast({
+        variant: "destructive",
+        title: "Informe seu e-mail",
+        description: "Digite o seu e-mail no campo antes de clicar em 'Esqueci minha senha'.",
+      });
+      return;
+    }
+    setResetSending(true);
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email.toLowerCase().trim(), {
+        redirectTo,
+      });
+
+      if (error) {
+        if (error.message?.includes("security purposes") || error.message?.includes("after")) {
+          throw new Error("Por motivos de segurança, você precisa aguardar alguns segundos antes de solicitar novamente. Verifique sua caixa de entrada e spam.");
+        }
+        throw error;
+      }
+
+      toast({
+        title: "E-mail de redefinição enviado!",
+        description: `Enviamos o link para ${email}. Verifique a caixa de entrada e a pasta de Spam.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Erro na solicitação",
+        description: err?.message || "Ocorreu um erro ao enviar e-mail.",
+      });
+    } finally {
+      setResetSending(false);
+    }
+  };
 
   // Se já estiver logado, redireciona para a página apropriada
   useEffect(() => {
@@ -258,9 +297,21 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="login-password" className="text-xs text-slate-400">
-                Senha
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="login-password" className="text-xs text-slate-400">
+                  Senha
+                </Label>
+                {mode === "login" && (
+                  <button
+                    type="button"
+                    onClick={handleResetPassword}
+                    disabled={resetSending}
+                    className="text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {resetSending ? "Enviando..." : "Esqueci minha senha"}
+                  </button>
+                )}
+              </div>
               <Input
                 id="login-password"
                 type="password"
