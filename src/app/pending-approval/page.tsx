@@ -28,15 +28,14 @@ export default function PendingApprovalPage() {
       }
       
       const email = sessionData.session.user.email;
-      const { data } = await supabase
-        .from("authorized_users")
-        .select("status")
-        .ilike("email", email || "")
-        .maybeSingle();
+      if (!email) return;
 
-      if (data?.status === "approved" || email === "caioluispeixotos@gmail.com") {
+      const res = await fetch(`/api/user/status?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+
+      if (data?.status === "approved" || email.toLowerCase().trim() === "caioluispeixotos@gmail.com") {
         toast({ title: "Cadastro aprovado!", description: "Redirecionando para a aplicação..." });
-        router.replace("/");
+        window.location.href = "/";
       } else {
         toast({
           title: "Ainda em análise",

@@ -101,29 +101,19 @@ export function onAuthStateChanged(auth: Auth, callback: (user: User | null) => 
       const cleanEmail = email.toLowerCase().trim();
       const isAdminEmail = cleanEmail === 'caioluispeixotos@gmail.com';
 
-      // Buscar autorização no banco
-      const { data, error } = await supabase
-        .from('authorized_users')
-        .select('role, status')
-        .ilike('email', cleanEmail)
-        .maybeSingle();
+      let role: 'Admin' | 'Editor' | 'Viewer' = isAdminEmail ? 'Admin' : 'Viewer';
+      let status: 'approved' | 'pending' | 'rejected' = isAdminEmail ? 'approved' : 'pending';
 
-      let role: 'Admin' | 'Editor' | 'Viewer' = (data?.role as any) || (isAdminEmail ? 'Admin' : 'Viewer');
-      let status: 'approved' | 'pending' | 'rejected' = (data?.status as any) || (isAdminEmail ? 'approved' : 'pending');
-
-      if (isAdminEmail) {
-        role = 'Admin';
-        status = 'approved';
-      }
-
-      // Se o usuário ainda não existir na tabela authorized_users, insere como pending ou admin
-      if (!data) {
+      if (!isAdminEmail) {
         try {
-          await supabase
-            .from('authorized_users')
-            .insert([{ email: cleanEmail, role, status }]);
+          const res = await fetch(`/api/user/status?email=${encodeURIComponent(cleanEmail)}`);
+          if (res.ok) {
+            const statusData = await res.json();
+            role = statusData.role || 'Viewer';
+            status = statusData.status || 'pending';
+          }
         } catch (e) {
-          // Ignora se o registro já tiver sido inserido via trigger
+          console.error('Erro ao verificar status via API:', e);
         }
       }
 
