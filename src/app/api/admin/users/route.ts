@@ -34,7 +34,7 @@ export async function GET(request: Request) {
       if (u.email) {
         authorizedMap.set(u.email.toLowerCase().trim(), {
           ...u,
-          status: u.status || "approved", // fallback se status for nulo
+          status: u.status || "approved",
         });
       }
     });
@@ -63,7 +63,6 @@ export async function GET(request: Request) {
           .insert(toInsert);
 
         if (insertError) {
-          // Se falhar por falta da coluna status, tenta sem a coluna status
           if (insertError.message?.includes("status")) {
             const fallbackToInsert = toInsert.map(({ status, ...rest }) => rest);
             await admin.from("authorized_users").insert(fallbackToInsert);
@@ -109,7 +108,7 @@ export async function POST(request: Request) {
   try {
     const admin = getSupabaseAdmin();
     const body = await request.json();
-    const { action, id, email, role } = body;
+    const { action, id, email, role, password } = body;
 
     if (!action) {
       return NextResponse.json({ error: "Ação não especificada" }, { status: 400 });
@@ -120,30 +119,60 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "ID ou E-mail obrigatório" }, { status: 400 });
       }
 
-      try {
-        let query = admin.from("authorized_users").update({ status: "approved" });
-        if (id) query = query.eq("id", id);
-        else if (email) query = query.ilike("email", email.toLowerCase().trim());
+      const cleanEmail = email?.toLowerCase().trim();
 
-        const { error } = await query;
-        if (error) {
-          if (error.message?.includes("status")) {
-            return NextResponse.json({
-              error: "A coluna 'status' não existe no banco. Execute o SQL de migração no Supabase para ativar essa função.",
-            }, { status: 400 });
-          }
-          throw error;
-        }
-      } catch (err: any) {
-        if (err.message?.includes("status")) {
-          return NextResponse.json({
-            error: "A coluna 'status' não foi encontrada na tabela 'authorized_users'. Execute o SQL de migração no Supabase SQL Editor.",
-          }, { status: 400 });
-        }
-        throw err;
+      // 1. Atualizar na tabela authorized_users
+      let query = admin.from("authorized_users").update({ status: "approved" });
+      if (id) query = query.eq("id", id);
+      else if (cleanEmail) query = query.ilike("email", cleanEmail);
+
+      const { error } = await query;
+      if (error && !error.message?.includes("status")) {
+        throw error;
       }
 
-      return NextResponse.json({ success: true, message: "Usuário aprovado com sucesso." });
+      // 2. Confirma o e-mail no Supabase Auth para liberar login com e-mail/senha imediatamente
+      if (cleanEmail) {
+        try {
+          const { data: authUsers } = await admin.auth.admin.listUsers();
+          const targetAuthUser = authUsers?.users?.find(
+            (u) => u.email?.toLowerCase().trim() === cleanEmail
+          );
+          if (targetAuthUser) {
+            await admin.auth.admin.updateUserById(targetAuthUser.id, {
+              email_confirm: true,
+            });
+          }
+        } catch (e) {
+          console.error("[API Admin Approve] Erro ao confirmar e-mail no Supabase Auth:", e);
+        }
+      }
+
+      return NextResponse.json({ success: true, message: "Usuário aprovado e e-mail confirmado com sucesso." });
+    }
+
+    if (action === "set_password") {
+      if (!email || !password) {
+        return NextResponse.json({ error: "E-mail e nova senha são obrigatórios" }, { status: 400 });
+      }
+      const cleanEmail = email.toLowerCase().trim();
+      const { data: authUsers } = await admin.auth.admin.listUsers();
+      const targetAuthUser = authUsers?.users?.find(
+        (u) => u.email?.toLowerCase().trim() === cleanEmail
+      );
+
+      if (!targetAuthUser) {
+        return NextResponse.json({ error: "Usuário não encontrado no Supabase Auth" }, { status: 404 });
+      }
+
+      const { error } = await admin.auth.admin.updateUserById(targetAuthUser.id, {
+        password: password,
+        email_confirm: true,
+      });
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, message: `Senha de ${cleanEmail} alterada com sucesso.` });
     }
 
     if (action === "reject") {
@@ -158,7 +187,7 @@ export async function POST(request: Request) {
 
       let query = admin.from("authorized_users").delete();
       if (id) query = query.eq("id", id);
-      else if (email) query = query.ilike("email", cleanEmail);
+      else if (cleanEmail) query = query.ilike("email", cleanEmail);
 
       const { error } = await query;
       if (error) throw error;
@@ -185,7 +214,6 @@ export async function POST(request: Request) {
 
         if (error) {
           if (error.message?.includes("status")) {
-            // Fallback sem a coluna status
             const { error: fallbackErr } = await admin
               .from("authorized_users")
               .upsert([{

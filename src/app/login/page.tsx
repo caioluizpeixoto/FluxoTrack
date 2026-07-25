@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Zap, LogIn, UserPlus, ShieldCheck } from "lucide-react";
+import { Loader2, Zap, LogIn, UserPlus, ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const { user, loading } = useUser();
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resetSending, setResetSending] = useState(false);
@@ -309,17 +311,27 @@ export default function LoginPage() {
                   </button>
                 )}
               </div>
-              <Input
-                id="login-password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11 rounded-xl border-white/10 bg-white/5 text-slate-100 focus:border-primary/50"
-                required
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                minLength={6}
-              />
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 rounded-xl border-white/10 bg-white/5 text-slate-100 pr-10 focus:border-primary/50"
+                  required
+                  autoComplete={mode === "login" ? "current-password" : "new-password"}
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {mode === "register" && (
@@ -327,17 +339,27 @@ export default function LoginPage() {
                 <Label htmlFor="confirm-password" className="text-xs text-slate-400">
                   Confirmar Senha
                 </Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="h-11 rounded-xl border-white/10 bg-white/5 text-slate-100 focus:border-primary/50"
-                  required
-                  autoComplete="new-password"
-                  minLength={6}
-                />
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="h-11 rounded-xl border-white/10 bg-white/5 text-slate-100 pr-10 focus:border-primary/50"
+                    required
+                    autoComplete="new-password"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             )}
 

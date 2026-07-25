@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUser } from "@/firebase";
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, UserPlus, Trash2, ShieldAlert, Check, X, Clock, ShieldCheck, RefreshCw } from "lucide-react";
+import { Loader2, UserPlus, Trash2, ShieldAlert, Check, X, Clock, ShieldCheck, RefreshCw, KeyRound } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -98,7 +98,7 @@ export default function UsersManagementPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao aprovar");
 
-      toast({ title: "Cadastro aprovado com sucesso!", description: `O acesso para ${email} foi liberado.` });
+      toast({ title: "Cadastro aprovado!", description: `O acesso e o e-mail de ${email} foram liberados.` });
       fetchUsers();
     } catch (err: any) {
       toast({ variant: "destructive", title: "Erro ao aprovar", description: err.message });
@@ -155,6 +155,28 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleSetPassword = async (email: string) => {
+    const newPass = prompt(`Digite a nova senha para ${email}:`);
+    if (!newPass) return;
+    if (newPass.length < 6) {
+      toast({ variant: "destructive", title: "Senha muito curta", description: "A senha deve ter no mínimo 6 caracteres." });
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_password", email, password: newPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao alterar senha");
+
+      toast({ title: "Senha alterada com sucesso!", description: `A nova senha para ${email} foi gravada.` });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Erro", description: err.message });
+    }
+  };
+
   const pendingUsers = users.filter((u) => u.status === 'pending');
   const approvedUsers = users.filter((u) => u.status === 'approved' || u.email.toLowerCase().trim() === 'caioluispeixotos@gmail.com');
 
@@ -181,7 +203,7 @@ export default function UsersManagementPage() {
                 Aprovação de Usuários
               </h1>
               <p className="text-slate-400 text-sm">
-                Gerencie solicitações de acesso e libere o uso da plataforma para os usuários.
+                Gerencie solicitações de acesso, libere usuários e redefina senhas se necessário.
               </p>
             </div>
             <Button
@@ -337,15 +359,26 @@ export default function UsersManagementPage() {
                               </span>
                             </td>
                             <td className="px-4 py-4">
-                              <Button 
-                                variant="destructive" 
-                                size="sm" 
-                                onClick={() => handleRemoveUser(u.id, u.email)}
-                                disabled={isMainAdmin}
-                                className="h-8 px-2"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1 text-xs" /> Revogar Acesso
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSetPassword(u.email)}
+                                  className="h-8 px-2.5 border-white/10 hover:bg-white/10 text-slate-300 text-xs gap-1"
+                                >
+                                  <KeyRound className="h-3.5 w-3.5 text-primary" />
+                                  Alterar Senha
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  onClick={() => handleRemoveUser(u.id, u.email)}
+                                  disabled={isMainAdmin}
+                                  className="h-8 px-2"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-1 text-xs" /> Revogar
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         );
