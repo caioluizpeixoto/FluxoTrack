@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706636745154",
+    "project_id": "meu-app-8fce5",
+    "storage_bucket": "meu-app-8fce5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706636745154:android:d84929b4406c9534b0ee5b",
+        "android_client_info": {
+          "package_name": "com.fluxofy.fluxofy_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCtiX8igLO3-LuUNlTn-7W9Lq3EvQ5aLCY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
