@@ -184,7 +184,9 @@ export async function POST(
             },
             target_channel: 'push',
             headings: { en: title, pt: title },
-            contents: { en: msg, pt: msg }
+            contents: { en: msg, pt: msg },
+            android_sound: "venda",
+            android_channel_id: "vendas_channel_id"
           })
         });
       }

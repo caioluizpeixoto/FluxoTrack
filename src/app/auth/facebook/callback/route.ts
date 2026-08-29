@@ -90,18 +90,33 @@ export async function GET(request: Request) {
       );
     }
 
-    // ── 5. Atualiza profile ───────────────────────────────────────────────────
-    await supabase.from('profiles').update({
+    // ── 5. Garante / Atualiza profile (Upsert) ──────────────────────────────
+    let userEmail = metaUser.email || '';
+    let userDisplayName = metaUser.name;
+    try {
+      const { data: authUserData } = await supabase.auth.admin.getUserById(supabaseUserId);
+      if (authUserData?.user) {
+        userEmail = authUserData.user.email || userEmail;
+        userDisplayName = authUserData.user.user_metadata?.displayName || authUserData.user.user_metadata?.name || userDisplayName;
+      }
+    } catch (e) {
+      console.warn('[Callback] Não foi possível buscar dados adicionais do usuário auth:', e);
+    }
+
+    await supabase.from('profiles').upsert({
+      id: supabaseUserId,
+      email: userEmail,
+      display_name: userDisplayName,
       meta_access_token: accessToken,
       meta_connected: true,
       facebook_id: metaUser.id,
       facebook_name: metaUser.name,
       meta_token_expires_at: expiresAt,
       updated_at: new Date().toISOString(),
-    }).eq('id', supabaseUserId);
+    }, { onConflict: 'id' });
 
     // ── 6. Upsert meta_connections ────────────────────────────────────────────
-    const { data: conn } = await supabase
+    const { data: conn, error: connErr } = await supabase
       .from('meta_connections')
       .upsert({
         user_id: supabaseUserId,
@@ -117,10 +132,14 @@ export async function GET(request: Request) {
       .select('id')
       .single();
 
+    if (connErr) {
+      console.error('[Callback] Erro ao salvar meta_connections:', connErr);
+    }
+
     const connectionId = conn?.id;
 
     if (!connectionId) {
-      throw new Error('Falha ao salvar a conexão no banco de dados.');
+      throw new Error('Falha ao salvar a conexão no banco de dados: ' + (connErr?.message || 'ID não retornado'));
     }
 
     // ── 7. Businesses ────────────────────────────────────────────────────────
@@ -142,7 +161,13 @@ export async function GET(request: Request) {
     }
 
     // ── 8. Ad Accounts ───────────────────────────────────────────────────────
-    const adAccounts = await getMetaAdAccounts(accessToken);
+    let adAccounts: Awaited<ReturnType<typeof getMetaAdAccounts>> = [];
+    try {
+      adAccounts = await getMetaAdAccounts(accessToken);
+    } catch (e) {
+      console.warn('[Callback] Ad Accounts:', (e as Error).message);
+    }
+
     let totalPixels = 0;
 
     for (const acc of adAccounts) {
@@ -161,18 +186,22 @@ export async function GET(request: Request) {
       }, { onConflict: 'user_id,account_id' });
 
       // ── 9. Pixels por conta ─────────────────────────────────────────────
-      const pixels = await getMetaPixels(rawId, accessToken);
-      totalPixels += pixels.length;
+      try {
+        const pixels = await getMetaPixels(rawId, accessToken);
+        totalPixels += pixels.length;
 
-      for (const px of pixels) {
-        await supabase.from('meta_pixels').upsert({
-          user_id: supabaseUserId,
-          connection_id: connectionId,
-          ad_account_id: rawId,
-          pixel_id: px.id,
-          pixel_name: px.name ?? null,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,pixel_id' });
+        for (const px of pixels) {
+          await supabase.from('meta_pixels').upsert({
+            user_id: supabaseUserId,
+            connection_id: connectionId,
+            ad_account_id: rawId,
+            pixel_id: px.id,
+            pixel_name: px.name ?? null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,pixel_id' });
+        }
+      } catch (pxErr) {
+        console.warn(`[Callback] Falha ao buscar pixels da conta ${rawId}:`, (pxErr as Error).message);
       }
     }
 
